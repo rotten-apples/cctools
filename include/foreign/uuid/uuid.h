@@ -35,6 +35,12 @@
 #ifndef _UUID_UUID_H
 #define _UUID_UUID_H
 
+#ifdef __APPLE__
+#include <sys/_types.h>
+#else
+typedef unsigned char   __darwin_uuid_t[16];
+#endif
+
 #ifndef _UUID_T
 #define _UUID_T
 typedef __darwin_uuid_t	uuid_t;
