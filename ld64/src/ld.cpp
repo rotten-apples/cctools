@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <limits.h>
@@ -55,6 +56,17 @@
 #include "MachOWriterExecutable.hpp"
 
 #include "SectCreate.h"
+
+uint64_t xarch_absolute_time()
+{
+    struct timeval tv;
+    uint64_t ret;
+
+    gettimeofday(&tv, NULL);
+    ret = ((((uint64_t)(tv.tv_sec)) << 32) | ((uint64_t)(tv.tv_usec)));
+
+    return ret;
+}
 
 #if 0
 static void dumpAtom(ObjectFile::Atom* atom)
@@ -425,7 +437,7 @@ Linker::Linker(int argc, const char* argv[])
 	  fOutputFileSize(0), fTotalObjectSize(0),
 	  fTotalArchiveSize(0),  fTotalObjectLoaded(0), fTotalArchivesLoaded(0), fTotalDylibsLoaded(0)
 {
-	fStartTime = mach_absolute_time();
+	fStartTime = xarch_absolute_time();
 	if ( fOptions.printStatistics() )
 		getVMInfo(fStartVMInfo);
 
@@ -581,6 +593,10 @@ void Linker::link()
 void Linker::printTime(const char* msg, uint64_t partTime, uint64_t totalTime)
 {
 	static uint64_t sUnitsPerSecond = 0;
+
+    /* FIXME */
+
+#if 0
 	if ( sUnitsPerSecond == 0 ) {
 		struct mach_timebase_info timeBaseInfo;
 		if ( mach_timebase_info(&timeBaseInfo) == KERN_SUCCESS ) {
@@ -602,6 +618,7 @@ void Linker::printTime(const char* msg, uint64_t partTime, uint64_t totalTime)
 		uint32_t percent = percentTimesTen/10;
 		fprintf(stderr, "%s: %u.%u seconds (%u.%u%%)\n", msg, seconds, secondsTimeTen-seconds*10, percent, percentTimesTen-percent*10);
 	}
+#endif
 }
 
 char* Linker::commatize(uint64_t in, char* out)
@@ -632,7 +649,7 @@ void Linker::getVMInfo(vm_statistics_data_t& info)
 
 void Linker::printStatistics()
 {
-	fEndTime = mach_absolute_time();
+	fEndTime = xarch_absolute_time();
 	if ( fOptions.printStatistics() ) {
 		vm_statistics_data_t endVMInfo;
 		getVMInfo(endVMInfo);
@@ -721,7 +738,7 @@ inline void Linker::addAtoms(std::vector<class ObjectFile::Atom*>& atoms)
 
 void Linker::buildAtomList()
 {
-	fStartBuildAtomsTime = mach_absolute_time();
+	fStartBuildAtomsTime = xarch_absolute_time();
 	// add initial undefines from -u option
 	std::vector<const char*>& initialUndefines = fOptions.initialUndefines();
 	for (std::vector<const char*>::iterator it=initialUndefines.begin(); it != initialUndefines.end(); it++) {
@@ -755,7 +772,7 @@ static const char* pathLeafName(const char* path)
 
 void Linker::loadUndefines()
 {
-	fStartLoadUndefinesTime = mach_absolute_time();
+	fStartLoadUndefinesTime = xarch_absolute_time();
 	// keep looping until no more undefines were added in last loop
 	unsigned int undefineCount = 0xFFFFFFFF;
 	while ( undefineCount != fGlobalSymbolTable.getRequireCount() ) {
@@ -920,7 +937,7 @@ void Linker::resolveFrom(ObjectFile::Reference* reference)
 
 void Linker::resolveReferences()
 {
-	fStartResolveTime = mach_absolute_time();
+	fStartResolveTime = xarch_absolute_time();
 	// note: the atom list may grow during this loop as libraries supply needed atoms
 	for (unsigned int j=0; j < fAllAtoms.size(); ++j) {
 		ObjectFile::Atom* atom = fAllAtoms[j];
@@ -1095,7 +1112,7 @@ void Linker::deadStripResolve()
 
 void Linker::sortAtoms()
 {
-	fStartSortTime = mach_absolute_time();
+	fStartSortTime = xarch_absolute_time();
 	Section::assignIndexes();
 	std::sort(fAllAtoms.begin(), fAllAtoms.end(), Linker::AtomSorter());
 	//fprintf(stderr, "Sorted atoms:\n");
@@ -1770,7 +1787,7 @@ void Linker::collectStabs()
 
 void Linker::writeOutput()
 {
-	fStartWriteTime = mach_absolute_time();
+	fStartWriteTime = xarch_absolute_time();
 	// tell writer about each segment's atoms
 	fOutputFileSize = fOutputFile->write(fAllAtoms, fStabs, this->entryPoint(), this->dyldHelper(), (fCreateUUID && fOptions.emitUUID()));
 }
@@ -1863,7 +1880,7 @@ ObjectFile::Reader* Linker::createReader(const Options::FileInfo& info)
 
 void Linker::createReaders()
 {
-	fStartCreateReadersTime = mach_absolute_time();
+	fStartCreateReadersTime = xarch_absolute_time();
 	std::vector<Options::FileInfo>& files = fOptions.getInputFiles();
 	const int count = files.size();
 	if ( count == 0 )
@@ -2199,7 +2216,7 @@ void Linker::logTraceInfo (const char* format, ...)
 
 void Linker::createWriter()
 {
-	fStartCreateWriterTime = mach_absolute_time();
+	fStartCreateWriterTime = xarch_absolute_time();
 	const char* path = fOptions.getOutputFilePath();
 	switch ( fArchitecture ) {
 		case CPU_TYPE_POWERPC:
