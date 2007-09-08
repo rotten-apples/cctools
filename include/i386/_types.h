@@ -67,14 +67,19 @@ typedef int			__darwin_ct_rune_t;	/* ct_rune_t */
  * mbstate_t is an opaque object to keep conversion state, during multibyte
  * stream conversions.  The content must not be referenced by user programs.
  */
-#ifdef __APPLE__
+#ifndef _POSIX_C_SOURCE
 typedef union {
 	char		__mbstate8[128];
 	long long	_mbstateL;			/* for alignment */
 } __mbstate_t;
-#endif
-
 typedef __mbstate_t		__darwin_mbstate_t;	/* mbstate_t */
+#else
+typedef union {
+	char		__mbstate8[128];
+	long long	_mbstateL;			/* for alignment */
+} __darwin_x_mbstate_t;
+typedef __darwin_x_mbstate_t		__darwin_mbstate_t;	/* mbstate_t */
+#endif
 
 #if defined(__GNUC__) && defined(__PTRDIFF_TYPE__)
 typedef __PTRDIFF_TYPE__	__darwin_ptrdiff_t;	/* ptr1 - ptr2 */
