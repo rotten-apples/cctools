@@ -863,7 +863,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-as-targets     space-separated list ("ppc", "ppc64", "i386",
+  --enable-as-targets     space-separated list ("arm", "ppc", "ppc64", "i386",
                           "x86_64", "all")
 
 Optional Packages:
@@ -1472,6 +1472,18 @@ echo "$as_me: error: $PACKAGE_NAME only supports targeting Darwin" >&2;}
 esac
 
 case $target_cpu in
+     arm)
+
+cat >>confdefs.h <<\_ACEOF
+#define EMULATED_HOST_CPU_TYPE 12
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define EMULATED_HOST_CPU_SUBTYPE 6
+_ACEOF
+
+	;;
      powerpc)
 
 cat >>confdefs.h <<\_ACEOF
@@ -3079,10 +3091,10 @@ fi;
 
 case "$conftargets" in
      all)
-        ASTARGETS="ppc ppc64 i386 x86_64"
+        ASTARGETS="ppc ppc64 i386 x86_64 arm"
 	;;
      default)
-	ASTARGETS="ppc ppc64 i386 x86_64"
+	ASTARGETS="ppc ppc64 i386 x86_64 arm"
 	;;
      yes)
 	{ { echo "$as_me:$LINENO: error: no assembler targets configured" >&5
@@ -4955,6 +4967,10 @@ for ast in $ASTARGETS; do
     x86_64)
 	          ac_config_files="$ac_config_files as/x86_64/Makefile:as/x86_64/Makefile.in:as/Makefile.arch.in"
 
+    ;;
+    arm)
+	          ac_config_files="$ac_config_files as/arm/Makefile:as/arm/Makefile.in:as/Makefile.arch.in"
+
 	;;
     *)
 	{ { echo "$as_me:$LINENO: error: Unrecognized assembler target $ast" >&5
@@ -5508,6 +5524,7 @@ do
   "as/ppc64/Makefile" ) CONFIG_FILES="$CONFIG_FILES as/ppc64/Makefile:as/ppc64/Makefile.in:as/Makefile.arch.in" ;;
   "as/i386/Makefile" ) CONFIG_FILES="$CONFIG_FILES as/i386/Makefile:as/i386/Makefile.in:as/Makefile.arch.in" ;;
   "as/x86_64/Makefile" ) CONFIG_FILES="$CONFIG_FILES as/x86_64/Makefile:as/x86_64/Makefile.in:as/Makefile.arch.in" ;;
+  "as/arm/Makefile" ) CONFIG_FILES="$CONFIG_FILES as/arm/Makefile:as/arm/Makefile.in:as/Makefile.arch.in" ;;
   "ld/Makefile" ) CONFIG_FILES="$CONFIG_FILES ld/Makefile" ;;
   "ld64/Makefile" ) CONFIG_FILES="$CONFIG_FILES ld64/Makefile" ;;
   "man/Makefile" ) CONFIG_FILES="$CONFIG_FILES man/Makefile" ;;
