@@ -212,7 +212,9 @@ struct __darwin_ppc_exception_state
 #ifndef _POSIX_C_SOURCE
 struct ppc_exception_state64
 #else /* _POSIX_C_SOURCE */
-struct __darwin_ppc_exception_state64 {
+struct __darwin_ppc_exception_state64
+#endif /* _POSIX_C_SOURCE */
+{
 	unsigned long long dar;		/* Fault registers for coredump */
 #if defined(__LP64__)
 	unsigned int  dsisr;
@@ -224,7 +226,6 @@ struct __darwin_ppc_exception_state64 {
 	unsigned long pad1[4];		/* space in PCB "just in case" */
 #endif
 };
-#endif /* _POSIX_C_SOURCE */
 
 #pragma pack()
 
