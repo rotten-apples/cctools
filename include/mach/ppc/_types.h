@@ -82,12 +82,13 @@ struct __darwin_ppc_thread_state
 	unsigned int vrsave;	/* Vector Save Register */
 };
 
+#pragma pack(4)							/* Make sure the structure stays as we defined it */
 #ifndef _POSIX_C_SOURCE
 struct ppc_thread_state64
 #else /* _POSIX_C_SOURCE */
 struct __darwin_ppc_thread_state64
-#pragma pack(4)							/* Make sure the structure stays as we defined it */
-struct ppc_thread_state64 {
+#endif
+{
 	unsigned long long srr0;	/* Instruction address register (PC) */
 	unsigned long long srr1;	/* Machine state register (supervisor) */
 	unsigned long long r0;
