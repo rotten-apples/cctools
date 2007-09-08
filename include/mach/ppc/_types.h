@@ -133,7 +133,6 @@ struct __darwin_ppc_thread_state64
 };
 
 #pragma pack()
-#endif /* _POSIX_C_SOURCE */
 
 /* This structure should be double-word aligned for performance */
 
