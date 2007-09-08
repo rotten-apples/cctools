@@ -25,6 +25,9 @@
 #ifdef SPARC
 #include <mach-o/sparc/reloc.h>
 #endif
+#ifdef ARM
+#include <mach-o/arm/reloc.h>
+#endif
 #if defined(I386) && defined(ARCH64)
 #include <mach-o/x86_64/reloc.h>
 #endif
@@ -66,6 +69,11 @@
 #define RELOC_SECTDIFF		SPARC_RELOC_SECTDIFF
 #define RELOC_LOCAL_SECTDIFF	SPARC_RELOC_SECTDIFF
 #define RELOC_PAIR		SPARC_RELOC_PAIR
+#endif
+#ifdef ARM
+#define RELOC_SECTDIFF          ARM_RELOC_SECTDIFF
+#define RELOC_LOCAL_SECTDIFF    ARM_RELOC_SECTDIFF
+#define RELOC_PAIR              ARM_RELOC_PAIR
 #endif
 #if defined(M68K) || defined(I386)
 #define RELOC_SECTDIFF		GENERIC_RELOC_SECTDIFF
@@ -1339,7 +1347,7 @@ struct relocation_info *riP)
 	count = 1;
 	riP++;
 
-#if !defined(M68K) && !defined(I386)
+#if !defined(M68K) && !defined(I386) && !defined(ARM)
 	/*
 	 * For RISC machines whenever we have a relocation item using the half
 	 * of an address we also emit a relocation item describing the other

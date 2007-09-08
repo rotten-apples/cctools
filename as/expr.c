@@ -827,7 +827,7 @@ expressionS *expressionP)
 		     * mean the same as the (conventional) "9f". This is simply
 		     * easier than checking for strict canonical form.
 		     */
-		    if(number < 10){
+		    if(number < 256){   /* iPhone binutils: allow more than 10 LLs */
 			if(c == 'b'){
 			    /*
 			     * Backward ref to local label.
@@ -890,7 +890,7 @@ expressionS *expressionP)
 			    input_line_pointer--; /* restore following char */
 		        }
 		    }
-		    else{ /* a number >= 10 */
+		    else{ /* a number >= LOCAL_LABEL_MAX */
 			ignore_c_ll_or_ull(c);
 			expressionP->X_add_number = number;
 			expressionP->X_seg        = SEG_ABSOLUTE;

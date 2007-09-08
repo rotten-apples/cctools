@@ -23,7 +23,7 @@
 #if defined(__MWERKS__) && !defined(__private_extern__)
 #define __private_extern__ __declspec(private_extern)
 #endif
-
+#include <config.h>
 #include <sys/types.h>
 #include <string.h>
 #include <stdarg.h>
@@ -58,10 +58,14 @@ uint8_t *uuid)
 	 * dynamically lookup uuid_generate_random() and if it is defined we
 	 * call it indirectly.
 	 */
+#if HAVE_NSISSYMBOLNAMEDEFINED
 	if(NSIsSymbolNameDefined("_uuid_generate_random")){
 	    nssymbol = (void *)NSLookupAndBindSymbol("_uuid_generate_random");
 	    uuid_func = NSAddressOfSymbol(nssymbol);
 	    uuid_func(uuid);
+#else
+	if(0){
+#endif
 	}
 	/*
 	 * Since we don't have uuid_generate() just read bytes from /dev/urandom

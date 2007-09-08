@@ -44,6 +44,10 @@
 #include "hppa_disasm.h"
 #include "sparc_disasm.h"
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 /* Name of this program for error messages (argv[0]) */
 char *progname = NULL;
 
@@ -998,23 +1002,35 @@ void *cookie) /* cookie is not used */
 		S_ATTR_SOME_INSTRUCTIONS){
 	    if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__protocol") == 0 && vflag == TRUE){
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_protocol_section(ofile_mh, ofile->load_commands,
 		   ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	            (strcmp(sectname, "__string_object") == 0 ||
 	             strcmp(sectname, "__cstring_object") == 0) &&
 		    vflag == TRUE){
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_string_object_section(sectname, ofile_mh,
 		   ofile->load_commands, ofile->object_byte_sex,
 		   ofile->object_addr, ofile->object_size, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__runtime_setup") == 0 && vflag == TRUE){
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_runtime_setup_section(ofile_mh,ofile->load_commands,
 		   ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 	    else if(get_sect_info(segname, sectname, ofile_mh,
 		ofile->load_commands, ofile->object_byte_sex,
@@ -1099,10 +1115,14 @@ void *cookie) /* cookie is not used */
 			     ofile->object_size);
 
 	if(oflag)
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 	    print_objc_segment(ofile_mh, ofile->load_commands,
 			       ofile->object_byte_sex, ofile->object_addr,
 			       ofile->object_size, sorted_symbols,
 			       nsorted_symbols, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 
 	if(load_commands != NULL)
 	    free(load_commands);
@@ -2112,6 +2132,8 @@ unsigned long object_size)
 	}
 }
 
+#if 0
+
 /*
  * To avoid linking in libm.  These variables are defined as they are used in
  * pthread_init() to put in place a fast sqrt().
@@ -2143,3 +2165,5 @@ __fpclassify(long double x)
 {
 	return(0);
 }
+
+#endif

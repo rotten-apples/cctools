@@ -55,12 +55,10 @@
 #ifndef RLD
 #include "stuff/symbol_list.h"
 #endif
-#include "make.h"
 #include <mach/mach_init.h>
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
 #else
-#include <servers/bootstrap.h>
 #endif
 #else /* defined(KLD) && defined(__STATIC__) */
 #include <mach/mach.h>
@@ -82,6 +80,8 @@ static char *mkstr(
 #include "symbols.h"
 #include "layout.h"
 #include "pass2.h"
+
+#include <config.h>
 
 /* name of this program as executed (argv[0]) */
 __private_extern__ char *progname = NULL;
@@ -117,6 +117,8 @@ __private_extern__ struct arch_flag arch_flag =
     { "ppc",    CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_ALL };
 #elif __i386__
     { "i386",   CPU_TYPE_I386,    CPU_SUBTYPE_I386_ALL };
+#elif __arm__
+    { "arm",    CPU_TYPE_ARM,     CPU_SUBTYPE_ARM_ALL };
 #elif
 #error "unsupported architecture for static KLD"
 #endif
@@ -566,7 +568,18 @@ char *envp[])
 		  print("[Logging ld options]\t%s\n", argv[i]);
 
 	        p = &(argv[i][1]);
+
+        /* iPhone binutils local: allow -compatibility_version and
+         * -current_version as synonyms for -dylib_compatibility_version and
+         * -dylib_current_version, for compatibility with GNU libtool */
+        if (!strcmp(p, "compatibility_version") || !strcmp(p,
+            "current_version"))
+            asprintf(&p, "dylib_%s", p);
+
 		switch(*p){
+		case 'B': 
+			if(strcmp(p, "Bstatic") && strcmp(p, "Bdynamic")) goto unknown_flag;
+			break;
 		case 'l':
 		    if(p[1] == '\0')
 			fatal("-l: argument missing");
@@ -799,7 +812,7 @@ char *envp[])
 			dylib_install_name = argv[i + 1];
 			i += 1;
 		    }
-		    else if(strcmp(p, "dylib_current_version") == 0){
+		    else if(strcmp(p, "dylib_current_version") == 0) {
 			if(i + 1 >= argc)
 			    fatal("-dylib_current_version: argument missing");
 			if(dylib_current_version != 0)
@@ -812,7 +825,7 @@ char *envp[])
 				  "zero");
 			i += 1;
 		    }
-		    else if(strcmp(p, "dylib_compatibility_version") == 0){
+		    else if(strcmp(p, "dylib_compatibility_version") == 0) {
 			if(i + 1 >= argc)
 			    fatal("-dylib_compatibility_version: argument "
 				  "missing");
@@ -1870,6 +1883,11 @@ unknown_flag:
 	else{
 	    next_root = p;
 	}
+       if(next_root == NULL) {
+#ifdef CROSS_SYSROOT
+         next_root = CROSS_SYSROOT;
+#endif
+       }
 	if(next_root != NULL){
 	    for(i = 0; standard_dirs[i] != NULL; i++){
 		p = allocate(strlen(next_root) +
@@ -2026,7 +2044,7 @@ unknown_flag:
 	     * 64-bit architectures are handled by ld64
 	     */
 	    if(arch_flag.cputype & CPU_ARCH_ABI64) {
-	        argv[0] = "/usr/bin/ld64";
+	        argv[0] = BINDIR "/" LD64PROG;
 	        ld_exit(!execute(argv, 0));
 	    }
 
@@ -2316,7 +2334,8 @@ unknown_flag:
 				seg_addr_table_entry->segs_read_write_addr;
 			if(segs_read_only_addr == 0 &&
 			   segs_read_write_addr == 0){
-			    segs_read_write_addr = 0x10000000;
+			    segs_read_write_addr = get_shared_region_sz_from_flag(
+                    &arch_flag);
 			    warning("-segs_read_write_addr 0x0 ignored from "
 				    "segment address table: %s %s line %lu "
 				    "using -segs_read_write_addr 0x%x",
@@ -2485,13 +2504,14 @@ unknown_flag:
 				    "-segs_read_only_addr 0x%x and "
 				    "-segs_read_write_addr 0x%x because "
 				    "LD_SPLITSEGS_NEW_LIBRARIES environment is "
-				    "set",(unsigned int)seg1addr, 0,0x10000000);
+				    "set",(unsigned int)seg1addr, 0,
+                    get_shared_region_sz_from_flag(&arch_flag));
 			}
 			seg1addr_specified = FALSE;
 			seg1addr = 0;
 			segs_read_only_addr_specified = TRUE;
 			segs_read_only_addr = 0;
-			segs_read_write_addr = 0x10000000;
+			segs_read_write_addr = get_shared_region_sz_from_flag(&arch_flag);
 		    }
 		    /*
 		     * Finally if this is not a split library then turn off
@@ -2686,6 +2706,16 @@ unknown_flag:
 	    else{
 		p = &(argv[i][1]);
 		switch(*p){
+		case 'B':
+			if(strcmp(p, "Bstatic") == 0){
+				search_lib_extensions[0]=".a";
+				search_lib_extensions[1]=".dylib";
+				break;
+			} else if (strcmp(p, "Bdynamic") == 0){
+				search_lib_extensions[0]=".dylib";
+				search_lib_extensions[1]=".a";
+				break;
+			}
 		case 'b':
 		    if(strcmp(p, "bundle_loader") == 0){
 			/*
@@ -2915,7 +2945,7 @@ unknown_flag:
 	 */
 	if(arch_flag.cputype != 0 &&
 	    arch_flag.cputype & CPU_ARCH_ABI64){
-	    argv[0] = "/usr/bin/ld64";
+	    argv[0] = BINDIR "/" LD64PROG;
 	    ld_exit(!execute(argv, 0));
 	}
 
@@ -3273,6 +3303,7 @@ static
 void
 check_for_ProjectBuilder(void)
 {
+#if OLD_PROJECTBUILDER_INTERFACE
     char *portName;
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
     char *hostName;
@@ -3296,6 +3327,7 @@ check_for_ProjectBuilder(void)
 	if(ProjectBuilder_port == MACH_PORT_NULL)
 	    return;
 	talking_to_ProjectBuilder = 1;
+#endif
 }
 
 /*
@@ -3307,6 +3339,7 @@ void
 tell_ProjectBuilder(
 char *message)
 {
+#if OLD_PROJECTBUILDER_INTERFACE
 	make_alert(ProjectBuilder_port,
 	    2, /* eventType */
 	    NULL, 0, /* functionName, not used by ProjectBuilder */
@@ -3314,6 +3347,7 @@ char *message)
 	    NULL, 0, /* directory */
 	    0, /* line */
 	    message, strlen(message)+1 > 1024 ? 1024 : strlen(message)+1);
+#endif
 }
 
 /*

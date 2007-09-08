@@ -20,10 +20,10 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#import <stuff/bytesex.h>
-#import <mach-o/reloc.h>
-#import <mach-o/nlist.h>
-#import <stuff/bool.h>
+#include <stuff/bytesex.h>
+#include <mach-o/reloc.h>
+#include <mach-o/nlist.h>
+#include <stuff/bool.h>
 #include "stuff/symbol.h"
 
 extern unsigned long hppa_disassemble(

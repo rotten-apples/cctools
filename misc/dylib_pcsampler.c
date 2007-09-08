@@ -20,17 +20,17 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#import <libc.h>
-#import <stdio.h>
-#import <stdlib.h>
-#import <sys/file.h>
-#import <sys/types.h>
-#import <mach/mach.h>
-#import "stuff/openstep_mach.h"
-#import <mach-o/gmon.h>
-#import "stuff/ofile.h"
-#import "stuff/errors.h"
-#import "stuff/round.h"
+#include <libc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/file.h>
+#include <sys/types.h>
+#include <mach/mach.h>
+#include "stuff/openstep_mach.h"
+#include <mach-o/gmon.h>
+#include "stuff/ofile.h"
+#include "stuff/errors.h"
+#include "stuff/round.h"
 
 static void create(
     char *dylib,

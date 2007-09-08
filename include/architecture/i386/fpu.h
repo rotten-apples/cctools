@@ -3,20 +3,21 @@
  *
  * @APPLE_LICENSE_HEADER_START@
  * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
+ * "Portions Copyright (c) 1999 Apple Computer, Inc.  All Rights
+ * Reserved.  This file contains Original Code and/or Modifications of
+ * Original Code as defined in and that are subject to the Apple Public
+ * Source License Version 1.0 (the 'License').  You may not use this file
+ * except in compliance with the License.  Please obtain a copy of the
+ * License at http://www.apple.com/publicsource and read it before using
+ * this file.
  * 
  * The Original Code and all software distributed under the License are
  * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
  * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
+ * FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT.  Please see the
+ * License for the specific language governing rights and limitations
+ * under the License."
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
@@ -27,12 +28,15 @@
  *
  * HISTORY
  *
- * 5 October 1992 David E. Bohman at NeXT
+ * 5 October 1992 ? at NeXT
  *	Added names to previously unamed fields in the mantissa.
  *
- * 5 April 1992 David E. Bohman at NeXT
+ * 5 April 1992 ? at NeXT
  *	Created.
  */
+
+#ifndef _ARCH_I386_FPU_H_
+#define _ARCH_I386_FPU_H_
 
 /*
  * Data register.
@@ -120,7 +124,7 @@ typedef struct fp_control {
 					:3;
 } fp_control_t;
 
-#import <architecture/i386/sel.h>
+#include <architecture/i386/sel.h>
 
 /*
  * Floating point 'environment'
@@ -147,7 +151,21 @@ typedef struct fp_env {
  * used by FSAVE/FRSTOR instructions.
  */
  
+/*
+ * To allow the the common idiom of:
+ *     #define environ (*_NSGetEnviron())
+ * to be used these fields were renamed.  Old code that that does
+ * not use this idiom can use the old field names by defining
+ * _ARCHITECTURE_I386_FPU_FPSTATE_LEGACY_FIELD_NAMES_ .
+ */
 typedef struct fp_state {
+#if _ARCHITECTURE_I386_FPU_FPSTATE_LEGACY_FIELD_NAMES_
     fp_env_t			environ;
     fp_stack_t			stack;
+#else
+    fp_env_t			fp_environ;
+    fp_stack_t			fp_stack;
+#endif
 } fp_state_t;
+
+#endif	/* _ARCH_I386_FPU_H_ */

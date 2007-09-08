@@ -22,6 +22,7 @@
  */
 #include <mach/machine.h>
 #include <mach-o/reloc.h>
+#include <mach-o/arm/reloc.h>
 #include <mach-o/m88k/reloc.h>
 #include <mach-o/ppc/reloc.h>
 #include <mach-o/i860/reloc.h>
@@ -69,6 +70,8 @@ cpu_type_t cputype)
 	case CPU_TYPE_SPARC:
 	    return(SPARC_RELOC_PAIR);
 	    break;
+    case CPU_TYPE_ARM:
+        return(ARM_RELOC_PAIR);
 	}
 	fatal("internal error: reloc_pair_r_type() called with unknown "
 	      "cputype (%u)", cputype);
@@ -142,6 +145,11 @@ unsigned long r_type)
 		r_type == SPARC_RELOC_SECTDIFF)
 	      return(TRUE);
 	    break;
+    case CPU_TYPE_ARM:
+        if (r_type == ARM_RELOC_SECTDIFF ||
+            r_type == ARM_RELOC_LOCAL_SECTDIFF)
+            return TRUE;
+        return FALSE;
 	default:
 	    fatal("internal error: reloc_has_pair() called with unknown "
 		  "cputype (%u)", cputype);
@@ -200,6 +208,10 @@ unsigned long r_type)
 	       r_type == SPARC_RELOC_LO10_SECTDIFF)
 		return(TRUE);
 	    break;
+    case CPU_TYPE_ARM:
+        if (r_type == ARM_RELOC_SECTDIFF || r_type == ARM_RELOC_LOCAL_SECTDIFF)
+            return TRUE;
+        return FALSE;
 	default:
 	    fatal("internal error: reloc_is_sectdiff() called with unknown "
 		  "cputype (%u)", cputype);

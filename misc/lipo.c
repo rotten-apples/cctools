@@ -1748,6 +1748,19 @@ struct fat_arch *fat_arch)
 		goto print_arch_unknown;
 	    }
 	    break;
+    case CPU_TYPE_ARM:
+        switch (fat_arch->cpusubtype) {
+            case CPU_SUBTYPE_ARM_ALL:
+                printf("arm");
+                break;
+            case 6:
+                printf("arm1176jzf-s");
+                break;
+            case 12:
+                printf("arm-built-with-buggy-toolchain");
+                break;
+        }
+        break; 
 	case CPU_TYPE_ANY:
 	    switch(fat_arch->cpusubtype){
 	    case CPU_SUBTYPE_MULTIPLE:

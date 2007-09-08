@@ -32,6 +32,6 @@
 /*
  * round() rounds v to a multiple of r.
  */
-__private_extern__ unsigned long round(
+extern unsigned long round(
     unsigned long v,
     unsigned long r);

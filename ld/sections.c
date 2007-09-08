@@ -70,6 +70,7 @@
 #include "m88k_reloc.h"
 #include "hppa_reloc.h"
 #include "sparc_reloc.h"
+#include "arm_reloc.h"
 #include "sets.h"
 #include "hash_string.h"
 #include "layout.h"
@@ -3633,6 +3634,8 @@ unsigned long *nextrel)
 			hppa_reloc(fake_contents, fake_relocs, &fake_map);
 		    else if(arch_flag.cputype == CPU_TYPE_SPARC)
 			sparc_reloc(fake_contents, fake_relocs, &fake_map);
+            else if(arch_flag.cputype == CPU_TYPE_ARM)
+            arm_reloc(fake_contents, fake_relocs, &fake_map, NULL, 0);
 #ifndef RLD
 		    else if(arch_flag.cputype == CPU_TYPE_I860)
 			i860_reloc(fake_contents, fake_relocs, map);
@@ -4013,6 +4016,8 @@ struct section_map *map)
 	    hppa_reloc(contents, relocs, map);
 	else if(arch_flag.cputype == CPU_TYPE_SPARC)
 	    sparc_reloc(contents, relocs, map);
+    else if(arch_flag.cputype == CPU_TYPE_ARM)
+        arm_reloc(contents, relocs, map, NULL, 0);
 #ifndef RLD
 	else if(arch_flag.cputype == CPU_TYPE_I860)
 	    i860_reloc(contents, relocs, map);
@@ -4790,7 +4795,7 @@ unsigned long *nextrel)
 		}
 		/*
 		 * Even though the file can't be moved we may be trying to
-		 * prebind.  If we are prebinging we need the local
+		 * prebind.  If we are prebinding we need the local
 		 * relocation entries for lazy symbol pointers to be saved
 		 * so dyld will have the info to undo this if it fails.
 		 */
@@ -5655,6 +5660,8 @@ struct object_file *obj)
 		generic_reloc(contents, relocs, map, FALSE, &refs, i);
 	    else if(arch_flag.cputype == CPU_TYPE_I386)
 		generic_reloc(contents, relocs, map, TRUE, &refs, i);
+        else if (arch_flag.cputype == CPU_TYPE_ARM)
+            arm_reloc(contents, relocs, map, &refs, i);
 	    else if(arch_flag.cputype == CPU_TYPE_MC88000 ||
 		    arch_flag.cputype == CPU_TYPE_HPPA ||
 		    arch_flag.cputype == CPU_TYPE_SPARC ||

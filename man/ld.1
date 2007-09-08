@@ -1738,6 +1738,18 @@ module for each object file linked in.  This is the default.
 For dynamic link editor files, specifies the name of the file
 the dynamic link editor will be installed in for programs that use it.
 .TP
+.BI \-Bstatic
+Search for static archives before dynamic shared libraries. Both
+.BI \-Bstatic
+and
+.BI \-Bdynamic
+can be specified multiple times, and affect only the following
+.BI \-l
+arguments.
+.TP
+.BI \-Bdynamic
+This is the default. Search for dynamic shared libraries first, then static.
+.TP
 .BI \-macosx_version_min " version"
 This overrides the
 .B MACOSX_DEPLOYMENT_TARGET

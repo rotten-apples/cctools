@@ -25,7 +25,7 @@
 #endif
 
 #include "stuff/target_arch.h"
-#import "stuff/ofile.h"
+#include "stuff/ofile.h"
 
 /*
  * The input files are broken out in to their object files and then placed in
@@ -171,13 +171,13 @@ struct object {
     unsigned long output_nextrefsyms;
 };
 
-__private_extern__ struct ofile * breakout(
+extern struct ofile * breakout(
     char *filename,
     struct arch **archs,
     unsigned long *narchs,
     enum bool calculate_input_prebind_cksum);
 
-__private_extern__ struct ofile * breakout_mem(
+extern struct ofile * breakout_mem(
     void *membuf,
     unsigned long length,
     char *filename,
@@ -185,11 +185,11 @@ __private_extern__ struct ofile * breakout_mem(
     unsigned long *narchs,
     enum bool calculate_input_prebind_cksum);
 
-__private_extern__ void free_archs(
+extern void free_archs(
     struct arch *archs,
     unsigned long narchs);
 
-__private_extern__ void writeout(
+extern void writeout(
     struct arch *archs,
     unsigned long narchs,
     char *output,
@@ -199,7 +199,7 @@ __private_extern__ void writeout(
     enum bool library_warnings,
     unsigned long *throttle);
 
-__private_extern__ void writeout_to_mem(
+extern void writeout_to_mem(
     struct arch *archs,
     unsigned long narchs,
     char *filename,
@@ -210,7 +210,7 @@ __private_extern__ void writeout_to_mem(
     enum bool library_warning,
     enum bool *seen_archive);
 
-__private_extern__ void checkout(
+extern void checkout(
     struct arch *archs,
     unsigned long narchs);
 

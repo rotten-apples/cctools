@@ -24,56 +24,56 @@
 #define __private_extern__ __declspec(private_extern)
 #endif
 
-__private_extern__ void calc_hppa_HILO(
+extern void calc_hppa_HILO(
     unsigned long base,
     unsigned long offset,
     unsigned long *left21,
     unsigned long *right14);
 
-__private_extern__ unsigned long assemble_17(
+extern unsigned long assemble_17(
     unsigned long x,
     unsigned long y,
     unsigned long z);
 
-__private_extern__ unsigned long assemble_21(
+extern unsigned long assemble_21(
     unsigned long x);
 
-__private_extern__ unsigned long assemble_12(
+extern unsigned long assemble_12(
     unsigned long x,
     unsigned long y);
 
-__private_extern__ unsigned long assemble_3(
+extern unsigned long assemble_3(
     unsigned long x);
 
-__private_extern__ unsigned long sign_ext(
+extern unsigned long sign_ext(
     unsigned long x,
     unsigned long len);
 
-__private_extern__ unsigned long low_sign_ext(
+extern unsigned long low_sign_ext(
     unsigned long x,
     unsigned long len);
 
-__private_extern__ unsigned long dis_assemble_21(
+extern unsigned long dis_assemble_21(
     unsigned long as21);
 
-__private_extern__ unsigned long low_sign_unext(
+extern unsigned long low_sign_unext(
     unsigned long x,
     unsigned long len);
 
-__private_extern__ void dis_assemble_17(
+extern void dis_assemble_17(
     unsigned long as17,
     unsigned long *x,
     unsigned long *y,
     unsigned long *z);
 
-__private_extern__ unsigned long sign_unext(
+extern unsigned long sign_unext(
     unsigned long x,
     unsigned long len);
 
-__private_extern__ unsigned long dis_assemble_3(
+extern unsigned long dis_assemble_3(
     unsigned long x);
 
-__private_extern__ void dis_assemble_12(
+extern void dis_assemble_12(
     unsigned long as12,
     unsigned long *x,
     unsigned long *y);

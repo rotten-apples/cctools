@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
+/* iPhone binutils additions by Patrick Walton <pcwalton@uchicago.edu>. */
+
 #define MASK_CHAR (0xFF)	/* If your chars aren't 8 bits, you will
 				   change this a bit.  But then, GNU isnt
 				   spozed to run on your machine anyway.
@@ -58,6 +60,10 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "app.h"
 #if defined(I386) && defined(ARCH64)
 #include "i386.h"
+#endif
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
 /*
@@ -161,19 +167,38 @@ static int if_depth = 0;
  * Assembler macros are implemented with these variables and functions.
  */
 #define MAX_MACRO_DEPTH 20
+
+struct macro_arg {
+    char *name;
+    char *default_value;
+};
+
+struct macro_info {
+    char *name;
+    char *contents;
+    int new_style;
+    int arg_count;
+    struct macro_arg **args;
+};
+
 static int macro_depth = 0;
 static struct hash_control
 	*ma_hash = NULL;	/* use before set up: NULL-> address error */
 static struct obstack macros;	/* obstack for macro text */
 static char *macro_name = NULL;	/* name of macro we are defining */
+static struct macro_info *macro_info;   /* info re. macro we are defining */
 static int count_lines = TRUE;	/* turns line number counting on and off */
 static int macros_on = TRUE;	/* .macros_on and .macros_off toggles this to
 				   allow macros to be turned off, which allows
 				   macros to override a machine instruction and
 				   still use it. */
-static void expand_macro(char *macro_contents);
+static void expand_macro(struct macro_info *info);
 static void macro_begin(void);
 
+/* iPhone binutils local: "repeat" command recording */
+int rept_recording = 0;
+char *rept_record_start;
+int rept_times = 0;
 
 /*
  * The .dump and .load feature is implemented with these variables and
@@ -459,6 +484,7 @@ static const pseudo_typeS pseudo_table[] = {
   { "file",	s_file,		0	},
   { "fill",	s_fill,		0	},
   { "globl",	s_globl,	0	},
+  { "global",	s_globl,	0	},  /* iPhone binutils extension */
   { "lcomm",	s_lcomm,	0	},
   { "line",	s_line,		0	},
   { "long",	cons,		4	},
@@ -484,6 +510,7 @@ static const pseudo_typeS pseudo_table[] = {
   { "include",	s_include,	0	},
   { "macro",	s_macro,	0	},
   { "endmacro",	s_endmacro,	0	},
+  { "endm",	s_endmacro,	0	},  /* GAS 2.17 compatibility */
   { "macros_on",s_macros_on,	0	},
   { "macros_off",s_macros_off,	0	},
   { "if",	s_if,		0	},
@@ -494,6 +521,9 @@ static const pseudo_typeS pseudo_table[] = {
   { "load",	s_load,		0	},
   { "subsections_via_symbols",	s_subsections_via_symbols,	0	},
   { "machine",	s_machine,	0	},
+  { "rept", s_rept, 0       },
+  { "endr", s_endr, 0       },
+  { "ifc", s_ifc,   0       },
   { NULL }	/* end sentinel */
 };
 
@@ -845,7 +875,7 @@ char *buffer)
 			   used only for macro expansion */
     pseudo_typeS *pop;	/* pointer to a pseudo op stucture returned by
 			   hash_find(po_hash, s+1) to determine if it is one */
-    char *the_macro;	/* pointer to a macro name returned by
+    struct macro_info *the_macro;	/* pointer to a macro name returned by
 			   hash_find(ma_hash, s) to determine if it is one */
     int digit_value;	/* the value of a digit label as an integer, 1: == 1 */
 
@@ -1113,19 +1143,24 @@ char *buffer)
 		continue;
 	    }
 
-	    /* local label  ("4:") */
-	    if(isdigit(c)){
-		digit_value = c - '0';
-		if(*input_line_pointer++ == ':' ){
-		    local_colon(digit_value);
-		}
-		else{
-		    as_bad("Spurious digit %d.", digit_value);
-		    input_line_pointer--;
-		    ignore_rest_of_line();
-		}
+	    /* local label  ("4:")
+         * iPhone binutils local - allow more than 10 local labels */
+        char *ptr = input_line_pointer - 1;
+        int local_label_no = 0;
+        while (isdigit(*ptr)) {
+            local_label_no = local_label_no * 10 + ((*ptr) - '0');
+            ptr++;
+        }
+        if (*ptr == ':') {
+            input_line_pointer = ptr + 1;
+            local_colon(local_label_no);
+            continue;
+        }
+
+        as_bad("Spurious digit %d.", digit_value);
+        input_line_pointer--;
+        ignore_rest_of_line();
 		continue;
-	    }
 
 	    /*
 	     * The only full line comment that should make it here is the first
@@ -1892,6 +1927,7 @@ int value)
 /*
  * s_globl() implements the pseudo op:
  *	.globl name [ , name ]
+ *  As an iPhone binutils extension, '.global' is accepted too.
  */
 void
 s_globl(
@@ -2419,6 +2455,7 @@ int value)
     struct attribute_name *attribute_name;
     char *attributename, *sizeof_stub_name, f, g, *t, *u, *endp;
 
+    SKIP_WHITESPACE();
 	segname = input_line_pointer;
 	do{
 	    c = *input_line_pointer++ ;
@@ -2430,6 +2467,7 @@ int value)
 	}
 	p = input_line_pointer - 1;
 
+    SKIP_WHITESPACE();
 	sectname = input_line_pointer;
 	do{
 	    d = *input_line_pointer++ ;
@@ -2466,6 +2504,10 @@ int value)
 	attribute_name = attribute_names;
 	sizeof_stub = 0;
 	if(d == ','){
+#if 0
+        printf("YES optional section type\n");
+#endif
+
 	    typename = input_line_pointer;
 	    do{
 		e = *input_line_pointer++ ;
@@ -2487,6 +2529,10 @@ int value)
 	     * Now see if the optional section attribute is present.
 	     */
 	    if(e == ','){
+#if 0
+        printf("YES optional section attribute\n");
+#endif
+
 		do{
 		    attributename = input_line_pointer;
 		    do{
@@ -2577,10 +2623,11 @@ int value)
     symbolS *symbolP;
     int size, align;
 
+    SKIP_WHITESPACE();
 	segname = input_line_pointer;
 	do{
 	    c = *input_line_pointer++ ;
-	}while(c != ',' && c != '\0' && c != '\n');
+	}while(c != ',' && c != '\0' && c != '\n' && c != ' ' && c != '\t');
 	if(c != ','){
 	    as_bad("Expected comma after segment-name");
 	    ignore_rest_of_line();
@@ -2588,10 +2635,11 @@ int value)
 	}
 	p = input_line_pointer - 1;
 
+    SKIP_WHITESPACE();
 	sectname = input_line_pointer;
 	do{
 	    d = *input_line_pointer++ ;
-	}while(d != ',' && d != '\0' && d != '\n');
+	}while(d != ',' && d != '\0' && d != '\n' && c != ' ' && c != '\t');
 	if(p + 1 == input_line_pointer){
 	    as_bad("Expected section-name after comma");
 	    ignore_rest_of_line();
@@ -2633,6 +2681,11 @@ int value)
 	if(d != ',')
 	    return;
 
+#if 0
+            printf("YES optional extra attribute\n");
+#endif
+
+	SKIP_WHITESPACE();
 	if(*input_line_pointer == '"')
 	    name = input_line_pointer + 1;
 	else
@@ -2646,6 +2699,7 @@ int value)
 	    ignore_rest_of_line();
 	    return;
 	}
+    SKIP_WHITESPACE();
 	input_line_pointer ++;
 	if((size = get_absolute_expression()) < 0){
 	    as_bad("zerofill size (%d.) <0! Ignored.", size);
@@ -2653,7 +2707,12 @@ int value)
 	    return;
 	}
 	align = 0;
+    SKIP_WHITESPACE();
 	if(*input_line_pointer == ','){
+#if 0
+            printf("YES optional align  attribute\n");
+#endif
+
 	    input_line_pointer++;
 	    align = get_absolute_expression();
 	    if(align > MAX_ALIGNMENT){
@@ -2893,8 +2952,10 @@ void)
 	SKIP_WHITESPACE();
 	if(is_end_of_line(*input_line_pointer))
 	    input_line_pointer++;
-	else
+	else {
+        as_bad("Rest of this line needed to be empty but wasn't");
 	    ignore_rest_of_line();
+    }
 }
 
 /* we simply ignore the rest of this statement */
@@ -3902,6 +3963,36 @@ int value)
 	}
 }
 
+/* iPhone binutils extension: .ifc assembles if the two strings are the same */
+void s_ifc(int value)
+{
+    char *ptr1, *ptr2;
+    int len1, len2;
+
+    if (if_depth >= MAX_IF_DEPTH)
+        as_fatal("Maximum if nesting level reached");
+    last_states[if_depth++] = the_cond_state;
+    the_cond_state.the_cond = if_cond;
+
+    if (the_cond_state.ignore)
+        totally_ignore_line();
+    else {
+        ptr1 = demand_copy_string(&len1);
+        
+        SKIP_WHITESPACE();
+        if (*input_line_pointer != ',')
+            as_bad(".ifc needs two strings separated by a comma (',')");
+        else
+            input_line_pointer++;
+        
+        ptr2 = demand_copy_string(&len2);
+
+        the_cond_state.cond_met = (len1 == len2 && !strncmp(ptr1, ptr2, len1));
+        the_cond_state.ignore = !the_cond_state.cond_met;
+        demand_empty_rest_of_line();
+    }
+}
+
 /*
  * s_elseif() implements the pseudo op:
  *	.elseif expression
@@ -4019,36 +4110,109 @@ int value)
 	demand_empty_rest_of_line();
 }
 
+int is_eol(char c)
+{
+    return (c == '\r' || c == '\n' || c == '\0');
+}
+
+int is_ignorable_ws(char c)
+{
+    return (c == ' ' || c == '\t');
+}
+
 /*
  * s_macro() implements the pseudo op:
  *	.macro macro_name
  * that defines a macro.
+ *
+ * iPhone binutils local: support the GAS 2.17-style macro definitions
  */
 void
 s_macro(
 int value)
 {
-    int c;
-    pseudo_typeS *pop;
+    char *ptr;
+    int len;
+    struct macro_arg *arg;
 
 	if(macro_name)
 	    as_bad("Can't define a macro inside another macro definition");
 	else{
-	    SKIP_WHITESPACE();
+        while (is_ignorable_ws(*input_line_pointer))
+            input_line_pointer++;
+        ptr = input_line_pointer;
+        while (is_part_of_name(*input_line_pointer))
+            input_line_pointer++;
+        len = input_line_pointer - ptr;
+        macro_name = malloc(len + 1);
+        strncpy(macro_name, ptr, len);
+        macro_name[len] = '\0';
+
+        macro_info = (struct macro_info *)malloc(sizeof(struct macro_info));
+        macro_info->name = macro_name;
+        macro_info->contents = NULL;
+        macro_info->arg_count = 0;
+        macro_info->args = (struct macro_arg **)malloc(sizeof(struct macro_arg
+            *) * 32);   /* TODO: don't have a hard arg limit */
+
+        /* Grab the arguments. */
+        while (1) {
+            while (is_ignorable_ws(*input_line_pointer) || *input_line_pointer
+                == ',')
+                input_line_pointer++;
+            ptr = input_line_pointer;
+            while (is_part_of_name(*input_line_pointer) || *input_line_pointer
+                == '=')
+                input_line_pointer++;
+            len = input_line_pointer - ptr;
+
+            if (len <= 0)
+                break;
+
+            arg = (struct macro_arg *)malloc(sizeof(struct macro_arg));
+            arg->name = malloc(len + 1);
+            strncpy(arg->name, ptr, len);
+            arg->default_value = arg->name;
+            strsep(&(arg->default_value), "=");
+
+            if (!(arg->default_value))
+                arg->default_value = "";
+
+            macro_info->args[(macro_info->arg_count)++] = arg;
+        }
+
+        macro_info->new_style = macro_info->arg_count > 0;
+
+#if 0
+        printf("macro %s:\n", macro_info->name);
+        int i;
+        for (i = 0; i < macro_info->arg_count; i++)
+            printf("arg %d: name %s, default %s\n", i,
+                macro_info->args[i]->name, macro_info->args[i]->default_value);
+#endif
+
+#if 0
+    int c;
+    pseudo_typeS *pop;
+
+        *input_line_pointer++;
+
 	    while(is_part_of_name(c = *input_line_pointer ++))
-		obstack_1grow (&macros, c);
+            obstack_1grow (&macros, c);
 	    obstack_1grow(&macros, '\0');
 	    --input_line_pointer;
 	    macro_name = obstack_finish(&macros);
 	    if(macro_name == "")
-		as_bad("Missing name of macro");
+            as_bad("Missing name of macro");
 	    if(*macro_name == '.'){
-		pop = (pseudo_typeS *)hash_find(po_hash, macro_name + 1);
-		if(pop != NULL)
-		    as_bad("Pseudo-op name: %s can't be a macro name",
+            pop = (pseudo_typeS *)hash_find(po_hash, macro_name + 1);
+            if(pop != NULL)
+                as_bad("Pseudo-op name: %s can't be a macro name",
 			    macro_name);
 	    }
+#endif
 	}
+
 	totally_ignore_line();
 }
 
@@ -4069,13 +4233,80 @@ int value)
 	}
 	else{
 	    obstack_1grow(&macros, '\0');
-	    errorString = hash_insert(ma_hash, macro_name,
-				      obstack_finish(&macros));
+        
+        macro_info->contents = obstack_finish(&macros);
+
+	    errorString = hash_insert(ma_hash, macro_name, macro_info);
 	    if(errorString != NULL && *errorString)
 		as_bad("The macro named \"%s\" is already defined",
 			macro_name);
 	    macro_name = NULL;
 	}
+}
+
+void s_rept(int value)
+{
+    if (rept_recording)
+        as_bad("Nested repetition ('.rept') isn't allowed");
+    else {
+        rept_times = strtol(input_line_pointer, &input_line_pointer, 10);
+
+        rept_recording = 1;
+        rept_record_start = input_line_pointer;
+    }
+
+    totally_ignore_line(); 
+}
+
+void s_endr(int value)
+{
+    char *buffer, *last_buffer_limit, *last_input_line_pointer, *new_buf, *ptr;
+    int i, last_count_lines, len;
+
+    if (!rept_recording) {
+        as_bad("'.endr' found, but I wasn't instructed to repeat anything");
+        return;
+    }
+
+    ptr = input_line_pointer;
+    while (*ptr != '.')
+        ptr--;          /* back up to before this op so it isn't parsed */
+    ptr--;
+
+    len = ptr - rept_record_start;
+    new_buf = malloc(len + 2);
+    strncpy(new_buf, rept_record_start, len);
+    new_buf[len] = '\n';
+    new_buf[len+1] = '\0';
+
+#if 0
+    printf("new buf is: %s\n", new_buf);
+#endif
+
+	last_buffer_limit = buffer_limit;
+	last_count_lines = count_lines;
+	last_input_line_pointer = input_line_pointer;
+
+    /* Note: we start at 1 because one instance will have already been
+     * assembled at this point. */
+    for (i = 1; i < rept_times; i++) {
+        buffer_limit = new_buf + len + 1;
+        buffer = new_buf;
+        count_lines = FALSE;
+
+    #ifdef PPC
+        if(flagseen[(int)'p'] == TRUE)
+            ppcasm_parse_a_buffer(buffer);
+        else
+    #endif /* PPC */
+            parse_a_buffer(buffer);
+    }
+
+	buffer_limit = last_buffer_limit;
+	count_lines = last_count_lines;
+	input_line_pointer = last_input_line_pointer;
+
+    rept_recording = 0;
 }
 
 /*
@@ -4111,19 +4342,26 @@ char *char_pointer)
 
 /*
  * expand_macro() is called to expand macros.
+ *
+ * iPhone binutils local: lots of additions to deal with GAS 2.17-style macros. 
  */
 static
 void
 expand_macro(
-char *macro_contents)
+struct macro_info *info)
 {
+    char *macro_contents;
     char *buffer;
+    char *ptr, *arg_buf, *arg_val_ptr;
     char c;
     int index, nargs;
     char *last_buffer_limit;
     int last_count_lines;
+    int named_invocation, len, i, which_arg;
     char *last_input_line_pointer;
     char *arguments [10]; /* at most 10 arguments, each is substituted */
+
+    macro_contents = info->contents;
 
 	if(macro_depth >= MAX_MACRO_DEPTH)
 	   as_fatal("You can't nest macros more than %d levels deep",
@@ -4132,77 +4370,212 @@ char *macro_contents)
 
 	/* copy each argument to a object in the macro obstack */
 	nargs = 0;
-	for(index = 0; index < 10; index ++){
-	    if(*input_line_pointer == ' ')
-		++input_line_pointer;
-	    know(*input_line_pointer != ' ');
-	    c = *input_line_pointer;
-	    if(is_end_of_line(c))
-		arguments[index] = NULL;
-	    else{
-		int parenthesis_depth = 0;
-		do{
-		    c = *input_line_pointer++;
-		    if(parenthesis_depth){
-			if(c == ')')
-			    parenthesis_depth --;
-		    }
-		    else{
-			if(c == '(')
-			    parenthesis_depth ++;
-			else
-			    if(is_end_of_line(c) ||
-			       (c == ' ') || (c == ','))
-			    break;
-		    }
-		    know(c != '\0');
-		    if(is_end_of_line(c))
-			as_bad("mismatched parenthesis");
-		    obstack_1grow(&macros, c);
-		}while(1);
-		obstack_1grow(&macros, '\0');
-		arguments[index] = obstack_finish(&macros);
-		nargs++;
-		if(is_end_of_line(c))
-		    --input_line_pointer;
-		else if(c == ' ')
-		    if(*input_line_pointer == ',')
-			input_line_pointer++;
-	    }
-	}
-	if(!is_end_of_line(c)){
-	    as_bad("More than 10 arguments not allowed for macros");
-	    ignore_rest_of_line();
-	}
+
+    memset(arguments, '\0', sizeof(char *) * 10);
+
+    /* iPhone binutils new: parse new-style arguments */
+    if (info->new_style) {
+        /* First, determine if it's a named-argument style invocation or a
+         * normal invocation. The presence of '=' should be good enough to
+         * determine which it is. */
+        named_invocation = 0;
+        ptr = input_line_pointer;
+        while (!is_end_of_line(*ptr)) {
+            if (*ptr == '=') {
+                named_invocation = 1;
+                break;
+            }
+            ptr++;
+        }
+
+        index = 0;
+
+        while (is_ignorable_ws(*input_line_pointer))
+            input_line_pointer++; 
+        ptr = input_line_pointer;
+
+        /* Ok, now parse each argument. */
+        while (1) {
+            if (is_end_of_line(*input_line_pointer) || *input_line_pointer ==
+                ',' || is_ignorable_ws(*input_line_pointer)) {
+                len = input_line_pointer - ptr;
+                arg_buf = malloc(len + 1);
+                if (len)
+                    strncpy(arg_buf, ptr, len);
+                arg_buf[len] = '\0';
+
+#if 0
+                printf("arg is '%s'\n", arg_buf);
+#endif
+
+                if (named_invocation) {
+                    arg_val_ptr = arg_buf;
+                    strsep(&arg_val_ptr, "=");
+                    if (arg_val_ptr == NULL) {
+                        as_bad("In a named-argument-style macro invocation, "
+                            "all of the arguments must be specified in the "
+                            "named-argument style, but one or more weren't");
+                        break;
+                    }
+
+                    /* We've parsed it fine, now just find which argument the
+                     * user meant. */
+                    which_arg = -1;
+                    for (i = 0; i < info->arg_count; i++) {
+                        if (!strcmp(arg_buf, info->args[i]->name)) {
+                            which_arg = i;
+                            break;
+                        }
+                    }
+
+                    if (which_arg == -1) {
+                        as_bad("'%s' doesn't name an argument of the macro "
+                            "'%s'", arg_buf, info->name);
+                        break;
+                    }
+
+                    arguments[which_arg] = arg_val_ptr; 
+                } else {
+                    /* If not a named invocation, it's simple. */
+                    arguments[index++] = arg_buf; 
+                }
+
+                if (*input_line_pointer == ',' || is_ignorable_ws(
+                    *input_line_pointer)) {
+                    input_line_pointer++;
+                    while (is_ignorable_ws(*input_line_pointer))
+                        input_line_pointer++; 
+                    ptr = input_line_pointer;
+                } else  /* must be end of line */
+                    break;
+            } else
+                input_line_pointer++;
+        }
+
+        nargs = info->arg_count;
+
+        /* Fill in blank args with default values. */
+        for (i = 0; i < nargs; i++)
+            if (arguments[i] == NULL || arguments[i][0] == '\0')
+                arguments[i] = info->args[i]->default_value;
+    } else {
+        /* Fall back to the old-style arguments - note that it doesn't matter
+         * which we use for a zero-argument macro. */ 
+        for(index = 0; index < 10; index ++){
+            if(*input_line_pointer == ' ')
+            ++input_line_pointer;
+            know(*input_line_pointer != ' ');
+            c = *input_line_pointer;
+            if(is_end_of_line(c))
+            arguments[index] = NULL;
+            else{
+            int parenthesis_depth = 0;
+            do{
+                c = *input_line_pointer++;
+                if(parenthesis_depth){
+                if(c == ')')
+                    parenthesis_depth --;
+                }
+                else{
+                if(c == '(')
+                    parenthesis_depth ++;
+                else
+                    if(is_end_of_line(c) ||
+                       (c == ' ') || (c == ','))
+                    break;
+                }
+                know(c != '\0');
+                if(is_end_of_line(c))
+                as_bad("mismatched parenthesis");
+                obstack_1grow(&macros, c);
+            }while(1);
+            obstack_1grow(&macros, '\0');
+            arguments[index] = obstack_finish(&macros);
+            nargs++;
+            if(is_end_of_line(c))
+                --input_line_pointer;
+            else if(c == ' ')
+                if(*input_line_pointer == ',')
+                input_line_pointer++;
+            }
+        }
+        if(!is_end_of_line(c)){
+            as_bad("More than 10 arguments not allowed for macros");
+            ignore_rest_of_line();
+        }
+    }
 	/*
 	 * Build a buffer containing the macro contents with arguments
 	 * substituted
 	 */
 	obstack_1grow(&macros, '\n');
-	while((c = *macro_contents++)){
-	    if(c == '$'){
-		if(*macro_contents == '$'){
-		    macro_contents++;
-		}
-		else if((*macro_contents >= '0') && (*macro_contents <= '9')){
-		    index = *macro_contents++ - '0';
-		    last_input_line_pointer = macro_contents;
-		    macro_contents = arguments[index];
-		    if(macro_contents){
-			while ((c = * macro_contents ++))
-			obstack_1grow (&macros, c);
-		    }
-		    macro_contents = last_input_line_pointer;
-		    continue;
-		}
-		else if (*macro_contents == 'n'){
-		    macro_contents++ ;
-		    obstack_1grow(&macros, nargs + '0');
-		    continue;
-		}
-	    }
-	    obstack_1grow (&macros, c);
-	}
+
+    if (info->new_style) {
+        while((c = *macro_contents++)){
+            if (c == '\\') {
+                if (*macro_contents == '\\')
+                    macro_contents++;
+                else {
+                    ptr = macro_contents;
+                    while (is_part_of_name(*ptr))
+                        ptr++;
+
+                    index = -1;
+                    for (i = 0; i < info->arg_count; i++) {
+                        if (!strncmp(macro_contents, info->args[i]->name,
+                            ptr - macro_contents)) {
+                            index = i;
+                            break;
+                        }
+                    }
+
+                    macro_contents = ptr;
+
+                    if (index == -1)
+                        as_bad("Undeclared macro argument");
+                    else {
+                        last_input_line_pointer = macro_contents;
+                        macro_contents = arguments[index];
+                        if (macro_contents) {
+                            while ((c = *(macro_contents++)))
+                                obstack_1grow(&macros, c);
+                        }
+                        macro_contents = last_input_line_pointer;
+                        continue;
+                    }
+                }
+            }
+
+            obstack_1grow (&macros, c);
+        }
+    } else {
+        while((c = *macro_contents++)){
+            if(c == '$'){
+                if(*macro_contents == '$'){
+                    macro_contents++;
+                }
+                else if((*macro_contents >= '0') && (*macro_contents <= '9')){
+                    index = *macro_contents++ - '0';
+                    last_input_line_pointer = macro_contents;
+                    macro_contents = arguments[index];
+                    if(macro_contents){
+                    while ((c = * macro_contents ++))
+                    obstack_1grow (&macros, c);
+                    }
+                    macro_contents = last_input_line_pointer;
+                    continue;
+                }
+                else if (*macro_contents == 'n'){
+                    macro_contents++ ;
+                    obstack_1grow(&macros, nargs + '0');
+                    continue;
+                }
+            }
+            obstack_1grow (&macros, c);
+        }
+    }
+
+
 	obstack_1grow (&macros, '\n');
 	obstack_1grow (&macros, '\0');
 	last_buffer_limit = buffer_limit;
@@ -4211,9 +4584,10 @@ char *macro_contents)
 	buffer_limit = obstack_next_free (&macros) - 1;
 	buffer = obstack_finish (&macros);
 	count_lines = FALSE;
-	/*
+
+#if 0
 	printf("expanded macro: %s", buffer + 1);
-	*/
+#endif
 #ifdef PPC
 	if(flagseen[(int)'p'] == TRUE)
 	    ppcasm_parse_a_buffer(buffer + 1);
@@ -4221,9 +4595,13 @@ char *macro_contents)
 #endif /* PPC */
 	    parse_a_buffer(buffer + 1);
 	obstack_free (&macros, buffer);
-	for(index = 9; index >= 0; index --)
-	    if(arguments[index])
-		obstack_free(&macros, arguments[index]);
+
+    if (!(info->new_style)) {
+        for(index = 9; index >= 0; index --)
+            if(arguments[index])
+            obstack_free(&macros, arguments[index]);
+    }
+
 	buffer_limit = last_buffer_limit;
 	count_lines = last_count_lines;
 	input_line_pointer = last_input_line_pointer;
@@ -4575,3 +4953,4 @@ int value)
       demand_empty_rest_of_line();
 }
 #endif /* PPC */
+

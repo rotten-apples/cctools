@@ -24,5 +24,5 @@
 #define __private_extern__ __declspec(private_extern)
 #endif
 
-__private_extern__ long hash_string(
+extern long hash_string(
     char *key);

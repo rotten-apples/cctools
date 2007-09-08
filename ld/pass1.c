@@ -128,6 +128,13 @@ __private_extern__ char *standard_framework_dirs[] = {
 
 /* The pointer to the head of the base object file's segments */
 __private_extern__ struct merged_segment *base_obj_segments = NULL;
+
+__private_extern__ char *search_lib_extensions[] = {
+	".dylib",
+	".a",
+	NULL
+};
+
 #endif /* !defined(RLD) */
 
 #if !defined(SA_RLD) && !(defined(KLD) && defined(__STATIC__))
@@ -344,6 +351,7 @@ enum bool force_weak)
     char *file_name;
 #ifndef RLD
     char *p, *type;
+    int search_lib_index = 0;
 #endif /* !defined(RLD) */
     kern_return_t r;
     unsigned long file_size;
@@ -361,7 +369,6 @@ enum bool force_weak)
 	/* this function" can safely be ignored */
 	file_name = NULL;
 #endif /* DEBUG */
-
 	fd = -1;
 #ifndef RLD
 	if(lname){
@@ -383,12 +390,11 @@ enum bool force_weak)
 			search_paths_for_lname(&name[2], &file_name, &fd);
 		    }
 		    else{
-			p = mkstr("lib", &name[2], ".dylib", NULL);
-			search_for_file(p, &file_name, &fd);
-			if(fd == -1){
-			    p = mkstr("lib", &name[2], ".a", NULL);
-			    search_for_file(p, &file_name, &fd);
-			}
+			while (search_lib_extensions[search_lib_index] && (fd == -1)) {
+				p = mkstr("lib", &name[2], search_lib_extensions[search_lib_index], NULL);
+				search_for_file(p, &file_name, &fd);
+				search_lib_index++;
+				}
 		    }
 		}
 		else{
@@ -641,15 +647,16 @@ const char *lname_argument,
 char **file_name,
 int *fd)
 {
-	*file_name = mkstr(dir, "/", "lib", lname_argument, ".dylib", NULL);
-	if((*fd = open(*file_name, O_RDONLY)) != -1)
-	    return;
-	free(*file_name);
-
-	*file_name = mkstr(dir, "/", "lib", lname_argument, ".a", NULL);
-	if((*fd = open(*file_name, O_RDONLY)) != -1)
-	    return;
-	free(*file_name);
+	int search_lib_index=0;
+	*fd = -1;
+	while (search_lib_extensions[search_lib_index] && (*fd == -1)) {
+		*file_name = mkstr(dir, "/", "lib", lname_argument, search_lib_extensions[search_lib_index], NULL);
+		if((*fd = open(*file_name, O_RDONLY)) != -1)
+			break;
+	search_lib_index++;
+	}
+	if (*fd == -1)
+		free(*file_name);
 }
 #endif /* !defined(RLD) */
 

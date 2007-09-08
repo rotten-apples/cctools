@@ -20,6 +20,6 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-__private_extern__ unsigned long crc32(
+extern unsigned long crc32(
     const void *buf,
     unsigned int len);

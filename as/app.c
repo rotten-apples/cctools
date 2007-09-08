@@ -29,6 +29,10 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "app.h"
 #include "messages.h"
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 FILE *scrub_file = NULL;
 char *scrub_string = NULL;
 char *scrub_last_string = NULL;
@@ -296,6 +300,12 @@ FILE *fp)
 			state++;
 			return ' ';
 		}
+#ifdef ARM
+        /* because it COULDN'T POSSIBLY BE THE CASE that spaces could be
+         * significant between keywords?!?! */
+        if (state == 3)
+            return ' ';
+#endif
 #ifdef PPC
 		if(flagseen[(int)'p'] == TRUE && state == 3){
 			return ' ';
@@ -623,6 +633,10 @@ do_scrub_next_char_from_string()
 			state++;
 			return ' ';
 		}
+#ifdef ARM
+        if (state == 3)
+            return ' '; /* stupid stupid stupid. */
+#endif
 #ifdef PPC
 		if(flagseen[(int)'p'] == TRUE && state == 3){
 			return ' ';

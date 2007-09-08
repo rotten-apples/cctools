@@ -47,13 +47,13 @@
 #include "stuff/execute.h"
 #include "stuff/version_number.h"
 
-#include "make.h"
 #include <mach/mach_init.h>
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
 #else
-#include <servers/bootstrap.h>
 #endif
+
+#include <config.h>
 
 /* used by error routines as the name of the program */
 char *progname = NULL;
@@ -288,14 +288,9 @@ char **envp)
 	toc_mode = S_IFREG | (0666 & ~oumask);
 	(void)umask(oumask);
 
-	/* see if this is being run as ranlib */
-	p = strrchr(argv[0], '/');
-	if(p != NULL)
-	    p++;
-	else
-	    p = argv[0];
-	if(strncmp(p, "ranlib", sizeof("ranlib") - 1) == 0)
-	    cmd_flags.ranlib = TRUE;
+#ifdef RANLIB
+  cmd_flags.ranlib = TRUE;
+#endif
 
 	/* The default is to used long names */
 	cmd_flags.use_long_names = TRUE;
@@ -812,6 +807,15 @@ char **envp)
 		    cmd_flags.files[cmd_flags.nfiles++] = argv[i];
 		    lflags_seen = TRUE;
 		}
+		else if(strncmp(argv[i], "-Bstatic", 8) == 0 ||
+			    strncmp(argv[i], "-Bdynamic",9) == 0){
+		    if(cmd_flags.ranlib == TRUE){
+			error("unknown option: %s", argv[i]);
+			usage();
+		    }
+		    cmd_flags.files[cmd_flags.nfiles++] = argv[i];
+		    lflags_seen = TRUE;
+		}
 		else if(strncmp(argv[i], "-weak-l", 7) == 0){
 		    if(cmd_flags.ranlib == TRUE){
 			error("unknown option: %s", argv[i]);
@@ -983,6 +987,11 @@ char **envp)
 	}
 	else{
 	    next_root = getenv("NEXT_ROOT");
+	}
+	if(next_root == NULL) {
+#ifdef CROSS_SYSROOT
+          next_root = CROSS_SYSROOT;
+#endif
 	}
 	if(next_root != NULL){
 	    for(i = 0; standard_dirs[i] != NULL; i++){
@@ -1204,6 +1213,10 @@ void)
 		i++;
 		continue;
 	    }
+		else if(strncmp(cmd_flags.files[i], "-Bstatic",8) == 0 ||
+			strncmp(cmd_flags.files[i], "-Bdynamic",9) == 0){
+		continue;
+		}
 	    else{
 		if(ofile_map(cmd_flags.files[i], NULL, NULL, ofiles + i,
 			     TRUE) == FALSE)
@@ -2284,6 +2297,7 @@ char *message,
 char *arch_name,
 char *fileName)
 {
+#ifdef OLD_PROJECTBUILDER_INTERFACE
     char message_buf[1024];
     mach_port_t ProjectBuilder_port;
     char *portName;
@@ -2319,6 +2333,7 @@ char *fileName)
 	    NULL, 0,
 	    0,
 	    message_buf, strlen(message_buf) + 1);
+#endif
 }
 
 /*
@@ -2367,9 +2382,9 @@ char *output)
 	for(i = 0; i < narchs || (i == 0 && narchs == 0); i++){
 	    reset_execute_list();
 	    if((archs[i].arch_flag.cputype & CPU_ARCH_ABI64) == CPU_ARCH_ABI64)
-		add_execute_list("ld64");
+		add_execute_list(makestr(BINDIR, "/", LD64PROG, NULL));
 	    else
-		add_execute_list("ld");
+	      add_execute_list(makestr(BINDIR, "/", LDPROG, NULL));
 	    if(narchs != 0 && cmd_flags.arch_only_flag.name == NULL)
 		add_execute_list("-arch_multiple");
 	    if(archs != NULL){

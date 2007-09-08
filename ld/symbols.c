@@ -6892,12 +6892,16 @@ output_merged_symbols(void)
 		    if(merged_symbol->definition_object->set_num != cur_set)
 			continue;
 #endif /* RLD */
-		    if(strip_level == STRIP_DYNAMIC_EXECUTABLE &&
+		    if ((strip_level == STRIP_DYNAMIC_EXECUTABLE &&
 		       (merged_symbol->nlist.n_desc & REFERENCED_DYNAMICALLY) !=
-			REFERENCED_DYNAMICALLY)
+                    REFERENCED_DYNAMICALLY))
 			continue;
 		    if(dead_strip == TRUE && merged_symbol->live == FALSE)
 			continue;
+
+            if (strip_level == STRIP_DYNAMIC_EXECUTABLE &&
+                (merged_symbol->nlist.n_type & N_PEXT) == N_PEXT)
+                continue;
 
 		    /*
 		     * See if this is a defined private extern symbol (but not

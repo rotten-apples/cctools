@@ -62,6 +62,7 @@ static const struct arch_flag arch_flags[] = {
     { "m88k",   CPU_TYPE_MC88000, CPU_SUBTYPE_MC88000_ALL },
     { "i860",   CPU_TYPE_I860,    CPU_SUBTYPE_I860_ALL },
     { "veo",    CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_ALL },
+    { "arm",    CPU_TYPE_ARM,     6 },
     /* specific architecture implementations */
     { "ppc601", CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_601 },
     { "ppc603", CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_603 },
@@ -87,6 +88,7 @@ static const struct arch_flag arch_flags[] = {
     { "hppa7100LC", CPU_TYPE_HPPA,  CPU_SUBTYPE_HPPA_7100LC },
     { "veo1",   CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_1 },
     { "veo2",   CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_2 },
+    { "arm",    CPU_TYPE_ARM,     6 },
     { NULL,	0,		  0 }
 };
 
@@ -200,7 +202,8 @@ const struct arch_flag *flag)
       flag->cputype == CPU_TYPE_I860 ||
       flag->cputype == CPU_TYPE_VEO)
         return BIG_ENDIAN_BYTE_SEX;
-    else if(flag->cputype == CPU_TYPE_I386)
+    else if(flag->cputype == CPU_TYPE_I386 ||
+            flag->cputype == CPU_TYPE_ARM)
         return LITTLE_ENDIAN_BYTE_SEX;
     else
         return UNKNOWN_BYTE_SEX;
@@ -223,7 +226,8 @@ const struct arch_flag *flag)
       flag->cputype == CPU_TYPE_I386 ||
       flag->cputype == CPU_TYPE_SPARC ||
       flag->cputype == CPU_TYPE_I860 ||
-      flag->cputype == CPU_TYPE_VEO)
+      flag->cputype == CPU_TYPE_VEO ||
+      flag->cputype == CPU_TYPE_ARM)
         return(-1);
     else if(flag->cputype == CPU_TYPE_HPPA)
         return(+1);
@@ -259,6 +263,8 @@ const struct arch_flag *flag)
 	return(0);
     case CPU_TYPE_HPPA:
 	return(0xc0000000-0x04000000);
+    case CPU_TYPE_ARM:
+    return(0x30000000);
     default:
 	return(0);
     }
@@ -295,7 +301,8 @@ const struct arch_flag *flag)
 {
 	if(flag->cputype == CPU_TYPE_POWERPC ||
 	   flag->cputype == CPU_TYPE_VEO ||
-	   flag->cputype == CPU_TYPE_I386)
+	   flag->cputype == CPU_TYPE_I386 ||
+       flag->cputype == CPU_TYPE_ARM)
 	    return(0x1000); /* 4K */
 	else
 	    return(0x2000); /* 8K */
@@ -313,6 +320,20 @@ const struct arch_flag *flag)
 	    return(VM_PROT_READ | VM_PROT_WRITE);
 	else
 	    return(VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
+}
+
+__private_extern__
+unsigned long
+get_shared_region_sz_from_flag(
+const struct arch_flag *flag)
+{
+    switch (flag->cputype) {
+        case CPU_TYPE_ARM:
+            return 0x08000000;
+
+        default:
+            return 0x10000000;
+    }            
 }
 
 /*

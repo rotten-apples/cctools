@@ -40,6 +40,7 @@
 #include <mach/i386/thread_status.h>
 #include <mach/hppa/thread_status.h>
 #include <mach/sparc/thread_status.h>
+#include <mach/arm/thread_status.h>
 #include "stuff/bool.h"
 #include "stuff/bytesex.h"
 #include "stuff/errors.h"
@@ -893,6 +894,17 @@ struct load_command *load_commands)
 		  }
 		  break;
 		}
+
+        if (cputype == CPU_TYPE_ARM) {
+            nflavor = 0;
+
+            p = (char *)ut + ut->cmdsize;
+            while (state < p) {
+                state += 8 + sizeof(arm_thread_state_t);
+                nflavor++; 
+            }
+            break;
+        }
 		    
 		error("in swap_object_headers(): malformed load commands "
 		    "(unknown cputype (%d) and cpusubtype (%d) of object and "
@@ -1356,6 +1368,21 @@ struct load_command *load_commands)
 		  }
 		  break;
 		}
+
+        if (cputype == CPU_TYPE_ARM) {
+            arm_thread_state_t *thread_state;
+            while (state < p) {
+                u_int32_t n;
+                n = *((u_int32_t *)state); *((u_int32_t *)state) = SWAP_LONG(n);
+                state += 4;
+                n = *((u_int32_t *)state); *((u_int32_t *)state) = SWAP_LONG(n);
+                state += 4;
+                thread_state = (arm_thread_state_t *)state;
+                swap_arm_thread_state(thread_state, target_byte_sex);
+                state += sizeof(arm_thread_state_t);
+            }
+        }
+        
 		break;
 
 	    case LC_IDENT:

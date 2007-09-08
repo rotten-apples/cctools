@@ -33,6 +33,8 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "fixes.h"
 #include "input-scrub.h"
 
+#define LOCAL_LABEL_MAX     256
+
 /* symbol-name => struct symbol pointer */
 struct hash_control *sy_hash = NULL;
 
@@ -69,10 +71,10 @@ symbolS	abs_symbol = { {{0}} };
 
 typedef short unsigned int local_label_countT;
 
-static local_label_countT local_label_counter[10];
+static local_label_countT local_label_counter[LOCAL_LABEL_MAX];
 
 static				/* Returned to caller, then copied. */
-  char symbol_name_build[12];	/* used for created names ("4f") */
+  char symbol_name_build[32];	/* used for created names ("4f") */
 
 static long int symbol_count = 0;	/* The number of symbols we've declared. */
 
@@ -96,18 +98,28 @@ void)
  *			local_label_name()
  *
  * Caller must copy returned name: we re-use the area for the next name.
+ *
+ * iPhone binutils extension: allow more than 10 local labels 
+ *   -- How old is this code anyway? This must be ANCIENT.
  */
 char *				/* Return local label name. */
 local_label_name(
 int n,		/* we just saw "n:", "nf" or "nb" : n a digit */
 int augend)	/* 0 for nb, 1 for n:, nf */
 {
+#if 0
   register char *	p;
   register char *	q;
   char symbol_name_temporary[10]; /* build up a number, BACKWARDS */
+#endif
 
   know( n >= 0 );
   know( augend == 0 || augend == 1 );
+
+    sprintf(symbol_name_build, "L%d%c%d", n, 1, local_label_counter[n] +
+        augend);
+
+#if 0
   p = symbol_name_build;
   * p ++ = 'L';
   * p ++ = n + '0';		/* Make into ASCII */
@@ -129,6 +141,8 @@ int augend)	/* 0 for nb, 1 for n:, nf */
   while (( * p ++ = * -- q ))
     {
     }
+#endif
+
   /* The label, as a '\0' ended string, starts at symbol_name_build. */
   return (symbol_name_build);
 }

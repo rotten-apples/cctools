@@ -20,6 +20,13 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
+
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
+
 #include "stdio.h"
 #include "string.h"
 #include "stuff/target_arch.h"
@@ -2041,3 +2048,5 @@ enum bool swapped)
 	}
 	return(FALSE);
 }
+
+#endif // HAVE_OBJC_OBJC_RUNTIME_H

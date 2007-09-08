@@ -27,6 +27,8 @@ char **argv,
 char **envp)
 {
     const char *LIB =
+      ASLIBEXECDIR;
+#if 0
 #if defined(__OPENSTEP__) || defined(__HERA__) || \
     defined(__GONZO_BUNSEN_BEAKER__) || defined(__KODIAK__)
 		    "/usr/libexec/";
@@ -39,6 +41,7 @@ char **envp)
 		    "/usr/local/libexec/";
 #else
 		    "/usr/local/libexec/gcc/darwin/";
+#endif
 #endif
     const char *AS = "/as";
 
@@ -162,6 +165,8 @@ char **envp)
 	    else
 		exit(1);
 	}
+	as_local = "";
+#if 0
 	as_local = makestr(LOCALLIB, arch_name, AS, NULL);
 	if(access(as_local, F_OK) == 0){
 	    argv[0] = as_local;
@@ -171,6 +176,8 @@ char **envp)
 		exit(1);
 	}
 	else{
+#endif
+	{
 	    printf("%s: assembler (%s or %s) for architecture %s not "
 		   "installed\n", progname, as, as_local, arch_name);
 	    arch_flags = get_arch_flags();
@@ -183,6 +190,7 @@ char **envp)
 		    printf("%s for architecture %s\n", as, arch_flags[i].name);
 		    count++;
 		}
+#if 0
 		else{
 		    as_local = makestr(LOCALLIB, arch_flags[i].name, AS, NULL);
 		    if(access(as_local, F_OK) == 0){
@@ -193,6 +201,7 @@ char **envp)
 			count++;
 		    }
 		}
+#endif
 	    }
 	    if(count == 0)
 		printf("%s: no assemblers installed\n", progname);
