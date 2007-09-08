@@ -45,6 +45,7 @@
 #include "ObjectFile.h"
 #include "dwarf2.h"
 #include "debugline.h"
+#include "strlcpy.h"
 
 
 //
