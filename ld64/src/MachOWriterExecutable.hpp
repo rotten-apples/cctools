@@ -47,6 +47,8 @@
 #include "ObjectFile.h"
 #include "ExecutableFile.h"
 #include "Options.h"
+#include "config.h"
+#include "strlcpy.h"
 
 #include "MachOFileAbstraction.hpp"
 

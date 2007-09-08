@@ -4520,7 +4520,8 @@ rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 
-for ac_func in strmode qsort_r qsort getattrlist NSIsSymbolNameDefined
+
+for ac_func in strmode qsort_r qsort getattrlist NSIsSymbolNameDefined strlcpy
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 echo "$as_me:$LINENO: checking for $ac_func" >&5

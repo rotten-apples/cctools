@@ -31,6 +31,7 @@
 #include <vector>
 #include "config.h"
 
+#include "strlcpy.h"
 #include "Options.h"
 
 void throwf(const char* format, ...)

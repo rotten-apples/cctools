@@ -45,7 +45,7 @@ MYCOMPILEFLAGS	= $(WARNINGS) $(MYWARNINGS) $(DEFS) $(MYDEFS) \
 MYLINKFLAGS	= $(LDFLAGS) $(MYLDFLAGS) $(MYLIBS)
 
 CXXFILES = ld.cpp Options.cpp SectCreate.cpp
-CFILES = debugline.c
+CFILES = debugline.c strlcpy.c
 
 OBJS = $(CXXFILES:.cpp=.o) $(CFILES:.c=.o)
 .cpp.o:

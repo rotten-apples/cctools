@@ -255,7 +255,8 @@ AC_COMPILE_IFELSE(
     ]
 )
 
-AC_CHECK_FUNCS([strmode qsort_r qsort getattrlist NSIsSymbolNameDefined])
+AC_CHECK_FUNCS(
+    [strmode qsort_r qsort getattrlist NSIsSymbolNameDefined strlcpy])
 
 AC_CHECK_DECLS([getc_unlocked])
 AH_VERBATIM([HAVE_DECL_GETC_UNLOCKED_REPLACEMENT],
