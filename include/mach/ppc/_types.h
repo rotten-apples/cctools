@@ -83,6 +83,9 @@ struct __darwin_ppc_thread_state
 };
 
 #ifndef _POSIX_C_SOURCE
+struct ppc_thread_state64
+#else /* _POSIX_C_SOURCE */
+struct __darwin_ppc_thread_state64
 #pragma pack(4)							/* Make sure the structure stays as we defined it */
 struct ppc_thread_state64 {
 	unsigned long long srr0;	/* Instruction address register (PC) */
@@ -207,7 +210,9 @@ struct __darwin_ppc_exception_state
 };
 
 #ifndef _POSIX_C_SOURCE
-struct ppc_exception_state64 {
+struct ppc_exception_state64
+#else /* _POSIX_C_SOURCE */
+struct __darwin_ppc_exception_state64 {
 	unsigned long long dar;		/* Fault registers for coredump */
 #if defined(__LP64__)
 	unsigned int  dsisr;

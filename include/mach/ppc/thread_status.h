@@ -67,6 +67,8 @@ typedef struct __darwin_ppc_thread_state	ppc_thread_state_t;
 
 #ifndef _POSIX_C_SOURCE
 typedef struct ppc_thread_state64		ppc_thread_state64_t;
+#else /* _POSIX_C_SOURCE */
+typedef struct __darwin_ppc_thread_state64  ppc_thread_state64_t;
 #endif /* _POSIX_C_SOURCE */
 
 #ifndef _POSIX_C_SOURCE
