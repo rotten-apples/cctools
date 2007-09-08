@@ -1,0 +1,12 @@
+ARCH    =   arm
+
+CFILES_arm =	army.c arm.c armop.c 
+MYDEFS_arm =	-DARM
+MYLIBS_arm =	-lstuff
+
+army.c: army.y armop.c
+	bison -v -o ../army.c -d ../army.y
+
+army.h: army.y armop.c
+	bison -v -o ../army.c -d ../army.y
+
