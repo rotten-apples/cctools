@@ -95,6 +95,14 @@ AC_ARG_WITH([sysroot],
 				[filesystem root of cross build environment]),
 		[AC_DEFINE_UNQUOTED([CROSS_SYSROOT],["$withval"],[filesystem root of cross build environment])])
 
+AC_ARG_ENABLE([ld64],
+    AC_HELP_STRING([--enable-ld64], [build ld64 as well]))
+
+LD64=""
+if test "$enable_ld64" = yes; then
+    LD64="ld64"
+fi
+
 ORIGCFLAGS=$CFLAGS
 CFLAGS="$CFLAGS -mdynamic-no-pic"
 AC_MSG_CHECKING([if -mdynamic-no-pic is supported])
@@ -279,7 +287,7 @@ case $host_os in
 	;;
 esac
 
-COMPONENTS="ar as include libstuff libmacho ld ld64 man misc otool"
+COMPONENTS="ar as include libstuff libmacho ld $LD64 man misc otool"
 AC_SUBST([COMPONENTS], [$COMPONENTS])
 
 AC_CONFIG_FILES([Makefile include/Makefile libstuff/Makefile libmacho/Makefile])

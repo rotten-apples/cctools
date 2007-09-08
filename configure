@@ -865,6 +865,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-as-targets     space-separated list ("arm", "ppc", "ppc64", "i386",
                           "x86_64", "all")
+  --enable-ld64           build ld64 as well
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3135,6 +3136,17 @@ _ACEOF
 
 fi;
 
+# Check whether --enable-ld64 or --disable-ld64 was given.
+if test "${enable_ld64+set}" = set; then
+  enableval="$enable_ld64"
+
+fi;
+
+LD64=""
+if test "$enable_ld64" = yes; then
+    LD64="ld64"
+fi
+
 ORIGCFLAGS=$CFLAGS
 CFLAGS="$CFLAGS -mdynamic-no-pic"
 echo "$as_me:$LINENO: checking if -mdynamic-no-pic is supported" >&5
@@ -4941,7 +4953,7 @@ esac
 	;;
 esac
 
-COMPONENTS="ar as include libstuff libmacho ld ld64 man misc otool"
+COMPONENTS="ar as include libstuff libmacho ld $LD64 man misc otool"
 COMPONENTS=$COMPONENTS
 
 
