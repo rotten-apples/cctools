@@ -30,6 +30,7 @@
 #include "stuff/breakout.h"
 #include "stuff/round.h"
 #include "stuff/allocate.h"
+#include "config.h"
 
 /* used by error routines as the name of the program */
 char *progname = NULL;
