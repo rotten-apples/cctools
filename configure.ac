@@ -26,23 +26,28 @@ esac
 case $target_cpu in
      arm)
         AC_DEFINE(EMULATED_HOST_CPU_TYPE, 12, [Emulated CPU type])        
-        AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 6, [Emulated CPU subtype])        
+        AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 6, [Emulated CPU subtype])
+        AC_DEFINE(DEFAULT_MACH_ARCH, "arm", [Default Mach architecture name])
 	;;
      powerpc)
         AC_DEFINE(EMULATED_HOST_CPU_TYPE, 18, [Emulated CPU type])        
-        AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 100, [Emulated CPU subtype])        
+        AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 100, [Emulated CPU subtype]) 
+        AC_DEFINE(DEFAULT_MACH_ARCH, "ppc", [Default Mach architecture name])
 	;;
      powerpc64)
         AC_DEFINE(EMULATED_HOST_CPU_TYPE, 16777234, [Emulated CPU type])        
         AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 0, [Emulated CPU subtype])        
+        AC_DEFINE(DEFAULT_MACH_ARCH, "ppc64", [Default Mach architecture name])
 	;;
      i?86)
         AC_DEFINE(EMULATED_HOST_CPU_TYPE, 7, [Emulated CPU type])        
         AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 3, [Emulated CPU subtype])        
+        AC_DEFINE(DEFAULT_MACH_ARCH, "i386", [Default Mach architecture name])
 	;;
      x86_64)
         AC_DEFINE(EMULATED_HOST_CPU_TYPE, 16777223, [Emulated CPU type])        
         AC_DEFINE(EMULATED_HOST_CPU_SUBTYPE, 3, [Emulated CPU subtype])        
+        AC_DEFINE(DEFAULT_MACH_ARCH, "x86_64", [Default Mach architecture name])
 	;;
      *)
 	AC_MSG_ERROR([Unsupported target $target_cpu])

@@ -2747,6 +2747,11 @@ cat >>confdefs.h <<\_ACEOF
 #define EMULATED_HOST_CPU_SUBTYPE 6
 _ACEOF
 
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_MACH_ARCH "arm"
+_ACEOF
+
 	;;
      powerpc)
 
@@ -2757,6 +2762,11 @@ _ACEOF
 
 cat >>confdefs.h <<\_ACEOF
 #define EMULATED_HOST_CPU_SUBTYPE 100
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_MACH_ARCH "ppc"
 _ACEOF
 
 	;;
@@ -2771,6 +2781,11 @@ cat >>confdefs.h <<\_ACEOF
 #define EMULATED_HOST_CPU_SUBTYPE 0
 _ACEOF
 
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_MACH_ARCH "ppc64"
+_ACEOF
+
 	;;
      i?86)
 
@@ -2783,6 +2798,11 @@ cat >>confdefs.h <<\_ACEOF
 #define EMULATED_HOST_CPU_SUBTYPE 3
 _ACEOF
 
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_MACH_ARCH "i386"
+_ACEOF
+
 	;;
      x86_64)
 
@@ -2793,6 +2813,11 @@ _ACEOF
 
 cat >>confdefs.h <<\_ACEOF
 #define EMULATED_HOST_CPU_SUBTYPE 3
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define DEFAULT_MACH_ARCH "x86_64"
 _ACEOF
 
 	;;

@@ -3,6 +3,9 @@
 /* filesystem root of cross build environment */
 #undef CROSS_SYSROOT
 
+/* Default Mach architecture name */
+#undef DEFAULT_MACH_ARCH
+
 /* Emulated CPU subtype */
 #undef EMULATED_HOST_CPU_SUBTYPE
 

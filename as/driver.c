@@ -16,6 +16,7 @@
 #include "stuff/errors.h"
 #include "stuff/execute.h"
 #include "stuff/allocate.h"
+#include "config.h"
 
 /* used by error calls (exported) */
 char *progname = NULL;
@@ -132,14 +133,10 @@ char **envp)
 	 * Construct the name of the assembler to run from the given -arch
 	 * <arch_flag> or if none then from the value returned from
 	 * get_arch_from_host().
+     * iphone-dev local: use DEFAULT_MACH_ARCH instead
 	 */
-	if(arch_name == NULL){
-	    if(get_arch_from_host(&arch_flag, NULL))
-		arch_name = arch_flag.name;
-	    else
-		fatal("known host architecture (can't determine which assembler"
-		      " to run)");
-	}
+	if(arch_name == NULL)
+        arch_name = DEFAULT_MACH_ARCH; 
 	else{
 	    /*
 	     * Convert a possible machine specific architecture name to a
