@@ -43,6 +43,7 @@
 #include "ppc_disasm.h"
 #include "hppa_disasm.h"
 #include "sparc_disasm.h"
+#include "arm_disasm.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -522,6 +523,8 @@ void *cookie) /* cookie is not used */
 	nindirect_symbols = 0;
 	hints = NULL;
 	nhints = 0;
+    mods = NULL;
+	nmods = 0;
 	/*
 	 * These may or may not be allocated.  If allocated they will not be
 	 * NULL and then free'ed before returning.
@@ -1917,6 +1920,12 @@ enum bool verbose)
 				strings, strings_size, verbose);
 		else if(cputype == CPU_TYPE_SPARC)
 		    j = sparc_disassemble(sect, size - i, cur_addr, addr,
+				object_byte_sex, relocs, nrelocs, symbols,
+				nsymbols, sorted_symbols, nsorted_symbols,
+				strings, strings_size, indirect_symbols,
+				nindirect_symbols, mh, load_commands, verbose);
+		else if(cputype == CPU_TYPE_ARM)
+		    j = arm_disassemble(sect, size - i, cur_addr, addr,
 				object_byte_sex, relocs, nrelocs, symbols,
 				nsymbols, sorted_symbols, nsorted_symbols,
 				strings, strings_size, indirect_symbols,

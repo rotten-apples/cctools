@@ -521,6 +521,9 @@ struct fat_arch *fat_arch)
 		goto print_arch_unknown;
 	    }
 	    break;
+	case CPU_TYPE_ARM:
+		printf("armv%d", fat_arch->cpusubtype);
+		break;
 	case CPU_TYPE_ANY:
 	    switch(fat_arch->cpusubtype){
 	    case CPU_SUBTYPE_MULTIPLE:
@@ -756,6 +759,10 @@ cpu_subtype_t cpusubtype)
 		goto print_arch_unknown;
 	    }
 	    break;
+	case CPU_TYPE_ARM:
+		printf("    cputype CPU_TYPE_ARM\n"
+		       "    cpusubtype CPU_SUBTYPE_ARM_V%d\n", cpusubtype);
+		break;
 	case CPU_TYPE_ANY:
 	    switch(cpusubtype){
 	    case CPU_SUBTYPE_MULTIPLE:
@@ -1392,6 +1399,10 @@ NS32:
 		    printf(" %10d", mh->cpusubtype);
 		    break;
 		}
+		break;
+	    case CPU_TYPE_ARM:
+		printf("     ARM");
+		printf("%11d", mh->cpusubtype);
 		break;
 #endif /* 32-bit architectures */
 	    default:
