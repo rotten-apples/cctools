@@ -151,7 +151,6 @@ struct arm_reserved_word_info arm_reserved_word_info[] = {
     { "s3",     OPRD_REG_S,         3       },
     { "s30",    OPRD_REG_S,         30      },
     { "s31",    OPRD_REG_S,         31      },
-    { "s3",     OPRD_REG_S,         3       },
     { "s4",     OPRD_REG_S,         4       },
     { "s5",     OPRD_REG_S,         5       },
     { "s6",     OPRD_REG_S,         6       },
