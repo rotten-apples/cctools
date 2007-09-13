@@ -6,9 +6,15 @@ MYLIBS_arm =	-lstuff
 
 all:	default
 
-army.c: army.y armop.c
-	bison -v -o ../army.c -d ../army.y
+.PHONY:	all
 
-army.h: army.y armop.c
-	bison -v -o ../army.c -d ../army.y
+army.c: army.y armop.c
+	bison -v -o army.c -d ../army.y
+
+arm.c:	army.c
+
+armop.c:	army.c
+
+clean::
+	rm -f ../army.c ../army.h
 

@@ -49,7 +49,8 @@ CFILES = app.c as.c atof-generic.c atof-ieee.c expr.c fixes.c flonum-const.c \
          symbols.c write_object.c xmalloc.c $(CFILES_$(ARCH))
 
 OBJS = $(CFILES:.c=.o) 
-.c.o:
+
+%.o:	%.c
 	$(CC) $(MYCOMPILEFLAGS) -c -o $@ $<
 
 .PHONY: default clean distclean install
@@ -63,6 +64,6 @@ install: as
 	mkdir -p $(DESTDIR)/$(ASLIBEXECDIR)/$(ARCH)
 	$(INSTALL_PROGRAM) as $(DESTDIR)/$(ASLIBEXECDIR)/$(ARCH)/as
 
-clean:
+clean::
 	rm -r -f *.o
 	rm -f as
