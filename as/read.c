@@ -4172,6 +4172,7 @@ int value)
             arg = (struct macro_arg *)malloc(sizeof(struct macro_arg));
             arg->name = malloc(len + 1);
             strncpy(arg->name, ptr, len);
+            arg->name[len] = '\0';
             arg->default_value = arg->name;
             strsep(&(arg->default_value), "=");
 
