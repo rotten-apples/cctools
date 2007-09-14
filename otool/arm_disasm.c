@@ -60,7 +60,7 @@ static const char *BASE_REGS[] = { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7
 static const char *COND_CODES[] = { "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc", "hi", "ls", "ge", "lt", "gt", "le", "", "nv" };
 static const char *FIELD_MASKS[] = { "", "c", "x", "cx", "s", "cs", "xs", "cxs", "f", "cf", "xf", "cxf", "sf", "csf", "xsf", "cxsf" };
 static const char *DATA_OPERATIONS[] = { "and", "eor", "sub", "rsb", "add", "adc", "sbc", "rsc", "tst", "teq", "cmp", "cmn", "orr", "mov", "bic", "mvn" };
-static const char *SHIFT_MODES[] = { "lsl", "asr", "ror", "rrx" };
+static const char *SHIFT_MODES[] = { "lsl", "lsr", "asr", "ror" };
 static const char *LDM_ADDR_MODES[] = { "da", "ia", "db", "ib" };
 static const char *LD_ST_TYPE[] = { "st", "ld" };
 static const char *MUL_MLA_TYPE[] = { "mul", "mla" };
@@ -255,7 +255,9 @@ unsigned long arm_disassemble(
 						printf("%s%s%s %s, %s, %s", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], BASE_REGS[rm]);
 					}
 					if (imm == 0x00) {
-						if (mode != 0x0) {
+						if (mode == 0x3) {
+							printf(", rrx");
+						} else if (mode != 0x0) {
 							printf(", %s #32", SHIFT_MODES[mode]);
 						}
 					} else {
@@ -282,7 +284,7 @@ unsigned long arm_disassemble(
 							case 0x00600000:
 								//printf("Count leading zeroes: 0x%08x\n", (unsigned int)opcode);
 								rm = (opcode & 0x0000000f);
-								rd = (opcode & 0x0000f000);
+								rd = (opcode & 0x0000f000) >> 12;
 								printf("clz%s %s, %s\n", COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rm]);
 								break;
 							default:

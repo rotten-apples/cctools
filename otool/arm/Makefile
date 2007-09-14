@@ -1,6 +1,7 @@
-CC = /usr/local/iphonedev/bin/arm-apple-darwin-cc
+CC = arm-apple-darwin-gcc
 CPPFLAGS = -I../../include -I.. -DOTOOL
-CFLAGS = -O2
+CFLAGS = -O2 -g
+LDFLAGS = 
 LIBSTUFF_C_SOURCES = \
 	SymLoc.c allocate.c arch.c arch_usage.c best_arch.c \
 	breakout.c bytesex.c checkout.c crc32.c \
@@ -18,7 +19,7 @@ OTOOL_C_SOURCES = \
 	main.c notify.c ofile_print.c \
 	ppc_disasm.c sparc_disasm.c vers.c
 OTOOL_OBJC_SOURCES = \
-	print_objc.m
+	print_objc.c
 LIBSTUFF_OBJECTS = \
 	$(patsubst %.c,%.o,$(LIBSTUFF_C_SOURCES))
 OTOOL_OBJECTS = \
@@ -29,7 +30,7 @@ VPATH = ../../libstuff:..
 all: otool
 
 otool: libstuff.a $(OTOOL_OBJECTS)
-	$(CC) -o $@ -L. -lstuff $(OTOOL_OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ -L. -lstuff $(OTOOL_OBJECTS)
 
 libstuff.a: $(LIBSTUFF_OBJECTS)
 	rm -f libstuff.a
@@ -39,6 +40,6 @@ libstuff.a: $(LIBSTUFF_OBJECTS)
 clean:
 	rm -f *.o libstuff.a otool
 
-print_objc.o: print_objc.m
+print_objc.o: print_objc.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -ObjC -c $^ -o $@
 
