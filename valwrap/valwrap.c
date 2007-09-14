@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     new_args = (char **)malloc(sizeof(char *) * (argc + 3));
     new_args[0] = "valgrind";
-    asprintf(&(new_args[1]), "--log-file=/tmp/%s", argv[1]);
+    asprintf(&(new_args[1]), "--log-file=/tmp/%s", PROGRAM_TO_INVOKE);
     new_args[2] = PROGRAM_TO_INVOKE;
     memcpy(new_args + 3, argv + 1, sizeof(char *) * (argc - 1));
     new_args[argc + 2] = NULL;
