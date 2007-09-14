@@ -1,13 +1,16 @@
 INFERIORS=as nm ld strip
-RESULTS=$(INFERIORS:%=arm-apple-darwin-valgrind-%)
+RESULTS=$(INFERIORS:%=arm-apple-darwin-%)
 
 all:	$(RESULTS)
 
-arm-apple-darwin-valgrind-%:	valwrap.c
-	gcc -Wall -DPROGRAM_TO_INVOKE=\"$*\" -D__USE_GNU -o $@ $^
+arm-apple-darwin-%:	valwrap.c
+	gcc -Wall -DPROGRAM_TO_INVOKE=\"arm-apple-darwin-core-$*\" -D__USE_GNU -o $@ $^
 
 install:
 	for x in $(RESULTS); do install -c $$x /usr/local/bin/$$x; done
 
-.PHONY:	all install
+clean:
+	rm -f $(RESULTS)	
+
+.PHONY:	all install clean
 
