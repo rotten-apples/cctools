@@ -89,7 +89,9 @@
 
 #define	BYTE_ORDER	__DARWIN_BYTE_ORDER
 
+#ifdef NEED_SYS_ENDIAN_H
 #include <sys/_endian.h>
+#endif
 
 #endif /* defined(KERNEL) || !defined(_POSIX_C_SOURCE) */
 #endif /* !_I386__ENDIAN_H_ */
