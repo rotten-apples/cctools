@@ -2260,6 +2260,7 @@ char *output)
 	    system_fatal("can't close output file: %s", output);
 	    return;
 	}
+
 	/*
 	 * Now set the modtime of the created library back to it's stat time
 	 * when we first closed it.
@@ -2676,6 +2677,11 @@ char *output)
 	arch->toc_ranlibs = allocate(sizeof(struct ranlib) *arch->toc_nranlibs);
 	arch->toc_strsize = round(arch->toc_strsize, 8);
 	arch->toc_strings = allocate(arch->toc_strsize);
+
+	/* iphone-dev issue 32: set this to zero, because if we don't we're writing
+     * random junk to the output - and that could be very bad! Thanks,
+     * valgrind. */
+	memset(arch->toc_strings, '\0', arch->toc_strsize);
 
 	/*
 	 * Second pass over the members to fill in the ranlib structs and
