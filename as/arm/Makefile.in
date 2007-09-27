@@ -4,16 +4,20 @@ CFILES_arm =	army.c arm.c armop.c
 MYDEFS_arm =	-DARM
 MYLIBS_arm =	-lstuff
 
+VPATH=@srcdir@/arm
+
 all:	default
 
 .PHONY:	all
 
-army.c: army.y armop.c
-	bison -v -o army.c -d ../army.y
+army.c: army.y
+	bison -v -o $@ -d $<
 
 arm.c:	army.c
 
-armop.c:	army.c
+army.h:	arm.c
+
+armop.c:	army.h
 
 clean::
 	rm -f ../army.c ../army.h
