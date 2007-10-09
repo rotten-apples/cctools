@@ -35,8 +35,6 @@
 #include "otool.h"
 #include "ofile_print.h"
 
-typedef enum bool bool_t;
-
 enum data_type {
 	TYPE_POINTER,
 	TYPE_SINGLE,
@@ -96,7 +94,12 @@ static const char *arm_symbol_name(
 	struct load_command *load_commands,
 	enum bool verbose
 );
-static struct section *arm_find_addr(unsigned long addr, struct load_command *load_commands, unsigned long nload_commands);
+static struct section *arm_find_addr(
+	unsigned long addr,
+	struct load_command *load_commands,
+	unsigned long nload_commands,
+	enum bool swapped
+);
 static char *arm_redirect_mem_string(
 	unsigned long addr,
 	enum byte_sex object_byte_sex,
@@ -136,17 +139,17 @@ unsigned long arm_disassemble(
 	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
 	mach_header_t *mh,
 	struct load_command *load_commands,
-	bool_t verbose
+	enum bool verbose
 ) {
     enum byte_sex host_byte_sex;
-    bool_t swapped;
+    enum bool swapped;
     unsigned long opcode;
     unsigned long sect_offset;
     const char *symbol_name;
 	unsigned int cond, rd, rm, rn, rs, mask, dataop, s, mode, rot, sint, l, b, w, u, p, a, n, h, regs;
 	unsigned int cp, crd, crm, crn, dataop2;
 	unsigned int vfpsdx, d, m;
-	bool_t regok;
+	enum bool regok;
 	int imm;
 	unsigned int i;
 
@@ -1138,7 +1141,7 @@ static const char *arm_symbol_name(
 	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
 	mach_header_t *mh,
 	struct load_command *load_commands,
-	bool_t verbose
+	enum bool verbose
 ) {
 	const char *symbol_name;
 	symbol_name = guess_indirect_symbol(
@@ -1162,19 +1165,36 @@ static const char *arm_symbol_name(
 
 // Return the information structure for the section containing the given address
 // or NULL if it's not in the file
-static struct section *arm_find_addr(unsigned long addr, struct load_command *load_commands, unsigned long nload_commands) {
-	int i;
-	struct load_command *current;
-	for (i = 0, current = load_commands; i < nload_commands; i++, current = ((void *) current) + current->cmdsize) {
+static struct section *arm_find_addr(
+	unsigned long addr,
+	struct load_command *load_commands,
+	unsigned long nload_commands,
+	enum bool swapped
+) {
+	int i, j;
+	struct segment_command *cmd;
+	struct section *sect_p;
+	struct section *sect;
+	struct load_command *current = load_commands;
+
+	for (i = 0; i < nload_commands; i++) {
 		if (current->cmd == LC_SEGMENT) {
-			struct segment_command *cmd = (struct segment_command *) current;
-			int j;
+
+			cmd = (struct segment_command *) current;
+			sect_p = (struct section *)&cmd[1];
+
 			for (j = 0; j < cmd->nsects; j++) {
-				struct section *sect = &(((struct section *) (((void *) cmd) + sizeof(struct segment_command)))[j]);
+				sect = &sect_p[j];
+
 				if (addr >= sect->addr && addr < sect->addr + sect->size) {
 					return sect;
 				}
 			}
+		}
+		if (swapped) {
+			current = ((void *) current) + SWAP_LONG(current->cmdsize);
+		} else {
+			current = ((void *) current) + current->cmdsize;
 		}
 	}
 	return NULL;
@@ -1209,13 +1229,13 @@ static char *arm_redirect_mem_string(
 	void *data;
 	struct section *sect;
     enum byte_sex host_byte_sex;
-    bool_t swapped;
+    enum bool swapped;
 	unsigned long redir;
 
 	host_byte_sex = get_host_byte_sex();
 	swapped = host_byte_sex != object_byte_sex;
 	
-	sect = arm_find_addr(addr, load_commands, mh->ncmds);
+	sect = arm_find_addr(addr, load_commands, mh->ncmds, swapped);
 	if (sect) {
 		//printf("\n<%s::%s>\n", sect->segname, sect->sectname);
 		off = sect->offset + addr - sect->addr;
@@ -1311,7 +1331,7 @@ static void print_verbose_mem(
     const char *symbol_name;
 	char *mem_string;
     enum byte_sex host_byte_sex;
-    bool_t swapped;
+    enum bool swapped;
 	float f;
 	double d;
 
