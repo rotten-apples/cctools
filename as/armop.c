@@ -5,7 +5,7 @@
 
 #include "army.h"
 
-int arm_op_count = 5763;
+int arm_op_count = 5783;
 struct arm_op_info arm_op_info[] = {
     { "adc", OP_DATA_PROC_3, 0xe0a00000 },
     { "adcal", OP_DATA_PROC_3, 0xe0a00000 },
@@ -4830,6 +4830,26 @@ struct arm_op_info arm_op_info[] = {
     { "swiul", OP_SWI, 0x3f000000 },
     { "swivc", OP_SWI, 0x7f000000 },
     { "swivs", OP_SWI, 0x6f000000 },
+    { "swp", OP_SWP, 0xe1000090 },
+    { "swpal", OP_SWP, 0xe1000090 },
+    { "swpcc", OP_SWP, 0x31000090 },
+    { "swpcs", OP_SWP, 0x21000090 },
+    { "swpeq", OP_SWP, 0x01000090 },
+    { "swpge", OP_SWP, 0xa1000090 },
+    { "swpgt", OP_SWP, 0xc1000090 },
+    { "swphi", OP_SWP, 0x81000090 },
+    { "swphs", OP_SWP, 0x21000090 },
+    { "swple", OP_SWP, 0xd1000090 },
+    { "swplo", OP_SWP, 0x31000090 },
+    { "swpls", OP_SWP, 0x91000090 },
+    { "swplt", OP_SWP, 0xb1000090 },
+    { "swpmi", OP_SWP, 0x41000090 },
+    { "swpne", OP_SWP, 0x11000090 },
+    { "swpnv", OP_SWP, 0xf1000090 },
+    { "swppl", OP_SWP, 0x51000090 },
+    { "swpul", OP_SWP, 0x31000090 },
+    { "swpvc", OP_SWP, 0x71000090 },
+    { "swpvs", OP_SWP, 0x61000090 },
     { "sxtab", OP_SXTAH, 0xe6a00070 },
     { "sxtab16", OP_SXTAH, 0xe6800070 },
     { "sxtab16al", OP_SXTAH, 0xe6800070 },

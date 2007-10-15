@@ -34,7 +34,7 @@ unsigned int instruction;
 %token <nval> OP_MLA OP_SMLAL OP_CLZ OP_LDR OP_LDRH OP_LDM OP_SWI OP_BKPT
 %token <nval> OP_CPS_EFFECT OP_CPS OP_LDREX OP_MCRR2 OP_PKHBT OP_QADD16 OP_REV
 %token <nval> OP_RFE OP_SXTAH OP_SEL OP_SETEND OP_SMLAD OP_SMLALD OP_SMMUL
-%token <nval> OP_SRS OP_SSAT OP_SSAT16 OP_STREX OP_SXTH OP_USAD8 OP_USADA8
+%token <nval> OP_SRS OP_SSAT OP_SSAT16 OP_STREX OP_SXTH OP_SWP OP_USAD8 OP_USADA8
 %token <nval> OP_BX OP_PKHTB OP_USAT OP_USAT16 OP_BLX OP_SMLA_XY OP_SMLAL_XY 
 %token <nval> OP_SMUL_XY OP_QADD OP_NOP OP_VFP_DP_S OP_VFP_DP_D OP_VFP_DPX_S
 %token <nval> OP_VFP_DPX_D OP_VFP_STM_S OP_VFP_STM_D OP_VFP_STM_X OP_VFP_ST_S
@@ -58,7 +58,7 @@ unsigned int instruction;
 %type  <nval> qadd16_class_inst rev_class_inst rfe_class_inst sxtah_class_inst
 %type  <nval> sel_class_inst setend_class_inst smlad_class_inst
 %type  <nval> smlald_class_inst smmul_class_inst srs_class_inst ssat_class_inst
-%type  <nval> strex_class_inst sxth_class_inst usad8_class_inst armv4t_inst
+%type  <nval> strex_class_inst swp_class_inst sxth_class_inst usad8_class_inst armv4t_inst
 %type  <nval> bx_class_inst armv5_inst blx_class_inst smla_xy_class_inst
 %type  <nval> smlal_xy_class_inst smul_xy_class_inst qadd_class_inst
 %type  <nval> mnemonic_inst vfp_inst vfp_Sd vfp_Sn vfp_Sm vfp_Dd vfp_Dn vfp_Dm
@@ -352,6 +352,7 @@ expr:
 armv2_inst:
       OP_LDC OPRD_COPROC ',' OPRD_COPRO_REG ',' load_store_copro_am
         { $$ = ($1 | ($2 << 8) | ($4 << 12) | $6); }
+    | swp_class_inst { $$ = $1; }
     ;
 
 armv3_inst:
@@ -522,6 +523,11 @@ ssat_class_inst:
 
 strex_class_inst:
       OP_STREX dest_reg ',' OPRD_REG ',' '[' src_reg ']'
+        { $$ = ($1 | $2 | $4 | $7); }
+    ;
+
+swp_class_inst:
+	  OP_SWP dest_reg ',' OPRD_REG ',' '[' src_reg ']'
         { $$ = ($1 | $2 | $4 | $7); }
     ;
 
