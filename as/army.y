@@ -41,7 +41,7 @@ unsigned int instruction;
 %token <nval> OP_VFP_ST_D OP_VFP_MSR OP_VFP_MRS OP_VFP_MDXR OP_VFP_MRDX
 %token <nval> OP_VFP_MXR OP_VFP_MRX OP_VFP_FMSTAT OP_VFP_DPX1_S OP_VFP_DPX1_D
 %token <nval> OP_VFP_FMDRR OP_VFP_FMRRD OP_VFP_FMSRR OP_VFP_FMRRS OP_VFP_DPX_SD
-%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC
+%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC OP_MCR OP_SWP
 %token <nval> OPRD_LSL_LIKE OPRD_RRX OPRD_IFLAGS OPRD_COPROC OPRD_CR OPRD_REG_S
 %token <nval> OPRD_REG_D OPRD_REG_VFP_SYS OPRD_ENDIANNESS OPRD_PSR
 %token <nval> OPRD_COPRO_REG
@@ -66,7 +66,7 @@ unsigned int instruction;
 %type  <nval> vfp_maybe_imm_offset generic_reg vfp_data_proc_inst
 %type  <nval> vfp_store_inst vfp_misc_inst vfp2_inst vfp_imm_offset_with_u_bit
 %type  <nval> vfp_store_am armv3_inst clz_class_inst armv2_inst
-%type  <nval> load_store_copro_am imm_div_4_with_u_bit
+%type  <nval> load_store_copro_am imm_div_4_with_u_bit mcr_opcode_2
 
 %%
 
@@ -352,13 +352,20 @@ expr:
 armv2_inst:
       OP_LDC OPRD_COPROC ',' OPRD_COPRO_REG ',' load_store_copro_am
         { $$ = ($1 | ($2 << 8) | ($4 << 12) | $6); }
-    | swp_class_inst { $$ = $1; }
+    | OP_MCR OPRD_COPROC ',' OPRD_IMM ',' dest_reg ',' OPRD_COPRO_REG ','
+        OPRD_COPRO_REG mcr_opcode_2
+        { $$ = ($1 | ($2 << 8) | ($4 << 21) | $6 | ($8 << 16) | $10 | $11); } 
     ;
+
+mcr_opcode_2:
+      /* empty */           { $$ = 0;           }
+    | ',' OPRD_IMM          { $$ = ($2 << 5);   }
 
 armv3_inst:
       OP_MSR OPRD_PSR ',' '#' shifter_imm  { $$ = ($1 | $2 | $5 | (1 << 25)); }
     | OP_MSR OPRD_PSR ',' OPRD_REG  { $$ = ($1 | $2 | $4); }
     | OP_MRS dest_reg ',' OPRD_PSR  { $$ = ($1 | $2 | $4); }
+    | swp_class_inst { $$ = $1; }
     ;
 
 armv4t_inst:
