@@ -488,6 +488,7 @@ static const pseudo_typeS pseudo_table[] = {
   { "lcomm",	s_lcomm,	0	},
   { "line",	s_line,		0	},
   { "long",	cons,		4	},
+  { "word",	cons,		4	},
   { "quad",	cons,		8	},
   { "lsym",	s_lsym,		0	},
   { "section",	s_section,	0	},
@@ -524,6 +525,7 @@ static const pseudo_typeS pseudo_table[] = {
   { "rept", s_rept, 0       },
   { "endr", s_endr, 0       },
   { "ifc", s_ifc,   0       },
+  { "ifnc", s_ifnc,   0       },
   { NULL }	/* end sentinel */
 };
 
@@ -1698,7 +1700,7 @@ int fill_size)
 
 /*
  * s_comm() implements the pseudo op:
- *	.comm name , expression
+ *	.comm name , expression [ , align_expression ]
  */
 static
 void
@@ -1710,6 +1712,7 @@ int value)
     char *p;
     signed_target_addr_t temp;
     symbolS *symbolP;
+    int align;
 
 	if(*input_line_pointer == '"')
 	    name = input_line_pointer + 1;
@@ -1731,6 +1734,13 @@ int value)
 	    ignore_rest_of_line();
 	    return;
 	}
+        align = 0;
+        if(*input_line_pointer == ','){
+            input_line_pointer++;
+            align = get_absolute_expression();
+            as_warn("Alignment of %u specified on .comm, and we didn't care.", align);
+        }
+
 	*p = 0;
 	symbolP = symbol_find_or_make(name);
 	*p = c;
@@ -3826,6 +3836,15 @@ int *len_pointer)
 	return(s);
 }
 
+static int is_identifier_char(char c) {
+    return
+	(c >= 'a' && c <= 'z') ||
+	(c >= 'A' && c <= 'Z') ||
+	(c >= '0' && c <= '9') ||
+	(c == '_' || c == '.') ||
+        (c == '=' || c == '$');
+}
+
 /*
  *			demand_copy_string()
  *
@@ -3855,19 +3874,20 @@ int *lenP)
 		obstack_1grow(&notes, c);
 		len++;
 	    }
-	    /*
-	     * This next line is so demand_copy_C_string will return a null
-	     * termanated string.
-	     */
-	    obstack_1grow(&notes, '\0');
-	    retval = obstack_finish(&notes);
 	}
 	else{
-	    as_bad("Missing string");
-	    retval = NULL;
-	    ignore_rest_of_line();
+	    while (is_identifier_char(*input_line_pointer)) {
+		obstack_1grow(&notes, *input_line_pointer++);
+		len++;
+	    }
 	}
+	/*
+	 * This next line is so demand_copy_C_string will return a null
+	 * termanated string.
+	 */
+	obstack_1grow(&notes, '\0');
 	*lenP = len;
+	retval = obstack_finish(&notes);
 	return(retval);
 }
 
@@ -3961,6 +3981,36 @@ int value)
 	    the_cond_state.ignore = !the_cond_state.cond_met;
 	    demand_empty_rest_of_line();
 	}
+}
+
+/* iPhone binutils extension: .ifc assembles if the two strings are the same */
+void s_ifnc(int value)
+{
+    char *ptr1, *ptr2;
+    int len1, len2;
+
+    if (if_depth >= MAX_IF_DEPTH)
+        as_fatal("Maximum if nesting level reached");
+    last_states[if_depth++] = the_cond_state;
+    the_cond_state.the_cond = if_cond;
+
+    if (the_cond_state.ignore)
+        totally_ignore_line();
+    else {
+        ptr1 = demand_copy_string(&len1);
+        
+        SKIP_WHITESPACE();
+        if (*input_line_pointer != ',')
+            as_bad(".ifnc needs two strings separated by a comma (',')");
+        else
+            input_line_pointer++;
+        
+        ptr2 = demand_copy_string(&len2);
+
+        the_cond_state.cond_met = (len1 != len2 || strncmp(ptr1, ptr2, len1));
+        the_cond_state.ignore = !the_cond_state.cond_met;
+        demand_empty_rest_of_line();
+    }
 }
 
 /* iPhone binutils extension: .ifc assembles if the two strings are the same */
@@ -4381,7 +4431,7 @@ struct macro_info *info)
          * determine which it is. */
         named_invocation = 0;
         ptr = input_line_pointer;
-        while (!is_end_of_line(*ptr)) {
+        while (is_identifier_char(*ptr)) {
             if (*ptr == '=') {
                 named_invocation = 1;
                 break;
@@ -4391,66 +4441,58 @@ struct macro_info *info)
 
         index = 0;
 
-        while (is_ignorable_ws(*input_line_pointer))
-            input_line_pointer++; 
-        ptr = input_line_pointer;
+	SKIP_WHITESPACE();
 
         /* Ok, now parse each argument. */
         while (1) {
-            if (is_end_of_line(*input_line_pointer) || *input_line_pointer ==
-                ',' || is_ignorable_ws(*input_line_pointer)) {
-                len = input_line_pointer - ptr;
-                arg_buf = malloc(len + 1);
-                if (len)
-                    strncpy(arg_buf, ptr, len);
-                arg_buf[len] = '\0';
+            int length;
+            char *value = demand_copy_string(&length);
 
-#if 0
-                printf("arg is '%s'\n", arg_buf);
-#endif
-
-                if (named_invocation) {
-                    arg_val_ptr = arg_buf;
-                    strsep(&arg_val_ptr, "=");
-                    if (arg_val_ptr == NULL) {
-                        as_bad("In a named-argument-style macro invocation, "
-                            "all of the arguments must be specified in the "
-                            "named-argument style, but one or more weren't");
-                        break;
-                    }
-
-                    /* We've parsed it fine, now just find which argument the
-                     * user meant. */
-                    which_arg = -1;
-                    for (i = 0; i < info->arg_count; i++) {
-                        if (!strcmp(arg_buf, info->args[i]->name)) {
-                            which_arg = i;
-                            break;
-                        }
-                    }
-
-                    if (which_arg == -1) {
-                        as_bad("'%s' doesn't name an argument of the macro "
-                            "'%s'", arg_buf, info->name);
-                        break;
-                    }
-
-                    arguments[which_arg] = arg_val_ptr; 
-                } else {
-                    /* If not a named invocation, it's simple. */
-                    arguments[index++] = arg_buf; 
+            if (named_invocation) {
+                if (*input_line_pointer++ != '=') {
+                    as_bad("In a named-argument-style macro invocation, "
+                        "all of the arguments must be specified in the "
+                        "named-argument style, but one or more weren't");
+                    break;
                 }
 
-                if (*input_line_pointer == ',' || is_ignorable_ws(
-                    *input_line_pointer)) {
-                    input_line_pointer++;
-                    while (is_ignorable_ws(*input_line_pointer))
-                        input_line_pointer++; 
-                    ptr = input_line_pointer;
-                } else  /* must be end of line */
+                /* We've parsed it fine, now just find which argument the
+                 * user meant. */
+                which_arg = -1;
+                for (i = 0; i < info->arg_count; i++) {
+                    if (!strcmp(value, info->args[i]->name)) {
+                        which_arg = i;
+                        break;
+                    }
+                }
+
+                if (which_arg == -1) {
+                    as_bad("'%s' doesn't name an argument of the macro "
+                        "'%s'", arg_buf, info->name);
                     break;
-            } else
-                input_line_pointer++;
+                }
+
+                arguments[which_arg] = demand_copy_string(&length); 
+            } else {
+                /* If not a named invocation, it's simple. */
+                arguments[index++] = value; 
+            }
+
+            if (*input_line_pointer == ',') {
+                ++input_line_pointer;
+                SKIP_WHITESPACE();
+                continue;
+            } else if (
+                !is_end_of_line(*input_line_pointer) &&
+                !is_ignorable_ws(*input_line_pointer)
+            ) {
+                as_bad("invalid macro expansion argument character (%c)", *input_line_pointer);
+            }
+
+            SKIP_WHITESPACE();
+
+            if (is_end_of_line(*input_line_pointer))
+                break;
         }
 
         nargs = info->arg_count;

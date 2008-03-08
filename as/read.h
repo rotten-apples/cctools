@@ -110,6 +110,8 @@ extern void s_rept(
     int value);
 extern void s_endr(
     int value);
+extern void s_ifnc(
+    int value);
 extern void s_ifc(
     int value);
 extern void big_cons(
