@@ -592,7 +592,7 @@ void fill_reloc_value(unsigned char *buf, unsigned int n, unsigned int mask)
 void md_number_to_imm(unsigned char *buf, signed_expr_t val, int size, fixS *
     fixP, int nsect)
 {
-    unsigned int n = 0;
+    unsigned int n = 0, err;
 
     switch (fixP->fx_r_type) {
         case ARM_RELOC_VANILLA:
@@ -644,8 +644,19 @@ void md_number_to_imm(unsigned char *buf, signed_expr_t val, int size, fixS *
             break;
 
         case ARM_RELOC_SHIFT_IMM12:
-            n = generate_shifted_immediate(val, NULL);
-            fill_reloc_value(buf, (unsigned int)n, 0x00000fff); 
+            n = generate_shifted_immediate(val, &err);
+            if (err) {
+                n = (0x3 << 21) | generate_shifted_immediate(~val, &err);
+                    if (!err)
+                        as_warn("Immediate value is out of range: converting "
+                            "automatically to a MVN instruction, but if this "
+                            "was not a MOV instruction then this is unsafe!");
+                    else
+                        as_bad("Immediate value out of range");
+                    printf("%x\n", n);
+                fill_reloc_value(buf, (unsigned int)n, (0x3 << 21) | 0x00000fff);
+            } else
+                fill_reloc_value(buf, (unsigned int)n, 0x00000fff);
             break;
 
         case ARM_RELOC_SHIFT_IMM:
@@ -653,6 +664,18 @@ void md_number_to_imm(unsigned char *buf, signed_expr_t val, int size, fixS *
                 val = 0;
             n = ((unsigned int)val) & 31;
             fill_reloc_value(buf, n << 7, 31 << 7);
+            break;
+
+        case ARM_RELOC_ADR:
+            val -= 4;
+            if (val >= 0)
+                n = 1 << 23;
+            else {
+                n = 1 << 22;
+                val = -val;
+            }
+            n |= generate_shifted_immediate(val, NULL);
+            fill_reloc_value(buf, (unsigned int)n, 0x00c00fff); 
             break;
 
         default:

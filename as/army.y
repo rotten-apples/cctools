@@ -31,7 +31,7 @@ unsigned int instruction;
 %token <nval> OPRD_REG
 %token <ival> OPRD_IMM
 %token <nval> OP_BRANCH OP_DATA_PROC_1 OP_DATA_PROC_2 OP_DATA_PROC_3 OP_MUL
-%token <nval> OP_MLA OP_SMLAL OP_CLZ OP_LDR OP_LDRH OP_LDM OP_SWI OP_BKPT
+%token <nval> OP_MLA OP_SMLAL OP_CLZ OP_LDR OP_LDRH OP_LDM OP_SWI OP_BKPT OP_BXJ
 %token <nval> OP_CPS_EFFECT OP_CPS OP_LDREX OP_MCRR2 OP_PKHBT OP_QADD16 OP_REV
 %token <nval> OP_RFE OP_SXTAH OP_SEL OP_SETEND OP_SMLAD OP_SMLALD OP_SMMUL
 %token <nval> OP_SRS OP_SSAT OP_SSAT16 OP_STREX OP_SXTH OP_SWP OP_USAD8 OP_USADA8
@@ -41,7 +41,7 @@ unsigned int instruction;
 %token <nval> OP_VFP_ST_D OP_VFP_MSR OP_VFP_MRS OP_VFP_MDXR OP_VFP_MRDX
 %token <nval> OP_VFP_MXR OP_VFP_MRX OP_VFP_FMSTAT OP_VFP_DPX1_S OP_VFP_DPX1_D
 %token <nval> OP_VFP_FMDRR OP_VFP_FMRRD OP_VFP_FMSRR OP_VFP_FMRRS OP_VFP_DPX_SD
-%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC OP_MCR
+%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC OP_MCR OP_ADR
 %token <nval> OPRD_LSL_LIKE OPRD_RRX OPRD_IFLAGS OPRD_COPROC OPRD_CR OPRD_REG_S
 %token <nval> OPRD_REG_D OPRD_REG_VFP_SYS OPRD_ENDIANNESS OPRD_PSR
 %token <nval> OPRD_COPRO_REG
@@ -66,6 +66,7 @@ unsigned int instruction;
 %type  <nval> vfp_maybe_imm_offset generic_reg vfp_data_proc_inst
 %type  <nval> vfp_store_inst vfp_misc_inst vfp2_inst vfp_imm_offset_with_u_bit
 %type  <nval> vfp_store_am armv3_inst clz_class_inst armv2_inst
+%type  <nval> bxj_class_inst
 %type  <nval> load_store_copro_am imm_div_4_with_u_bit mcr_opcode_2
 
 %%
@@ -101,6 +102,11 @@ data_inst:
         { $$ = ($1 | $2 | $4 | (1 << 20)); }
     | OP_DATA_PROC_3 dest_reg ',' src_reg ',' shifter_operand
         { $$ = ($1 | $2 | $4 | $6); }
+    | OP_ADR dest_reg ',' expr
+        {
+            register_reloc_type(ARM_RELOC_ADR, 4, 1);
+            $$ = ($1 | $2 | (15 << 16) | (1 << 25));
+        }
     ;
 
 load_inst:
@@ -249,7 +255,7 @@ shifter_imm:
     | expr
         {
             register_reloc_type(ARM_RELOC_SHIFT_IMM12, 4, 0);
-            $$ = ((0x1 << 25) | $1);
+            $$ = ((0x1 << 25) | $1 & 0xfff);
         }
     ;
 
@@ -378,6 +384,7 @@ bx_class_inst:
 
 armv5_inst:
       blx_class_inst        { $$ = $1; }
+    | bxj_class_inst        { $$ = $1; }
     | smla_xy_class_inst    { $$ = $1; }
     | smlal_xy_class_inst   { $$ = $1; }
     | smul_xy_class_inst    { $$ = $1; }
@@ -387,6 +394,10 @@ armv5_inst:
 
 clz_class_inst:
       OP_CLZ OPRD_REG ',' OPRD_REG  { $$ = ($1 | ($2 << 12) | $4); }
+    ;
+
+bxj_class_inst:
+      OP_BXJ OPRD_REG   { $$ = ($1 | (0x12 << 20) | (0xfff2 << 4) | $2); }
     ;
 
 blx_class_inst:

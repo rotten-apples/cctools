@@ -27,6 +27,7 @@ orr{<cond>}{s}      t: OP_DATA_PROC_3   e: 1100     (21)
 mov{<cond>}{s}      t: OP_DATA_PROC_1   e: 1101     (21)
 bic{<cond>}{s}      t: OP_DATA_PROC_3   e: 1110     (21)
 mvn{<cond>}{s}      t: OP_DATA_PROC_1   e: 1111     (21)
+adr{<cond>}{s}      t: OP_ADR           e: 0000     (21)
 
 # Multiply instructions
 mul{<cond>}{s}      t: OP_MUL           e: 0000000 (21), 1001 (4)
@@ -164,6 +165,7 @@ sb                                      e: 1101 (4)
 # -----------------------------------------------------------------------------
 
 blx{<cond>}             t: OP_BLX       e: 0 (0)
+bxj{<cond>}             t: OP_BXJ       e: 0 (0)
 
 smla{<x>}{<y>}{<cond>}  t: OP_SMLA_XY   e: 00010000 (20), 1 (7), 0 (4)
 smlaw{<y>}{<cond>}      t: OP_SMLA_XY   e: 00010010 (20), 1 (7), 0 (5), 0 (4)
