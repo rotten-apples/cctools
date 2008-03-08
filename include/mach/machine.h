@@ -244,18 +244,6 @@ typedef int	cpu_threadtype_t;
 #define CPU_SUBTYPE_HPPA_7100		((cpu_subtype_t) 0) /* compat */
 #define CPU_SUBTYPE_HPPA_7100LC		((cpu_subtype_t) 1)
 
-/* 
- * 	Acorn subtypes - Acorn Risc Machine port done by
- *		Olivetti System Software Laboratory
- */
-
-#define	CPU_SUBTYPE_ARM_ALL		((cpu_subtype_t) 0)
-#define CPU_SUBTYPE_ARM_A500_ARCH	((cpu_subtype_t) 1)
-#define CPU_SUBTYPE_ARM_A500		((cpu_subtype_t) 2)
-#define CPU_SUBTYPE_ARM_A440		((cpu_subtype_t) 3)
-#define CPU_SUBTYPE_ARM_M4		((cpu_subtype_t) 4)
-#define CPU_SUBTYPE_ARM_A680		((cpu_subtype_t) 5)
-
 /*
  *	MC88000 subtypes
  */
@@ -329,5 +317,10 @@ typedef int	cpu_threadtype_t;
 #define CPU_SUBTYPE_VEO_1	((cpu_subtype_t) 1)
 #define CPU_SUBTYPE_VEO_2	((cpu_subtype_t) 2)
 #define CPU_SUBTYPE_VEO_ALL	CPU_SUBTYPE_VEO_2
+
+#define CPU_SUBTYPE_ARM_V4T     ((cpu_subtype_t) 5)
+#define CPU_SUBTYPE_ARM_V6      ((cpu_subtype_t) 6)
+#define CPU_SUBTYPE_ARM_V5TEJ   ((cpu_subtype_t) 7)
+#define CPU_SUBTYPE_ARM_ALL     CPU_SUBTYPE_ARM_V4T
 
 #endif	/* _MACH_MACHINE_H_ */

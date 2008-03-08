@@ -62,7 +62,7 @@ static const struct arch_flag arch_flags[] = {
     { "m88k",   CPU_TYPE_MC88000, CPU_SUBTYPE_MC88000_ALL },
     { "i860",   CPU_TYPE_I860,    CPU_SUBTYPE_I860_ALL },
     { "veo",    CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_ALL },
-    { "arm",    CPU_TYPE_ARM,     6 },
+    { "arm",    CPU_TYPE_ARM,     CPU_SUBTYPE_ARM_ALL },
     /* specific architecture implementations */
     { "ppc601", CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_601 },
     { "ppc603", CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_603 },
@@ -88,7 +88,9 @@ static const struct arch_flag arch_flags[] = {
     { "hppa7100LC", CPU_TYPE_HPPA,  CPU_SUBTYPE_HPPA_7100LC },
     { "veo1",   CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_1 },
     { "veo2",   CPU_TYPE_VEO,     CPU_SUBTYPE_VEO_2 },
-    { "arm",    CPU_TYPE_ARM,     6 },
+    { "armv4t", CPU_TYPE_ARM,     CPU_SUBTYPE_ARM_V4T },
+    { "armv6",  CPU_TYPE_ARM,     CPU_SUBTYPE_ARM_V6 },
+    { "armv5",  CPU_TYPE_ARM,     CPU_SUBTYPE_ARM_V5TEJ },
     { NULL,	0,		  0 }
 };
 

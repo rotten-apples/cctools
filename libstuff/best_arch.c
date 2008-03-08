@@ -459,6 +459,27 @@ cpu_subtype_t cpusubtype2)
 		return(cpusubtype2);
 	    break; /* logically can't get here */
 
+	case CPU_TYPE_ARM:
+	    /*
+	     * Combining with the ALL type becomes the other type. Combining
+	     * anything with the 601 becomes 601.  All other non exact matches
+	     * combine to the higher value subtype.
+	     */
+	    if(cpusubtype1 == CPU_SUBTYPE_ARM_ALL)
+		return(cpusubtype2);
+	    if(cpusubtype2 == CPU_SUBTYPE_ARM_ALL)
+		return(cpusubtype1);
+
+	    if(cpusubtype1 == CPU_SUBTYPE_ARM_V6 ||
+	       cpusubtype2 == CPU_SUBTYPE_ARM_V6)
+		return(CPU_SUBTYPE_ARM_V6);
+
+	    if(cpusubtype1 > cpusubtype2)
+		return(cpusubtype1);
+	    else
+		return(cpusubtype2);
+	    break; /* logically can't get here */
+
 	case CPU_TYPE_POWERPC64:
 	    /*
 	     * Combining with the ALL type becomes the other type.  All other
