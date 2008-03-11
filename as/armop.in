@@ -28,6 +28,8 @@ mov{<cond>}{s}      t: OP_DATA_PROC_1   e: 1101     (21)
 bic{<cond>}{s}      t: OP_DATA_PROC_3   e: 1110     (21)
 mvn{<cond>}{s}      t: OP_DATA_PROC_1   e: 1111     (21)
 adr{<cond>}{s}      t: OP_ADR           e: 0000     (21)
+ldf{<cond>}{sdep}   t: OP_LDF           e: 110      (25), 1 (20), 1 (8)
+stf{<cond>}{sdep}   t: OP_LDF           e: 110      (25), 0 (20), 1 (8)
 
 # Multiply instructions
 mul{<cond>}{s}      t: OP_MUL           e: 0000000 (21), 1001 (4)
@@ -36,6 +38,13 @@ smlal{<cond>}{s}    t: OP_SMLAL         e: 0000111 (21), 1001 (4)
 smull{<cond>}{s}    t: OP_SMLAL         e: 0000110 (21), 1001 (4)
 umlal{<cond>}{s}    t: OP_SMLAL         e: 0000101 (21), 1001 (4)
 umull{<cond>}{s}    t: OP_SMLAL         e: 0000100 (21), 1001 (4) 
+
+.define sdep
+s                                       e: 0 (22), 0 (15)
+d                                       e: 0 (22), 1 (15)
+e                                       e: 1 (22), 0 (15)
+p                                       e: 1 (22), 1 (15)
+.enddefine
 
 .define s
 s                                       e: 1 (20)

@@ -28,7 +28,6 @@ unsigned int instruction;
     expressionS *eval;
 }
 
-%token <nval> OPRD_REG
 %token <ival> OPRD_IMM
 %token <nval> OP_BRANCH OP_DATA_PROC_1 OP_DATA_PROC_2 OP_DATA_PROC_3 OP_MUL
 %token <nval> OP_MLA OP_SMLAL OP_CLZ OP_LDR OP_LDRH OP_LDM OP_SWI OP_BKPT OP_BXJ
@@ -41,10 +40,10 @@ unsigned int instruction;
 %token <nval> OP_VFP_ST_D OP_VFP_MSR OP_VFP_MRS OP_VFP_MDXR OP_VFP_MRDX
 %token <nval> OP_VFP_MXR OP_VFP_MRX OP_VFP_FMSTAT OP_VFP_DPX1_S OP_VFP_DPX1_D
 %token <nval> OP_VFP_FMDRR OP_VFP_FMRRD OP_VFP_FMSRR OP_VFP_FMRRS OP_VFP_DPX_SD
-%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC OP_MCR OP_ADR
+%token <nval> OP_VFP_DPX_DS OP_MSR OP_MRS OP_LDC OP_MCR OP_ADR OP_LDF OP_STF
 %token <nval> OPRD_LSL_LIKE OPRD_RRX OPRD_IFLAGS OPRD_COPROC OPRD_CR OPRD_REG_S
 %token <nval> OPRD_REG_D OPRD_REG_VFP_SYS OPRD_ENDIANNESS OPRD_PSR
-%token <nval> OPRD_COPRO_REG
+%token <nval> OPRD_REG OPRD_FP_REG OPRD_COPRO_REG
 %token <eval> OPRD_EXP
 %type  <ival> expr
 %type  <nval> inst branch_inst data_inst load_inst load_mult_inst maybe_bang 
@@ -66,7 +65,7 @@ unsigned int instruction;
 %type  <nval> vfp_maybe_imm_offset generic_reg vfp_data_proc_inst
 %type  <nval> vfp_store_inst vfp_misc_inst vfp2_inst vfp_imm_offset_with_u_bit
 %type  <nval> vfp_store_am armv3_inst clz_class_inst armv2_inst
-%type  <nval> bxj_class_inst
+%type  <nval> bxj_class_inst floating_inst fp_reg
 %type  <nval> load_store_copro_am imm_div_4_with_u_bit mcr_opcode_2
 
 %%
@@ -90,6 +89,7 @@ fundamental_inst:
     | exception_inst    { $$ = $1; }
     | multiply_inst     { $$ = $1; }
     | mnemonic_inst     { $$ = $1; }
+    | floating_inst     { $$ = $1; }
     ;
 
 branch_inst:
@@ -107,6 +107,13 @@ data_inst:
             register_reloc_type(ARM_RELOC_ADR, 4, 1);
             $$ = ($1 | $2 | (15 << 16) | (1 << 25));
         }
+    ;
+
+floating_inst:
+      OP_STF fp_reg ',' load_store_copro_am
+        { $$ = ($1 | ($2 << 12) | $4); }
+    | OP_LDF fp_reg ',' load_store_copro_am
+        { $$ = ($1 | ($2 << 12) | $4); }
     ;
 
 load_inst:
@@ -197,6 +204,10 @@ generic_reg:
 
 src_reg:
       OPRD_REG      { $$ = ($1 << 16); }
+    ;
+
+fp_reg:
+      OPRD_FP_REG      { $$ = $1; }
     ;
 
 dest_reg:
@@ -563,7 +574,9 @@ usad8_class_inst:
     ;
 
 load_store_copro_am:
-      '[' OPRD_REG ',' '#' imm_div_4_with_u_bit ']' maybe_bang
+      '[' OPRD_REG ']' maybe_bang
+        { $$ = ((1 << 24) | ($2 << 16) | $4); }
+    | '[' OPRD_REG ',' '#' imm_div_4_with_u_bit ']' maybe_bang
         { $$ = ((1 << 24) | ($2 << 16) | $5 | $7); }
     | '[' OPRD_REG ']' ',' '#' imm_div_4_with_u_bit
         { $$ = ((0 << 24) | (1 << 21) | ($2 << 16) | $6); }
