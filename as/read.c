@@ -4553,7 +4553,6 @@ struct macro_info *info)
 	 */
 	obstack_1grow(&macros, '\n');
 
-    if (info->new_style) {
         while((c = *macro_contents++)){
             if (c == '\\') {
                 if (*macro_contents == '\\')
@@ -4588,12 +4587,7 @@ struct macro_info *info)
                     }
                 }
             }
-
-            obstack_1grow (&macros, c);
-        }
-    } else {
-        while((c = *macro_contents++)){
-            if(c == '$'){
+            else if(c == '$'){
                 if(*macro_contents == '$'){
                     macro_contents++;
                 }
@@ -4616,8 +4610,6 @@ struct macro_info *info)
             }
             obstack_1grow (&macros, c);
         }
-    }
-
 
 	obstack_1grow (&macros, '\n');
 	obstack_1grow (&macros, '\0');
