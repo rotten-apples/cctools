@@ -2518,6 +2518,7 @@ int value)
         printf("YES optional section type\n");
 #endif
 
+    SKIP_WHITESPACE();
 	    typename = input_line_pointer;
 	    do{
 		e = *input_line_pointer++ ;
@@ -2544,6 +2545,7 @@ int value)
 #endif
 
 		do{
+                    SKIP_WHITESPACE();
 		    attributename = input_line_pointer;
 		    do{
 			f = *input_line_pointer++ ;
@@ -2569,6 +2571,7 @@ int value)
 		 */
 		if(type == S_SYMBOL_STUBS){
 		    if(f == ','){
+                    SKIP_WHITESPACE();
 			sizeof_stub_name = input_line_pointer;
 			do{
 			    g = *input_line_pointer++ ;
