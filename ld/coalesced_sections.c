@@ -75,7 +75,7 @@
  * When redo_live is TRUE it re-merges only the live items from a coalesced
  * section from the specified section in the current object file (cur_obj).
  */
-__private_extern__
+extern
 void
 coalesced_section_merge(
 void *data,
@@ -308,7 +308,9 @@ deal_with_contents:
 		    }
 		    if(redo_live == FALSE || fine_relocs[i].live == TRUE){
 			/* align size before using it to assign output offset */
-			ms->s.size = round(ms->s.size, 1 << ms->s.align);
+			ms->s.size = align_to_input_mod(ms->s.size,
+						fine_relocs[i].input_offset,
+						ms->s.align);
 			fine_relocs[i].output_offset = ms->s.size;
 			ms->s.size += load_orders[i].input_size;
 		    }
@@ -346,7 +348,9 @@ deal_with_contents:
 		}
 		if(redo_live == FALSE || fine_relocs[i].live == TRUE){
 		    /* align size before using it to assign output offset */
-		    ms->s.size = round(ms->s.size, 1 << ms->s.align);
+		    ms->s.size = align_to_input_mod(ms->s.size,
+					            fine_relocs[i].input_offset,
+					            ms->s.align);
 		    fine_relocs[i].output_offset = ms->s.size;
 		    ms->s.size += load_orders[i].input_size;
 		}
@@ -757,7 +761,7 @@ deal_with_contents:
 	}
 }
 
-__private_extern__
+extern
 void
 coalesced_section_order(
 void *data,
@@ -803,7 +807,7 @@ struct merged_section *ms)
  * coalesced items can be re-merged (by later calling coalesced_section_merge()
  * with redo_live == TRUE.
  */
-__private_extern__
+extern
 void
 coalesced_section_reset_live(
 void *data,

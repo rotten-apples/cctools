@@ -20,8 +20,8 @@
  *
  * @APPLE_LICENSE_HEADER_END@
  */
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
 
 #ifndef LD_H
@@ -89,8 +89,7 @@ enum weak_reference_mismatches_handling {
     WEAK_REFS_MISMATCH_NON_WEAK
 };
 
-extern enum macosx_deployment_target_value macosx_deployment_target;
-extern const char *macosx_deployment_target_name;
+extern struct macosx_deployment_target macosx_deployment_target;
 
 /* name of this program as executed (argv[0]) */
 extern char *progname;
@@ -386,4 +385,3 @@ extern unsigned long debug;		/* link-editor debugging */
 #endif /* DEBUG */
 
 #endif
-

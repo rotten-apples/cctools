@@ -20,8 +20,8 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
 
 #ifndef SYMBOLS_H
@@ -472,4 +472,3 @@ extern void print_undefined_list(
 #endif /* DEBUG */
 
 #endif
-

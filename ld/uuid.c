@@ -20,9 +20,10 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
+
 #include <config.h>
 #include <sys/types.h>
 #include <string.h>
@@ -40,7 +41,7 @@
 /*
  * uuid() is called to set the uuid[] bytes for the uuid load command.
  */
-__private_extern__
+extern
 void
 uuid(
 uint8_t *uuid)
@@ -64,7 +65,7 @@ uint8_t *uuid)
 	    uuid_func = NSAddressOfSymbol(nssymbol);
 	    uuid_func(uuid);
 #else
-	if(0){
+	if (0){
 #endif
 	}
 	/*

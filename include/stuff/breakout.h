@@ -24,8 +24,20 @@
 #define __private_extern__ __declspec(private_extern)
 #endif
 
-#include "stuff/target_arch.h"
-#include "stuff/ofile.h"
+#import "stuff/ofile.h"
+
+/*
+ * This is used to build the table of contents of an archive.  Each toc_entry
+ * Contains a pointer to a symbol name that is defined by a member of the
+ * archive.  The member that defines this symbol is referenced by its index in
+ * the archive plus one.  This is done so the negative value if the index can
+ * be used for marking then later to generate the ran_off field with the byte
+ * offset.
+ */
+struct toc_entry {
+    char *symbol_name;
+    long member_index;
+};
 
 /*
  * The input files are broken out in to their object files and then placed in
@@ -59,9 +71,11 @@ struct arch {
     enum bool      toc_long_name;/* use the long name in the output */
     char	  *toc_name;	 /* name of toc member */
     unsigned long  toc_name_size;/* size of name of toc member */
-    struct ranlib *toc_ranlibs;	/* ranlib structs */
-    unsigned long  toc_nranlibs;/* number of ranlib structs */
-    char	  *toc_strings;	/* strings of symbol names for ranlib structs */
+    unsigned long ntocs;	/* number of table of contents entries */
+    struct toc_entry
+		  *toc_entries; /* the table of contents entries */
+    struct ranlib *toc_ranlibs;	/* the ranlib structs */
+    char	  *toc_strings;	/* strings of symbol names for toc entries */
     unsigned long  toc_strsize;	/* number of bytes for the strings above */
     unsigned long library_size;	/* current working size and final output size */
 				/*  for this arch when it's a library (used */
@@ -128,6 +142,10 @@ struct object {
 	*seg_linkedit;	    	    /* the 32-bit link edit segment command */
     struct segment_command_64
 	*seg_linkedit64;    	    /* the 64-bit link edit segment command */
+    struct linkedit_data_command
+	*code_sig_cmd;	    	    /* the code signature load command, if any*/
+    struct linkedit_data_command
+	*split_info_cmd;    	    /* the split info load command, if any*/
     struct section **sections;	    /* array of 32-bit section structs */
     struct section_64 **sections64; /* array of 64-bit section structs */
 
@@ -142,11 +160,23 @@ struct object {
     unsigned long input_sym_info_size;
     unsigned long output_sym_info_size;
 
+    /*
+     * For 64-bit Mach-O files they may have an odd number of indirect symbol
+     * table entries so the next offset MAYBE or MAY NOT be rounded to a
+     * multiple of 8. input_indirectsym_pad contains the amount of padding in
+     * that was in the input.
+     */
+    unsigned long input_indirectsym_pad;
+
     struct nlist *output_symbols;
     struct nlist_64 *output_symbols64;
     unsigned long output_nsymbols;
     char	 *output_strings;
     unsigned long output_strings_size;
+    char *output_code_sig_data;
+    unsigned long output_code_sig_data_size;
+    char *output_split_info_data;
+    unsigned long output_split_info_data_size;
 
     unsigned long output_ilocalsym;
     unsigned long output_nlocalsym;
@@ -159,8 +189,7 @@ struct object {
 
     struct relocation_info *output_loc_relocs;
     struct relocation_info *output_ext_relocs;
-    unsigned long *output_indirect_symtab;
-    unsigned long *output_indirect_symtab64;
+    uint32_t *output_indirect_symtab;
 
     struct dylib_table_of_contents *output_tocs;
     unsigned long output_ntoc;
@@ -171,13 +200,13 @@ struct object {
     unsigned long output_nextrefsyms;
 };
 
-extern struct ofile * breakout(
+__private_extern__ struct ofile * breakout(
     char *filename,
     struct arch **archs,
     unsigned long *narchs,
     enum bool calculate_input_prebind_cksum);
 
-extern struct ofile * breakout_mem(
+__private_extern__ struct ofile * breakout_mem(
     void *membuf,
     unsigned long length,
     char *filename,
@@ -185,11 +214,11 @@ extern struct ofile * breakout_mem(
     unsigned long *narchs,
     enum bool calculate_input_prebind_cksum);
 
-extern void free_archs(
+__private_extern__ void free_archs(
     struct arch *archs,
     unsigned long narchs);
 
-extern void writeout(
+__private_extern__ void writeout(
     struct arch *archs,
     unsigned long narchs,
     char *output,
@@ -199,7 +228,7 @@ extern void writeout(
     enum bool library_warnings,
     unsigned long *throttle);
 
-extern void writeout_to_mem(
+__private_extern__ void writeout_to_mem(
     struct arch *archs,
     unsigned long narchs,
     char *filename,
@@ -210,7 +239,7 @@ extern void writeout_to_mem(
     enum bool library_warning,
     enum bool *seen_archive);
 
-extern void checkout(
+__private_extern__ void checkout(
     struct arch *archs,
     unsigned long narchs);
 

@@ -20,8 +20,8 @@
  *
  * @APPLE_LICENSE_HEADER_END@
  */
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
 
 /*
@@ -62,8 +62,6 @@ extern char *standard_framework_dirs[];
 
 /* the pointer to the head of the base object file's segments */
 extern struct merged_segment *base_obj_segments;
-
-__private_extern__ char *search_lib_extensions[];
 
 /*
  * These are pointers to strings and symbols used to search of the table of
@@ -180,3 +178,5 @@ extern void merge_base_program(
     char *strtab,
     unsigned long strsize);
 #endif /* RLD */
+
+extern char *search_lib_extensions[];

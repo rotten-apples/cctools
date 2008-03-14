@@ -95,48 +95,48 @@
 #include "uuid.h"
 
 #ifdef RLD
-__private_extern__ long RLD_DEBUG_OUTPUT_FILENAME_flag;
+extern long RLD_DEBUG_OUTPUT_FILENAME_flag;
 #endif
 
 /* The output file's mach header */
-__private_extern__ struct mach_header output_mach_header = { 0 };
+struct mach_header output_mach_header = { 0 };
 
 /*
  * The output file's symbol table load command and the offsets used in the
  * second pass to output the symbol table and string table.
  */
-__private_extern__ struct symtab_info output_symtab_info = { {0} };
+struct symtab_info output_symtab_info = { {0} };
 
 /*
  * The output file's dynamic symbol table load command.
  */
-__private_extern__ struct dysymtab_info output_dysymtab_info = { {0} };
+struct dysymtab_info output_dysymtab_info = { {0} };
 
 /*
  * The output file's two level hints load command.
  */
-__private_extern__ struct hints_info output_hints_info = { { 0 } };
+struct hints_info output_hints_info = { { 0 } };
 
 /*
  * The output file's prebind_cksum load command.
  */
-__private_extern__ struct cksum_info output_cksum_info = { { 0 } };
+struct cksum_info output_cksum_info = { { 0 } };
 
 /*
  * The output file's prebind_cksum load command.
  */
-__private_extern__ struct uuid_info output_uuid_info = { 0 };
+struct uuid_info output_uuid_info = { 0 };
 
 /*
  * The output file's thread load command and the machine specific information
  * for it.
  */
-__private_extern__ struct thread_info output_thread_info = { {0} };
+struct thread_info output_thread_info = { {0} };
 
 /*
  * The output file's routines load command and the specific information for it.
  */
-__private_extern__ struct routines_info output_routines_info = { {0} };
+struct routines_info output_routines_info = { {0} };
 
 /*
  * The thread states that are currently known by this link editor.
@@ -152,13 +152,13 @@ static m88k_thread_state_grf_t mc88000 = { 0 };
 static struct i860_thread_state_regs i860 = { {0} };
 /* cputype == CPU_TYPE_I386, all cpusubtype's */
 static i386_thread_state_t intel386 = { 0 };
+/* cputype == CPU_TYPE_ARM, all subtypes */
+static arm_thread_state_t arm = { 0 };
 /* cputype == CPU_TYPE_HPPA, all cpusubtypes */
 static struct hp_pa_frame_thread_state hppa_frame_state = { 0 };
 static struct hp_pa_integer_thread_state hppa_integer_state = { 0 };
 /* cputype == CPU_TYPE_SPARC, all subtypes */
 static struct sparc_thread_state_regs sparc_state = { {0} };
-/* cputype == CPU_TYPE_ARM, all subtypes */
-static arm_thread_state_t arm = { 0 };
 
 static void layout_segments(void);
 static unsigned long next_vmaddr(
@@ -184,7 +184,7 @@ static void print_load_map_for_objects(struct merged_section *ms);
 /*
  * layout() is called from main() and lays out the output file.
  */
-__private_extern__
+extern
 void
 layout(void)
 {
@@ -194,13 +194,15 @@ layout(void)
 	memset(&output_dysymtab_info, '\0', sizeof(struct dysymtab_info));
 	memset(&output_hints_info, '\0', sizeof(struct hints_info));
 	memset(&output_cksum_info, '\0', sizeof(struct cksum_info));
+#ifndef KLD
 	memset(&output_uuid_info, '\0', sizeof(struct uuid_info));
+#endif
 	memset(&output_thread_info, '\0', sizeof(struct thread_info));
 	memset(&mc680x0, '\0', sizeof(struct m68k_thread_state_regs));
 	memset(&powerpc,     '\0', sizeof(ppc_thread_state_t));
 	memset(&mc88000, '\0', sizeof(m88k_thread_state_grf_t));
 	memset(&intel386,'\0', sizeof(i386_thread_state_t));
-    memset(&arm, '\0', sizeof(arm_thread_state_t));
+	memset(&arm,'\0', sizeof(arm_thread_state_t));
 	intel386.es = USER_DATA_SELECTOR;
 	intel386.ds = USER_DATA_SELECTOR;
 	intel386.ss = USER_DATA_SELECTOR;
@@ -411,7 +413,7 @@ layout(void)
  * output file.  This contains only a mach_header, a symtab load command the
  * symbol and string table for the current set of merged symbols.
  */
-__private_extern__
+extern
 void
 layout_rld_symfile(void)
 {
@@ -920,8 +922,7 @@ layout_segments(void)
 			  (unsigned int)segalign);
 	    }
 	    else{
-		segs_read_write_addr = segs_read_only_addr +
-            get_shared_region_sz_from_flag(&arch_flag);
+		segs_read_write_addr = segs_read_only_addr + get_shared_region_sz_from_flag(&arch_flag);
 	    }
 	}
 	first_msg = merged_segments;
@@ -1165,8 +1166,7 @@ layout_segments(void)
 	/*
 	 * Create the prebind cksum load command.
 	 */
-	if(prebinding == TRUE &&
-	   macosx_deployment_target >= MACOSX_DEPLOYMENT_TARGET_10_2){
+	if(prebinding == TRUE && macosx_deployment_target.major >= 2){
 	    output_cksum_info.prebind_cksum_command.cmd = LC_PREBIND_CKSUM;
 	    output_cksum_info.prebind_cksum_command.cmdsize =
 					sizeof(struct prebind_cksum_command);
@@ -1177,6 +1177,7 @@ layout_segments(void)
 	/*
 	 * Create the uuid load command.
 	 */
+#ifndef KLD
 	if(output_uuid_info.suppress != TRUE && output_uuid_info.emit == TRUE){
 	    output_uuid_info.uuid_command.cmd = LC_UUID;
 	    output_uuid_info.uuid_command.cmdsize = sizeof(struct uuid_command);
@@ -1184,6 +1185,12 @@ layout_segments(void)
 	    ncmds++;
 	    sizeofcmds += output_uuid_info.uuid_command.cmdsize;
 	}
+#else
+	if(output_uuid_info.uuid_command.cmdsize != 0){
+	    ncmds++;
+	    sizeofcmds += output_uuid_info.uuid_command.cmdsize;
+	}
+#endif /* KLD */
 
 	/*
 	 * Create the thread command if this is filetype is to have one.
@@ -1271,14 +1278,15 @@ layout_segments(void)
 	      output_thread_info.state = &sparc_state;
 	      output_thread_info.thread_command.cmdsize += sizeof(long) *
 		SPARC_THREAD_STATE_REGS_COUNT;
-        } else if (arch_flag.cputype == CPU_TYPE_ARM) {
-            output_thread_info.flavor = ARM_THREAD_STATE;
-            output_thread_info.count = ARM_THREAD_STATE_COUNT;
-            output_thread_info.entry_point = &(arm.r15);
-            output_thread_info.stack_pointer = &(arm.r13);
-            output_thread_info.state = &arm;
-            output_thread_info.thread_command.cmdsize += sizeof(long) *
-                ARM_THREAD_STATE_COUNT;
+	    }
+	    else if (arch_flag.cputype == CPU_TYPE_ARM) {
+		output_thread_info.flavor = ARM_THREAD_STATE;
+		output_thread_info.count = ARM_THREAD_STATE_COUNT;
+		output_thread_info.entry_point = &(arm.r15);
+		output_thread_info.stack_pointer = &(arm.r13);
+		output_thread_info.state = &arm;
+		output_thread_info.thread_command.cmdsize += sizeof(long) *
+					    ARM_THREAD_STATE_COUNT;
 	    }
 	    else{
 		fatal("internal error: layout_segments() called with unknown "
@@ -2488,7 +2496,7 @@ struct merged_section *ms)
 /*
  * print_mach_header() prints the output file's mach header.  For debugging.
  */
-__private_extern__
+extern
 void
 print_mach_header(void)
 {
@@ -2506,7 +2514,7 @@ print_mach_header(void)
  * print_symtab_info() prints the output file's symtab command.  For
  * debugging.
  */
-__private_extern__
+extern
 void
 print_symtab_info(void)
 {
@@ -2523,7 +2531,7 @@ print_symtab_info(void)
  * print_thread_info() prints the output file's thread information.  For
  * debugging.
  */
-__private_extern__
+extern
 void
 print_thread_info(void)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2006 Apple Computer, Inc.  All Rights Reserved.
+ * Copyright (c) 1999-2007 Apple Computer, Inc.  All Rights Reserved.
  *
  * @APPLE_LICENSE_HEADER_START@
  *
@@ -68,7 +68,7 @@
 #include "mod_sections.h"
 
 #ifdef RLD
-__private_extern__ char *base_name;
+extern char *base_name;
 #endif
 
 /*
@@ -78,17 +78,17 @@ __private_extern__ char *base_name;
  * static depending on the -keep_private_externs flag.  The count of merged
  * symbols referenced only from dylibs will not be in the output file.
  */
-__private_extern__ struct merged_symbol_root *merged_symbol_root = NULL;
-__private_extern__ unsigned long nmerged_symbols = 0;
-__private_extern__ unsigned long nmerged_private_symbols = 0;
-__private_extern__ unsigned long nmerged_symbols_referenced_only_from_dylibs =0;
+struct merged_symbol_root *merged_symbol_root = NULL;
+unsigned long nmerged_symbols = 0;
+unsigned long nmerged_private_symbols = 0;
+unsigned long nmerged_symbols_referenced_only_from_dylibs =0;
 
 /*
  * nstripped_merged_symbols is set to the number of merged symbol being stripped
  * out when -dead_strip is specified or the strip_level is
  * STRIP_DYNAMIC_EXECUTABLE.
  */
-__private_extern__ unsigned long nstripped_merged_symbols = 0;
+extern unsigned long nstripped_merged_symbols = 0;
 /*
  * When -dead_strip is specified some of these the merged private symbols may
  * get stripped. To allow assign_output_symbol_indexes() to recalculate the
@@ -104,8 +104,8 @@ static unsigned long nstripped_merged_private_symbols = 0;
  * The head of the list of the blocks that store the strings for the merged
  * symbols and the total size of all the strings.
  */
-__private_extern__ struct string_block *merged_string_blocks = NULL;
-__private_extern__ unsigned long merged_string_size = 0;
+struct string_block *merged_string_blocks = NULL;
+unsigned long merged_string_size = 0;
 
 /*
  * To order the merged symbol table these arrays are allocated and filled in by
@@ -140,15 +140,15 @@ static int qsort_by_undef_order(
  * The number of local symbols that will appear in the output file and the
  * size of their strings.
  */
-__private_extern__ unsigned long nlocal_symbols = 0;
-__private_extern__ unsigned long local_string_size = 0;
+unsigned long nlocal_symbols = 0;
+unsigned long local_string_size = 0;
 
 /*
  * The things to deal with creating local symbols with the object file's name
  * for a given section.  If the section name is (__TEXT,__text) these are the
  * same as a UNIX link editor's file.o symbols for the text section.
  */
-__private_extern__ struct sect_object_symbols sect_object_symbols = { FALSE };
+struct sect_object_symbols sect_object_symbols = { FALSE };
 
 /*
  * The head of the undefined list and the list of free undefined structures.
@@ -157,7 +157,7 @@ __private_extern__ struct sect_object_symbols sect_object_symbols = { FALSE };
  * merged_symbol filled in but they only serve as the heads and tails of there
  * lists.
  */
-__private_extern__ struct undefined_list undefined_list = {
+struct undefined_list undefined_list = {
     NULL, &undefined_list, &undefined_list
 };
 static struct undefined_list free_list = {
@@ -178,7 +178,7 @@ static struct undefined_block {
  * The common symbol load map.  Only allocated and filled in if load map is
  * requested.
  */
-__private_extern__ struct common_load_map common_load_map = { 0 };
+extern struct common_load_map common_load_map = { 0 };
 
 /*
  * These symbols are used by the routines command_line_symbol(),
@@ -296,7 +296,7 @@ struct section_map link_edit_section_maps = {
 };
 
 #ifndef RLD
-__private_extern__
+extern
 struct symtab_command link_edit_common_symtab = {
     LC_SYMTAB,		/* cmd */
     sizeof(struct symtab_command),	/* cmdsize */
@@ -307,7 +307,7 @@ struct symtab_command link_edit_common_symtab = {
 };
 #endif /* !defined(RLD) */
 
-__private_extern__
+extern
 struct object_file link_edit_common_object = {
     "\"link editor\"",	/* file_name */
     NULL,		 /* obj_addr */
@@ -381,8 +381,8 @@ static unsigned long nindr_symbols = 0;
  * are N_INDR which should use the matching indr_symbol from the table instead
  * of going through (struct merged_symbol *)(merged_symbol->nlist.n_value).
  */
-__private_extern__ struct indr_symbol_pair *indr_symbol_pairs = NULL;
-__private_extern__ unsigned long nindr_symbol_pairs = 0;
+extern struct indr_symbol_pair *indr_symbol_pairs = NULL;
+extern unsigned long nindr_symbol_pairs = 0;
 
 /*
  * commons_exist is set and used in define_common_symbols().  noundefs is set
@@ -397,7 +397,7 @@ static enum bool noundefs = TRUE;
  * merged_symbols_relocated is set when the merged symbols are relocated to
  * have addresses and section numbers as they would in the output file.
  */
-__private_extern__ enum bool merged_symbols_relocated = FALSE;
+extern enum bool merged_symbols_relocated = FALSE;
 
 static struct merged_symbol *enter_symbol(
     struct merged_symbol *hash_pointer,
@@ -939,7 +939,7 @@ maybe_remove_dwarf_symbol (struct merged_symbol *merged_symbol)
  * merge_symbols() merges the symbols from the current object (cur_obj) into
  * the merged symbol table.
  */
-__private_extern__
+extern
 void
 merge_symbols(void)
 {
@@ -2088,7 +2088,7 @@ struct nlist *symbol)
  * table entry for it.  If the symbol doesn't exist it enters an undefined
  * symbol for it.
  */
-__private_extern__
+extern
 struct merged_symbol *
 command_line_symbol(
 char *symbol_name)
@@ -2164,7 +2164,7 @@ char *symbol_name)
  * what is intended.  That is exactly one error message for each symbol and
  * exactly one trace for each object or command line option for each symbol.
  */
-__private_extern__
+extern
 void
 command_line_indr_symbol(
 char *symbol_name,
@@ -2339,7 +2339,7 @@ char *indr_symbol_name)
  * the merged symbol table.  The parameter dynamic_library is the dynamic
  * library struct the current object is from.
  */
-__private_extern__
+extern
 void
 merge_dylib_module_symbols(
 struct dynamic_library *dynamic_library)
@@ -2902,7 +2902,7 @@ printf("merging in coalesced symbol %s\n", merged_symbol->nlist.n_un.n_name);
  * table.  The parameter dynamic_library is the dynamic library struct the
  * current object is from.
  */
-__private_extern__
+extern
 void
 merge_bundle_loader_symbols(
 struct dynamic_library *dynamic_library)
@@ -3174,7 +3174,7 @@ printf("merging in coalesced symbol %s\n", merged_symbol->nlist.n_un.n_name);
  * The obj passed must be the object this symbol came from so that the the
  * section can be checked for the S_ATTR_STRIP_STATIC_SYMS attribute flag.
  */
-__private_extern__
+extern
 enum bool
 is_output_local_symbol(
 unsigned char n_type,
@@ -3482,7 +3482,7 @@ char *name_end)
  * the merged_symbol_chunk structs.  And it allocates the first of the
  * merged_symbol_list structs hang off the merged_symbol_root.
  */
-__private_extern__
+extern
 struct merged_symbol *
 lookup_symbol(
 char *symbol_name)
@@ -3528,7 +3528,7 @@ char *symbol_name)
  * hash_instrument() is called when -hash_instrument is specified and prints out
  * the info about the hash table and the merged symbols lists.
  */
-__private_extern__
+extern
 void
 hash_instrument(void)
 {
@@ -3833,7 +3833,7 @@ struct merged_symbol *merged_symbol)
  * pass1() when it comes across a symbol on the undefined list that is no longer
  * undefined.
  */
-__private_extern__
+extern
 void
 delete_from_undefined_list(
 struct undefined_list *undefined)
@@ -3921,7 +3921,7 @@ char *strings)
 /*
  * trace_merged_symbol() traces a symbol that is in the merged symbol table.
  */
-__private_extern__
+extern
 void
 trace_merged_symbol(
 struct merged_symbol *merged_symbol)
@@ -3990,7 +3990,7 @@ char *indr_symbol_name)
 /*
  * free_pass1_symbol_data() free()'s all symbol data only used in pass1().
  */
-__private_extern__
+extern
 void
 free_pass1_symbol_data(void)
 {
@@ -4001,7 +4001,7 @@ free_pass1_symbol_data(void)
 /*
  * free_undefined_list() free's up the memory for the undefined list.
  */
-__private_extern__
+extern
 void
 free_undefined_list(void)
 {
@@ -4031,7 +4031,7 @@ free_undefined_list(void)
  * alignment and warns if it is less.  Also it checks to make sure that no
  * section is to be created from a file for this reserved section.
  */
-__private_extern__
+extern
 void
 define_common_symbols(void)
 {
@@ -4428,7 +4428,7 @@ define_common_symbols(void)
  * undefined symbols as private externs.  Their final value gets set by
  * define_link_editor_dylib_symbols().
  */
-__private_extern__
+extern
 void
 define_undefined_symbols_a_way(
 void)
@@ -4496,7 +4496,7 @@ void)
  * section attribute live.  And marks the fine_reloc (if any) for each live
  * symbol live.
  */
-__private_extern__
+extern
 void
 mark_globals_live(void)
 {
@@ -4583,7 +4583,7 @@ mark_it_live:
  * mark_N_NO_DEAD_STRIP_local_symbols_live() is called to cause the fine_relocs
  * for local symbols that have the N_NO_DEAD_STRIP bit set to be marked live.
  */
-__private_extern__
+extern
 void
 mark_N_NO_DEAD_STRIP_local_symbols_live(void)
 {
@@ -4695,7 +4695,7 @@ struct merged_section *ms)
  * in layout_ordered_section() but when a section from an object is linked
  * as one block they are not set.  So this is done here.
  */
-__private_extern__
+extern
 void
 set_fine_relocs_for_merged_symbols(void)
 {
@@ -4745,7 +4745,7 @@ set_fine_relocs_for_merged_symbols(void)
  * have been marked live.  It adjust the counts and reference maps of symbols
  * to account for just the live symbols.
  */
-__private_extern__
+extern
 void
 count_live_symbols(void)
 {
@@ -5028,7 +5028,7 @@ void)
  * which are the address of the header.  Since these symbols are not in a 
  * section (it is before the first section) they are absolute symbols.
  */
-__private_extern__
+extern
 void
 define_link_editor_execute_symbols(
 unsigned long header_address)
@@ -5062,7 +5062,7 @@ unsigned long header_address)
  * slid by the dynamic link editor.  Also for these file types the symbol is
  * also made a private extern.
  */
-__private_extern__
+extern
 void
 setup_link_editor_symbols(
 void)
@@ -5225,7 +5225,7 @@ char *symbol_name)
  * the an address relative to the first section.  This symbol is also a private 
  * extern. This routine also sets the define_a_way symbols to their final value.
  */
-__private_extern__
+extern
 void
 define_link_editor_dylib_symbols(
 unsigned long header_address)
@@ -5301,7 +5301,7 @@ char *symbol_name)
  * the closest section they belong to (in some cases the *__end symbols will
  * be outside the section).
  */
-__private_extern__
+extern
 void
 define_link_editor_preload_symbols(
 enum bool setup)
@@ -5514,7 +5514,7 @@ unsigned long value)
  * reduce_indr_symbols() reduces indirect symbol chains to have all the indirect
  * symbols point at their leaf symbol.  Also catch loops of indirect symbols.
  */
-__private_extern__
+extern
 void
 reduce_indr_symbols(void)
 {
@@ -5634,7 +5634,7 @@ reduce_indr_symbols(void)
  * layout_merged_symbols() sets the values and section numbers of the merged
  * symbols.
  */
-__private_extern__
+extern
 void
 layout_merged_symbols(void)
 {
@@ -5680,7 +5680,7 @@ layout_merged_symbols(void)
  * the fine relocation entries have been set up to determined for which items
  * the contents will be used from current object file object file.
  */
-__private_extern__
+extern
 void
 discard_local_symbols_for_section(
 unsigned long nsect,
@@ -6226,7 +6226,7 @@ add_dwarf_map_for_sym(const struct nlist * sym,
  * current object file into the output file's memory buffer.  The symbols also
  * get relocated.
  */
-__private_extern__
+extern
 void
 output_local_symbols(void)
 {
@@ -6687,7 +6687,7 @@ unsigned long *mtime)
  * called by output_indirect_symbols() when a symbol that was a private extern
  * that is no longer external is being used as an indirect symbol.
  */
-__private_extern__
+extern
 unsigned long
 local_symbol_output_index(
 struct object_file *obj,
@@ -6756,7 +6756,7 @@ unsigned long index)
  * set_merged_string_block_indexes() set the relitive indexes for each merged
  * string block.
  */
-__private_extern__
+extern
 void
 set_merged_string_block_indexes(
 void)
@@ -6787,7 +6787,7 @@ void)
  * two-level namespace hints for the undefined symbols if they are to be in
  * the output.
  */
-__private_extern__
+extern
 void
 output_merged_symbols(void)
 {
@@ -6892,16 +6892,17 @@ output_merged_symbols(void)
 		    if(merged_symbol->definition_object->set_num != cur_set)
 			continue;
 #endif /* RLD */
-		    if ((strip_level == STRIP_DYNAMIC_EXECUTABLE &&
-		       (merged_symbol->nlist.n_desc & REFERENCED_DYNAMICALLY) !=
-                    REFERENCED_DYNAMICALLY))
+		    if(strip_level == STRIP_DYNAMIC_EXECUTABLE &&
+		       (((merged_symbol->nlist.n_desc &
+			  REFERENCED_DYNAMICALLY) != REFERENCED_DYNAMICALLY) ||
+			 (merged_symbol->nlist.n_type & N_PEXT) == N_PEXT))
 			continue;
 		    if(dead_strip == TRUE && merged_symbol->live == FALSE)
 			continue;
 
-            if (strip_level == STRIP_DYNAMIC_EXECUTABLE &&
-                (merged_symbol->nlist.n_type & N_PEXT) == N_PEXT)
-                continue;
+		    if (strip_level == STRIP_DYNAMIC_EXECUTABLE &&
+			(merged_symbol->nlist.n_type & N_PEXT) == N_PEXT)
+			continue;
 
 		    /*
 		     * See if this is a defined private extern symbol (but not
@@ -7143,7 +7144,7 @@ output_merged_symbols(void)
  * output_rld_symfile_merged_symbols() copies the merged symbol table into the
  * output file for the rld symfile.  It makes all the symbols absolute.
  */
-__private_extern__
+extern
 void
 output_rld_symfile_merged_symbols(
 void)
@@ -7248,7 +7249,7 @@ char *symbol_name)
  * symbols that are only referenced from dylibs and will not appear in the
  * output file.
  */
-__private_extern__
+extern
 void
 process_undefineds(
 void)
@@ -7400,7 +7401,7 @@ void)
 	 * does not support them generate a warning can clear the weak reference
 	 * bit.
 	 */
-	if(macosx_deployment_target <= MACOSX_DEPLOYMENT_TARGET_10_1){
+	if(macosx_deployment_target.major <= 1){
 	    weak_ref_warning = FALSE;
 	    for(merged_symbol_list = merged_symbol_root == NULL ? NULL :
 				     merged_symbol_root->list;
@@ -7417,7 +7418,7 @@ void)
 			    warning("weak symbol references not set in output "
 				    "with MACOSX_DEPLOYMENT_TARGET environment "
 				    "variable set to: %s",
-				    macosx_deployment_target_name);
+				    macosx_deployment_target.name);
 			    warning("weak referenced symbols:");
 			    weak_ref_warning = TRUE;
 			}
@@ -7677,7 +7678,7 @@ done:
  * reset_prebound_undefines() resets the prebound undefined symbols back to
  * undefined symbols if prebinding is not to be done.
  */
-__private_extern__
+extern
 void
 reset_prebound_undefines(
 void)
@@ -7764,7 +7765,7 @@ void)
  *	Undefinded Symbols
  *	    Sorted by name
  */
-__private_extern__
+extern
 void
 assign_output_symbol_indexes(
 void)
@@ -8199,7 +8200,7 @@ const struct merged_symbol **ms2)
  * merged_symbol_output_index() returns the index in the output file's symbol
  * table for the merged_symbol pointer passed to it.
  */
-__private_extern__
+extern
 unsigned long
 merged_symbol_output_index(
 struct merged_symbol *merged_symbol)
@@ -8223,7 +8224,7 @@ char *dylib_single_module_name;
  *	The module table
  *	The table of contents
  */
-__private_extern__
+extern
 void
 layout_dylib_tables(
 void)
@@ -8360,7 +8361,7 @@ void)
  *	The module table
  *	The table of contents
  */
-__private_extern__
+extern
 void
 output_dylib_tables(
 void)
@@ -8603,7 +8604,7 @@ static enum bool some_read_only_reloc_flags_set = FALSE;
  * clear_read_only_reloc_flags() clears the flagged_read_only_reloc flags on
  * all the merged symbols.
  */
-__private_extern__
+extern
 void
 clear_read_only_reloc_flags(
 void)
@@ -8633,7 +8634,7 @@ void)
  * already been flaged it's name is printed.  Also if first_time point to
  * a TRUE value a leading print statement is done.
  */
-__private_extern__
+extern
 void
 flag_read_only_reloc(
 struct section *s,
@@ -8680,7 +8681,7 @@ enum bool *first_time)
  * free_multiple_defs() frees the multiple_defs array and resets the count to
  * zero if it exist.
  */
-__private_extern__
+extern
 void
 free_multiple_defs(void)
 {
@@ -8697,7 +8698,7 @@ free_multiple_defs(void)
  * that symbols from the current set of symbols were all merged after the
  * previous set and appear last in symbol list and hash table.
  */
-__private_extern__
+extern
 void
 remove_merged_symbols(void)
 {
@@ -8868,7 +8869,7 @@ remove_merged_symbols(void)
 /*
  * print_symbol_list() prints the merged symbol table.  Used for debugging.
  */
-__private_extern__
+extern
 void
 print_symbol_list(
 char *string,
@@ -8969,7 +8970,7 @@ enum bool input_based)
  * the section number passed to it.  It returns NULL for section numbers that
  * are not in the output file.
  */
-__private_extern__
+extern
 struct section *
 get_output_section(
 unsigned long sect)
@@ -9005,7 +9006,7 @@ unsigned long sect)
 /*
  * print_undefined_list() prints the undefined symbol list.  Used for debugging.
  */
-__private_extern__
+extern
 void
 print_undefined_list(void)
 {

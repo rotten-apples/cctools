@@ -100,7 +100,7 @@ extern const struct section *getsectbynamefromheader(
  * The user's address function to be called in layout to get the address of
  * where to link edit the result.
  */
-__private_extern__
+extern
 unsigned long (*address_func)(unsigned long size, unsigned long headers_size) =
 									   NULL;
 
@@ -122,7 +122,7 @@ static void (*rld_monaddition)(char *lowpc, char *highpc) = NULL;
  * can call the address_func (above) with the allocated_size of memory
  * (including the symbol table) so that it can deallocate it correctly.
  */
-__private_extern__ long RLD_DEBUG_OUTPUT_FILENAME_flag = 0;
+extern long RLD_DEBUG_OUTPUT_FILENAME_flag = 0;
 
 #ifndef KLD
 /*
@@ -154,7 +154,7 @@ static volatile int fatals = 0;
  * The base file name passed to rld_load_basefile() if it has been called.
  * This points at an allocated copy of the name.
  */
-__private_extern__ char *base_name = NULL;
+extern char *base_name = NULL;
 
 #if !defined(SA_RLD) && !(defined(KLD) && defined(__STATIC__))
 /* 
@@ -247,8 +247,8 @@ const char *output_filename)
  * argument.  Errors for the kld api's are done through kld_error_vprintf()
  * which kextload(8) provides.
  * 
- * Note thes symbols are really __private_extern__ and done by the "nmedit -p"
- * command in the Makefile so that the other __private_extern__ symbols can be
+ * Note thes symbols are really extern and done by the "nmedit -p"
+ * command in the Makefile so that the other extern symbols can be
  * hidden by the "ld -r" first.
  */
 long
@@ -311,8 +311,8 @@ const char *output_filename)
  * does not produce an output file. Errors for the kld api's are done through
  * kld_error_vprintf() which /mach_kernel provides.
  * 
- * Note this symbol is really __private_extern__ and done by the "nmedit -p"
- * command in the Makefile so that the other __private_extern__ symbols can be
+ * Note this symbol is really extern and done by the "nmedit -p"
+ * command in the Makefile so that the other extern symbols can be
  * hidden by the "ld -r" first.
  */
 long
@@ -458,7 +458,7 @@ long obj_size)
 	     *     libsa/stdlib.h
 	     * if it exists on the system.
 	     */
-	    __private_extern__ const char *kld_basefile_name;
+	    extern const char *kld_basefile_name;
 #endif /* !defined(_LIBSA_STDLIB_H_) */
 #else /* !defined(KLD) */
 	    extern char **NXArgv;
@@ -1821,7 +1821,7 @@ unsigned long link_options)
 /*
  * cleanup() is called by all routines handling fatal errors.
  */
-__private_extern__
+extern
 void
 cleanup(void)
 {
@@ -1833,7 +1833,7 @@ cleanup(void)
 /*
  * All printing of all messages goes through this function.
  */
-__private_extern__
+extern
 void
 vprint(
 const char *format,
@@ -1849,7 +1849,7 @@ NXVPrintf(error_stream, format, ap);
 /*
  * All printing of all messages goes through this function.
  */
-__private_extern__
+extern
 void
 vprint(
 const char *format,
@@ -1864,7 +1864,7 @@ va_list ap)
  * allocate() is just a wrapper around malloc that prints and error message and
  * exits if the malloc fails.
  */
-__private_extern__
+extern
 void *
 allocate(
 unsigned long size)
@@ -1888,7 +1888,7 @@ unsigned long size)
  * reallocate() is just a wrapper around realloc that prints and error message
  * and exits if the realloc fails.
  */
-__private_extern__
+extern
 void *
 reallocate(
 void *p,
@@ -1913,8 +1913,8 @@ unsigned long size)
  * These two variables are set in sa_rld() and used in layout_segments()
  * as the place to put the output in memory.
  */
-__private_extern__ char         *sa_rld_output_addr = NULL;
-__private_extern__ unsigned long sa_rld_output_size = 0;
+extern char         *sa_rld_output_addr = NULL;
+extern unsigned long sa_rld_output_size = 0;
 
 /*
  * These two variables are set in sa_rld() and used in vprint() (defined in this
@@ -2129,7 +2129,7 @@ unsigned long      strsize)         /* sizeof the string table */
 /*
  * All printing of all SA_RLD messages goes through this function.
  */
-__private_extern__
+extern
 void
 vprint(
 const char *format,
@@ -2150,7 +2150,7 @@ va_list ap)
  * allocate() is just a wrapper around malloc that prints and error message and
  * exits if the malloc fails.
  */
-__private_extern__
+extern
 void *
 allocate(
 unsigned long size)
@@ -2168,7 +2168,7 @@ unsigned long size)
  * reallocate() is just a wrapper around realloc that prints and error message
  * and exits if the realloc fails.
  */
-__private_extern__
+extern
 void *
 reallocate(
 void *p,
@@ -2186,7 +2186,7 @@ unsigned long size)
  * savestr() malloc's space for the string passed to it, copys the string into
  * the space and returns a pointer to that space.
  */
-__private_extern__
+extern
 char *
 savestr(
 const char *s)
@@ -2204,7 +2204,7 @@ const char *s)
 /*
  * The Kernel framework does not provide this API so we have a copy here.
  */
-__private_extern__
+extern
 struct mach_header *
 _NSGetMachExecuteHeader(void)
 {

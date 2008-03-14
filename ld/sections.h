@@ -20,8 +20,8 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
 
 #ifndef SECTIONS_H
@@ -222,6 +222,10 @@ extern enum bool is_merged_symbol_coalesced(
 extern int qsort_load_order_values(
     const struct load_order *load_order1,
     const struct load_order *load_order2);
+extern unsigned long align_to_input_mod(
+    unsigned long output_offset,
+    unsigned long input_offset,
+    unsigned long align);
 #ifdef RLD
 extern void reset_merged_sections(
     void);
@@ -247,4 +251,3 @@ extern void print_load_order(
 #endif /* DEBUG */
 
 #endif
-

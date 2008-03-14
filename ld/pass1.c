@@ -78,22 +78,22 @@
 
 #ifndef RLD
 /* TRUE if -search_paths_first was specified */
-__private_extern__ enum bool search_paths_first = FALSE;
+extern enum bool search_paths_first = FALSE;
 
 /* the user specified directories to search for -lx names, and the number
    of them */
-__private_extern__ char **search_dirs = NULL;
-__private_extern__ unsigned long nsearch_dirs = 0;
+extern char **search_dirs = NULL;
+extern unsigned long nsearch_dirs = 0;
 
 /*
  * The user specified directories to search via the environment variable
  * LD_LIBRARY_PATH.
  */
-__private_extern__ char **ld_library_paths = NULL;
-__private_extern__ unsigned long nld_library_paths = 0;
+extern char **ld_library_paths = NULL;
+extern unsigned long nld_library_paths = 0;
 
 /* the standard directories to search for -lx names */
-__private_extern__ char *standard_dirs[] = {
+extern char *standard_dirs[] = {
     "/lib/",
     "/usr/lib/",
     "/usr/local/lib/",
@@ -104,11 +104,11 @@ __private_extern__ char *standard_dirs[] = {
  * The user specified directories to search for "-framework Foo" names, and the
  * number of them.  These are specified with -F options.
  */
-__private_extern__ char **framework_dirs = NULL;
-__private_extern__ unsigned long nframework_dirs = 0;
+extern char **framework_dirs = NULL;
+extern unsigned long nframework_dirs = 0;
 
 /* the standard framework directories to search for "-framework Foo" names */
-__private_extern__ char *standard_framework_dirs[] = {
+extern char *standard_framework_dirs[] = {
 #ifdef __OPENSTEP__
     "/LocalLibrary/Frameworks/",
     "/NextLibrary/Frameworks/",
@@ -127,12 +127,12 @@ __private_extern__ char *standard_framework_dirs[] = {
 };
 
 /* The pointer to the head of the base object file's segments */
-__private_extern__ struct merged_segment *base_obj_segments = NULL;
+extern struct merged_segment *base_obj_segments = NULL;
 
-__private_extern__ char *search_lib_extensions[] = {
-	".dylib",
-	".a",
-	NULL
+extern char *search_lib_extensions[] = {
+    ".dylib",
+    ".a",
+    NULL
 };
 
 #endif /* !defined(RLD) */
@@ -152,16 +152,16 @@ static struct stat stat_buf = { 0 };
  * ran_name so that the library can be mapped read only and thus not get dirty
  * and maybe written to the swap area by the kernel.
  */
-__private_extern__ char *bsearch_strings = NULL;
+extern char *bsearch_strings = NULL;
 #ifndef RLD
-__private_extern__ struct nlist *bsearch_symbols = NULL;
+extern struct nlist *bsearch_symbols = NULL;
 
 /*
  * The list of dynamic libraries to search.  The list of specified libraries
  * can contain archive libraries when archive libraries appear after dynamic
  * libraries on the link line.
  */
-__private_extern__ struct dynamic_library *dynamic_libs = NULL;
+extern struct dynamic_library *dynamic_libs = NULL;
 
 /*
  * When building two-level-namespace, indirect libraries are not kept
@@ -171,7 +171,7 @@ __private_extern__ struct dynamic_library *dynamic_libs = NULL;
  * gives us a scaling factor to multiple by the number of libraries
  * in dynamic_libs as an estimate of the total number of libraries.
  */
-__private_extern__ unsigned int indirect_library_ratio = 1;
+extern unsigned int indirect_library_ratio = 1;
 
 /*
  * The variable indirect_dylib is used for search_dynamic_libs() to communicate
@@ -337,7 +337,7 @@ static char *mkstr(
  * references or the -ObjC flag is set and their are symbols with the ".objc"
  * prefix defined.
  */
-__private_extern__
+extern
 void
 pass1(
 char *name,
@@ -369,6 +369,7 @@ enum bool force_weak)
 	/* this function" can safely be ignored */
 	file_name = NULL;
 #endif /* DEBUG */
+
 	fd = -1;
 #ifndef RLD
 	if(lname){
@@ -391,10 +392,10 @@ enum bool force_weak)
 		    }
 		    else{
 			while (search_lib_extensions[search_lib_index] && (fd == -1)) {
-				p = mkstr("lib", &name[2], search_lib_extensions[search_lib_index], NULL);
-				search_for_file(p, &file_name, &fd);
-				search_lib_index++;
-				}
+			    p = mkstr("lib", &name[2], search_lib_extensions[search_lib_index], NULL);
+			    search_for_file(p, &file_name, &fd);
+			    search_lib_index++;
+			}
 		    }
 		}
 		else{
@@ -650,13 +651,13 @@ int *fd)
 	int search_lib_index=0;
 	*fd = -1;
 	while (search_lib_extensions[search_lib_index] && (*fd == -1)) {
-		*file_name = mkstr(dir, "/", "lib", lname_argument, search_lib_extensions[search_lib_index], NULL);
-		if((*fd = open(*file_name, O_RDONLY)) != -1)
-			break;
+	    *file_name = mkstr(dir, "/", "lib", lname_argument, search_lib_extensions[search_lib_index], NULL);
+	    if((*fd = open(*file_name, O_RDONLY)) != -1)
+		break;
 	search_lib_index++;
 	}
 	if (*fd == -1)
-		free(*file_name);
+	    free(*file_name);
 }
 #endif /* !defined(RLD) */
 
@@ -890,7 +891,7 @@ pass1_fat_return:
 	return;
 }
 
-__private_extern__
+extern
 void
 check_fat(
 char *file_name,
@@ -2039,7 +2040,7 @@ enum bool force_weak)
  * is unlike archive library search semantic when each library is search once
  * when encountered.
  */
-__private_extern__
+extern
 void
 search_dynamic_libs(
 void)
@@ -2120,10 +2121,11 @@ void)
 
 	/*
 	 * For dynamic libraries on the dynamic library search list that are
-	 * from LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB references convert them into
-	 * using a dylib file so it can be searched.  Or remove them from the
-	 * search list if it can't be converted.  Then add all the dependent
-	 * libraries for that library to the search list.
+	 * from LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB or LC_REEXPORT_DYLIB
+	 * references convert them into using a dylib file so it can be
+	 * searched.  Or remove them from the search list if it can't be
+	 * converted.  Then add all the dependent libraries for that library to 
+	 * the search list.
 	 */
 	indirect_dylib = TRUE;
 	prev = NULL;
@@ -2131,13 +2133,14 @@ void)
 	    removed = FALSE;
 	    /*
 	     * If this element on the dynamic library list comes from a
-	     * LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB reference try to convert them
-	     * into using a dylib file so it can be searched.  If not take it
-	     * off the list.
+	     * LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB or LC_REEXPORT_DYLIB reference
+	     * try to convert them into using a dylib file so it can be
+	     * searched.  If not take it off the list.
 	     */
 	    if(p->type == DYLIB &&
 	       (p->dl->cmd == LC_LOAD_DYLIB ||
-		p->dl->cmd == LC_LOAD_WEAK_DYLIB)){
+		p->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+		p->dl->cmd == LC_REEXPORT_DYLIB)){
 		if(open_dylib(p) == FALSE){
 		    if(prebinding == TRUE){
 			warning("prebinding disabled because dependent "
@@ -2190,7 +2193,8 @@ void)
 			 sizeof(struct mach_header));
 		for(i = 0; i < mh->ncmds; i++){
 		    if(lc->cmd == LC_LOAD_DYLIB ||
-		       lc->cmd == LC_LOAD_WEAK_DYLIB){
+		       lc->cmd == LC_LOAD_WEAK_DYLIB ||
+		       lc->cmd == LC_REEXPORT_DYLIB){
 			dl = (struct dylib_command *)lc;
 			dep = add_dynamic_lib(DYLIB, dl, p->definition_obj);
 			p->dependent_images[p->ndependent_images++] = dep;
@@ -2561,11 +2565,13 @@ void)
 		q = p;
 		/*
 		 * This could be a dylib that was missing so its dynamic_library
-		 * struct will be just an LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB
-		 * command and a name with no strings, symbols, sub_images, etc.
+		 * struct will be just an LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB,
+		 * LC_REEXPORT_DYLIB command and a name with no strings,
+		 * symbols, sub_images, etc.
 	 	 */
 		if(p->dl->cmd == LC_LOAD_DYLIB ||
-		   p->dl->cmd == LC_LOAD_WEAK_DYLIB)
+		   p->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+		   p->dl->cmd == LC_REEXPORT_DYLIB)
 		    goto undefined_twolevel_reference;
 		bsearch_strings = q->strings;
 		bsearch_symbols = q->symbols;
@@ -2578,7 +2584,8 @@ void)
 		    for(i = 0; toc == NULL && i < p->nsub_images; i++){
 			q = p->sub_images[i];
 			if(q->dl->cmd == LC_LOAD_DYLIB ||
-			   q->dl->cmd == LC_LOAD_WEAK_DYLIB)
+			   q->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+			   q->dl->cmd == LC_REEXPORT_DYLIB)
 			    break;
 			bsearch_strings = q->strings;
 			bsearch_symbols = q->symbols;
@@ -2688,12 +2695,13 @@ undefined_twolevel_reference:
 			break;
 		    /*
 		     * This could be a dylib that was missing so its
-		     * dynamic_library struct will be just an LC_LOAD_DYLIB or
-		     * LC_LOAD_WEAK_DYLIB command and a name with no strings,
-		     * symbols, sub_images, etc.
+		     * dynamic_library struct will be just an LC_LOAD_DYLIB,
+		     * LC_LOAD_WEAK_DYLIB or LC_REEXPORT_DYLIB command and a
+		     * name with no strings, symbols, sub_images, etc.
 		     */
 		    if(p->dl->cmd == LC_LOAD_DYLIB ||
-		       p->dl->cmd == LC_LOAD_WEAK_DYLIB)
+		       p->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+		       p->dl->cmd == LC_REEXPORT_DYLIB)
 			break;
 		    q = p;
 		    bsearch_strings = q->strings;
@@ -2709,7 +2717,8 @@ undefined_twolevel_reference:
 			    q = p->sub_images[i];
 			    q->twolevel_searched = TRUE;
 			    if(q->dl->cmd == LC_LOAD_DYLIB ||
-			       q->dl->cmd == LC_LOAD_WEAK_DYLIB)
+			       q->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+			       q->dl->cmd == LC_REEXPORT_DYLIB)
 				break;
 			    /*
 			     * Don't search images that cannot be two level
@@ -3011,7 +3020,8 @@ undefined_twolevel_reference:
 				break;
 			    q = p;
 			    if(q->dl->cmd == LC_LOAD_DYLIB ||
-			       q->dl->cmd == LC_LOAD_WEAK_DYLIB)
+			       q->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+			       q->dl->cmd == LC_REEXPORT_DYLIB)
 				break;
 			    bsearch_strings = q->strings;
 			    bsearch_symbols = q->symbols;
@@ -3028,7 +3038,8 @@ undefined_twolevel_reference:
 				    q = p->sub_images[j];
 				    q->twolevel_searched = TRUE;
 				    if(q->dl->cmd == LC_LOAD_DYLIB ||
-				       q->dl->cmd == LC_LOAD_WEAK_DYLIB)
+				       q->dl->cmd == LC_LOAD_WEAK_DYLIB ||
+				       q->dl->cmd == LC_REEXPORT_DYLIB)
 					break;
 				    bsearch_strings = q->strings;
 				    bsearch_symbols = q->symbols;
@@ -3340,7 +3351,7 @@ next_dep:	;
  * be done.  If a symbol is overridden prebinding is disabled and a warning
  * is printed.
  */
-__private_extern__
+extern
 void
 prebinding_check_for_dylib_override_symbols(
 void)
@@ -3370,7 +3381,7 @@ void)
  * where another symbol of the same name is being used from some other object
  * or dynamic library.
  */
-__private_extern__
+extern
 void
 twolevel_namespace_check_for_unused_dylib_symbols(
 void)
@@ -3903,7 +3914,7 @@ struct dynamic_library *sub)
  * dylib_name specified in the dylib_command (or a new dynamic_library struct
  * for archive types).
  */
-__private_extern__
+extern
 struct dynamic_library *
 add_dynamic_lib(
 enum library_type type,
@@ -3932,9 +3943,9 @@ struct object_file *definition_obj)
 			/*
 			 * If the new one is also a LC_ID_DYLIB use the one
 			 * with the highest compatiblity number.  Else if the
-			 * new one is just an LC_LOAD_DYLIB or
-			 * LC_LOAD_WEAK_DYLIB ignore it and use the one that is
-			 * on the list which is a LC_ID_DYLIB.
+			 * new one is just an LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB
+			 * or LC_REEXPORT_DYLIB ignore it and use the one that
+			 * is on the list which is a LC_ID_DYLIB.
 			 */
 			if(dl->cmd == LC_ID_DYLIB){
 			   if(dl->dylib.compatibility_version >
@@ -4004,7 +4015,7 @@ struct object_file *definition_obj)
  * Function for bsearch() for finding a symbol name in a dylib table of
  * contents.
  */
-__private_extern__
+extern
 int
 dylib_bsearch(
 const char *symbol_name,
@@ -4047,7 +4058,7 @@ const struct ranlib *ran)
  * merge() merges all the global information from the cur_obj into the merged
  * data structures for the output object file to be built from.
  */
-__private_extern__
+extern
 void
 merge(
 enum bool dylib_only,
@@ -4157,8 +4168,8 @@ merge_return:
  * allocates the section_map structures and fills them in too), the fvmlib_
  * stuff field is set if any SG_FVMLIB segments or LC_LOADFVMLIB commands are
  * seen and the dylib_stuff field is set if the file is a MH_DYLIB or
- * MH_DYLIB_STUB type and has a LC_ID_DYLIB command or a LC_LOAD_DYLIB or
- * LC_LOAD_WEAK_DLIB command is seen.
+ * MH_DYLIB_STUB type and has a LC_ID_DYLIB command or a LC_LOAD_DYLIB,
+ * LC_LOAD_WEAK_DLIB or LC_REEXPORT_DYLIB command is seen.
  */
 static
 void
@@ -4192,7 +4203,7 @@ enum bool bundle_loader)
     cpu_subtype_t new_cpusubtype;
     const char *new_arch, *prev_arch;
     const struct arch_flag *family_arch_flag;
-    unsigned long *indirect_symtab;
+    uint32_t *indirect_symtab;
     struct dylib_table_of_contents *tocs;
     struct dylib_module *mods;
     struct dylib_reference *refs;
@@ -4204,6 +4215,9 @@ enum bool bundle_loader)
     static const struct symtab_command empty_symtab = { 0 };
     static const struct dysymtab_command empty_dysymtab = { 0 };
 
+#ifdef KLD
+	memset(&output_uuid_info, '\0', sizeof(struct uuid_info));
+#endif
 	/* check to see the mach_header is valid */
 	if(sizeof(struct mach_header) > cur_obj->obj_size){
 	    error_with_cur_obj("truncated or malformed object (mach header "
@@ -4460,11 +4474,10 @@ enum bool bundle_loader)
 			family_arch_flag->name);
 #if !defined(SA_RLD) && !(defined(KLD) && defined(__STATIC__))
 		/*
-		 * Pick up the Mac OS X deployment target.
+		 * Pick up the Mac OS X deployment target if not done already.
 		 */
-		get_macosx_deployment_target(&macosx_deployment_target,
-					     &macosx_deployment_target_name,
-					     arch_flag.cputype);
+		if(macosx_deployment_target.major == 0)
+		    get_macosx_deployment_target(&macosx_deployment_target);
 #endif /* !defined(SA_RLD) && !(defined(KLD) && defined(__STATIC__)) */
 	    }
 	}
@@ -4774,6 +4787,11 @@ enum bool bundle_loader)
 				  dyst->tocoff, sizeof(long),
 				"ntoc * sizeof(struct dylib_table_of_contents)",
 				"tocoff", i);
+		if(dyst->ntoc == 0 && cur_obj->dylib == TRUE &&
+		   dyst->nextdefsym != 0)
+		    warning_with_cur_obj("shared library has no table of "
+					 "contents entries (can't resolve "
+				         "symbols from it)");
 		if(errors)
 		    return;
 		check_size_offset(dyst->nmodtab * sizeof(struct dylib_module),
@@ -4940,6 +4958,7 @@ enum bool bundle_loader)
 
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
+	    case LC_REEXPORT_DYLIB:
 		if(filetype == MH_FVMLIB ||
 		   filetype == MH_DYLINKER){
 		    error_with_cur_obj("%s load command in object "
@@ -5271,20 +5290,41 @@ enum bool bundle_loader)
 		}
 		if(errors)
 		    return;
+#ifndef KLD
 		/*
 		 * If we see an input file with an LC_UUID load command then
 		 * set up to emit one in the output.
 		 */
 		output_uuid_info.emit = TRUE;
+#else
+		/*
+		 * For kernel extensions preserve the existing UUID in the
+		 * output.
+		 */
+		output_uuid_info.uuid_command.cmd = LC_UUID;
+		output_uuid_info.uuid_command.cmdsize =
+						sizeof(struct uuid_command);
+		memcpy(&(output_uuid_info.uuid_command.uuid[0]), uuid->uuid,
+		       sizeof(uuid->uuid));
+#endif
+
 		break;
 
-	    /* all of these are not looked at so they are also not swapped */
+	    /*
+	     * All of these are not looked at so the whole command is not
+	     * swapped.  But we need to swap just the first part in memory in
+	     * case they are in a dylib so other code can step over them.
+	     */
 	    case LC_UNIXTHREAD:
 	    case LC_THREAD:
 	    case LC_IDENT:
 	    case LC_FVMFILE:
 	    case LC_PREPAGE:
 	    case LC_PREBOUND_DYLIB:
+	    case LC_CODE_SIGNATURE:
+	    case LC_SEGMENT_SPLIT_INFO:
+		if(cur_obj->swapped)
+		    swap_load_command(lc, host_byte_sex);
 		break;
 
 	    default:
@@ -5427,7 +5467,7 @@ enum bool bundle_loader)
 		}
 
 		if(dyst->nindirectsyms != 0){
-		    indirect_symtab = (unsigned long *)(cur_obj->obj_addr +
+		    indirect_symtab = (uint32_t *)(cur_obj->obj_addr +
 					    dyst->indirectsymoff);
 		    if(cur_obj->swapped)
 			swap_indirect_symbols(indirect_symtab,
@@ -5542,7 +5582,7 @@ enum bool bundle_loader)
  * addresses from the _mh_execute_header.  This makes using the rest of the
  * code easy.
  */
-__private_extern__
+extern
 void
 merge_base_program(
 char *basefile_name,
@@ -5732,6 +5772,7 @@ unsigned long strsize)
 	    case LC_ID_DYLIB:
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
+	    case LC_REEXPORT_DYLIB:
 	    case LC_ID_DYLINKER:
 	    case LC_LOAD_DYLINKER:
 	    case LC_UNIXTHREAD:

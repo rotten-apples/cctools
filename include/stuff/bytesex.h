@@ -29,11 +29,10 @@
 #ifndef _STUFF_BYTESEX_H_
 #define _STUFF_BYTESEX_H_
 
-#if defined(__MWERKS__) && !defined(__private_extern__)
-#define __private_extern__ __declspec(private_extern)
+#if defined(__MWERKS__) && !defined(extern)
+#define extern __declspec(private_extern)
 #endif
 
-#include "stuff/target_arch.h"
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach/m68k/thread_status.h>
@@ -65,10 +64,17 @@ enum byte_sex {
 
 #define SWAP_SHORT(a) ( ((a & 0xff) << 8) | ((unsigned short)(a) >> 8) )
 
+#define SWAP_INT(a)  ( ((a) << 24) | \
+		      (((a) << 8) & 0x00ff0000) | \
+		      (((a) >> 8) & 0x0000ff00) | \
+	 ((unsigned int)(a) >> 24) )
+
+#ifndef __LP64__
 #define SWAP_LONG(a) ( ((a) << 24) | \
 		      (((a) << 8) & 0x00ff0000) | \
 		      (((a) >> 8) & 0x0000ff00) | \
 	((unsigned long)(a) >> 24) )
+#endif
 
 extern long long SWAP_LONG_LONG(
     long long ll);
@@ -228,7 +234,7 @@ extern void swap_i386_thread_state(
 /* current i386 thread states */
 #if i386_THREAD_STATE == 1
 extern void swap_i386_float_state(
-    struct i386_float_state *fpu,
+    struct __darwin_i386_float_state *fpu,
     enum byte_sex target_byte_sex);
 
 extern void swap_i386_exception_state(
@@ -324,6 +330,14 @@ extern void swap_uuid_command(
     struct uuid_command *uuid_cmd,
     enum byte_sex target_byte_sex);
 
+extern void swap_linkedit_data_command(
+    struct linkedit_data_command *ld,
+    enum byte_sex target_byte_sex);
+
+extern void swap_rpath_command(
+    struct rpath_command *rpath_cmd,
+    enum byte_sex target_byte_sex);
+
 extern void swap_nlist(
     struct nlist *symbols,
     unsigned long nsymbols,
@@ -345,8 +359,8 @@ extern void swap_relocation_info(
     enum byte_sex target_byte_sex);
 
 extern void swap_indirect_symbols(
-    unsigned long *indirect_symbols,
-    unsigned long nindirect_symbols,
+    uint32_t *indirect_symbols,
+    uint32_t nindirect_symbols,
     enum byte_sex target_byte_sex);
 
 extern void swap_dylib_reference(

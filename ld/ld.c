@@ -84,21 +84,21 @@ static char *mkstr(
 #include <config.h>
 
 /* name of this program as executed (argv[0]) */
-__private_extern__ char *progname = NULL;
+extern char *progname = NULL;
 /* indication of an error set in error(), for processing a number of errors
    and then exiting */
-__private_extern__ unsigned long errors = 0;
+extern unsigned long errors = 0;
 /* the pagesize of the machine this program is running on, getpagesize() value*/
-__private_extern__ unsigned long host_pagesize = 0;
+extern unsigned long host_pagesize = 0;
 /* the byte sex of the machine this program is running on */
-__private_extern__ enum byte_sex host_byte_sex = UNKNOWN_BYTE_SEX;
+extern enum byte_sex host_byte_sex = UNKNOWN_BYTE_SEX;
 
 /* name of output file */
-__private_extern__ char *outputfile = NULL;
+extern char *outputfile = NULL;
 /* type of output file */
-__private_extern__ unsigned long filetype = MH_EXECUTE;
+extern unsigned long filetype = MH_EXECUTE;
 /* multi or single module dylib output */
-__private_extern__ enum bool multi_module_dylib = TRUE;
+extern enum bool multi_module_dylib = TRUE;
 #ifndef RLD
 static enum bool filetype_specified = FALSE;
 static enum bool moduletype_specified = FALSE;
@@ -111,7 +111,7 @@ static enum bool Aflag_specified = FALSE;
  * cputype and cpusubtype.  specific_arch_flag is true if an -arch flag is
  * specified and the flag for a specific implementation of an architecture.
  */
-__private_extern__ struct arch_flag arch_flag =
+extern struct arch_flag arch_flag =
 #if defined(KLD) && defined(__STATIC__)
 #ifdef __ppc__
     { "ppc",    CPU_TYPE_POWERPC, CPU_SUBTYPE_POWERPC_ALL };
@@ -125,71 +125,71 @@ __private_extern__ struct arch_flag arch_flag =
 #else /* !(defined(KLD) && defined(__STATIC__)) */
     { 0 };
 #endif /* defined(KLD) && defined(__STATIC__) */
-__private_extern__ enum bool specific_arch_flag = FALSE;
+extern enum bool specific_arch_flag = FALSE;
 
 /*
  * The -force_cpusubtype_ALL flag.
  */
-__private_extern__ enum bool force_cpusubtype_ALL = FALSE;
+extern enum bool force_cpusubtype_ALL = FALSE;
 
 /* the byte sex of the output file */
-__private_extern__ enum byte_sex target_byte_sex = UNKNOWN_BYTE_SEX;
+extern enum byte_sex target_byte_sex = UNKNOWN_BYTE_SEX;
 static enum bool arch_multiple = FALSE;	/* print one arch message before error*/
 
-__private_extern__
+extern
 enum bool trace = FALSE;		/* print stages of link-editing */
-__private_extern__
+extern
 enum bool save_reloc = FALSE;		/* save relocation information */
-__private_extern__
+extern
 enum bool output_for_dyld = FALSE;	/* produce output for use with dyld */
-__private_extern__
+extern
 enum bool bind_at_load = FALSE;		/* mark the output for dyld to be bound
 					   when loaded */
-__private_extern__
+extern
 enum bool no_fix_prebinding = FALSE;	/* mark the output for dyld to never
 					   run fix_prebinding */
-__private_extern__
+extern
 enum bool load_map = FALSE;		/* print a load map */
-__private_extern__
+extern
 enum bool define_comldsyms = TRUE;	/* define common and link-editor defined
 					   symbol reguardless of file type */
 #ifndef RLD
 static enum bool
     dflag_specified = FALSE;		/* the -d flag has been specified */
 #endif /* !defined(RLD) */
-__private_extern__
+extern
 enum bool seglinkedit = FALSE;		/* create the link edit segment */
 #ifndef RLD
 static enum bool
     seglinkedit_specified = FALSE;	/* if either -seglinkedit or */
 					/*  -noseglinkedit was specified */
 #endif /* !defined(RLD) */
-__private_extern__
+extern
 enum bool whyload = FALSE;		/* print why archive members are
 					   loaded */
 #ifndef RLD
 static enum bool whatsloaded = FALSE;	/* print which object files are loaded*/
 #endif /* !defined(RLD) */
-__private_extern__
+extern
 enum bool flush = TRUE;			/* Use the output_flush routine to flush
 					   output file by pages */
-__private_extern__
+extern
 enum bool sectorder_detail = FALSE;	/* print sectorder warnings in detail */
-__private_extern__
+extern
 enum bool nowarnings = FALSE;		/* suppress warnings */
-__private_extern__
+extern
 enum bool no_arch_warnings = FALSE;	/* suppress wrong arch warnings */
-__private_extern__
+extern
 enum bool arch_errors_fatal = FALSE;	/* cause wrong arch errors to be fatal*/
-__private_extern__
+extern
 enum bool archive_ObjC = FALSE;		/* objective-C archive semantics */
-__private_extern__
+extern
 enum bool archive_all = FALSE;		/* always load everything in archives */
-__private_extern__
+extern
 enum bool keep_private_externs = FALSE;	/* don't turn private externs into
 					   non-external symbols */
 /* TRUE if -dynamic is specified, FALSE if -static is specified */
-__private_extern__
+extern
 enum bool dynamic = TRUE;
 #ifndef RLD
 static enum bool dynamic_specified = FALSE;
@@ -197,16 +197,16 @@ static enum bool static_specified = FALSE;
 #endif
 
 /* The level of symbol table stripping */
-__private_extern__ enum strip_levels strip_level = STRIP_DUP_INCLS;
+extern enum strip_levels strip_level = STRIP_DUP_INCLS;
 /* Strip the base file symbols (the -A argument's symbols) */
-__private_extern__ enum bool strip_base_symbols = FALSE;
+extern enum bool strip_base_symbols = FALSE;
 
 /* strip dead blocks */
-__private_extern__ enum bool dead_strip = FALSE;
+extern enum bool dead_strip = FALSE;
 /* don't strip module init and term sections */
-__private_extern__ enum bool no_dead_strip_inits_and_terms = FALSE;
+extern enum bool no_dead_strip_inits_and_terms = FALSE;
 /* print timings for dead striping code */
-__private_extern__ enum bool dead_strip_times = FALSE;
+extern enum bool dead_strip_times = FALSE;
 
 #ifndef RLD
 /*
@@ -214,76 +214,75 @@ __private_extern__ enum bool dead_strip_times = FALSE;
  * save_symbols is the names of the symbols from -exported_symbols_list
  * remove_symbols is the names of the symbols from -unexported_symbols_list
  */
-__private_extern__ struct symbol_list *save_symbols = NULL;
-__private_extern__ unsigned long nsave_symbols = 0;
-__private_extern__ struct symbol_list *remove_symbols = NULL;
-__private_extern__ unsigned long nremove_symbols = 0;
+extern struct symbol_list *save_symbols = NULL;
+extern unsigned long nsave_symbols = 0;
+extern struct symbol_list *remove_symbols = NULL;
+extern unsigned long nremove_symbols = 0;
 
 /*
  * -executable_path option's argument, executable_path is used to replace
  * @executable_path for dependent libraries.
  */
-__private_extern__ char *executable_path = NULL;
+extern char *executable_path = NULL;
 #endif /* RLD */
 
 
 /* The list of symbols to be traced */
-__private_extern__ char **trace_syms = NULL;
-__private_extern__ unsigned long ntrace_syms = 0;
+extern char **trace_syms = NULL;
+extern unsigned long ntrace_syms = 0;
 
 /* The number of references of undefined symbols to print */
-__private_extern__ unsigned long Yflag = 0;
+extern unsigned long Yflag = 0;
 
 /* The list of allowed undefined symbols */
-__private_extern__ char **undef_syms = NULL;
-__private_extern__ unsigned long nundef_syms = 0;
+extern char **undef_syms = NULL;
+extern unsigned long nundef_syms = 0;
 
 /* The list of -dylib_file arguments */
-__private_extern__ char **dylib_files = NULL;
-__private_extern__ unsigned long ndylib_files = 0;
+extern char **dylib_files = NULL;
+extern unsigned long ndylib_files = 0;
 
 /* The checking for undefined symbols */
-__private_extern__ enum undefined_check_level undefined_flag = UNDEFINED_ERROR;
+extern enum undefined_check_level undefined_flag = UNDEFINED_ERROR;
 #ifndef RLD
 static enum bool undefined_flag_specified = FALSE;
 #endif
 
 /* The checking for (twolevel namespace) multiply defined symbols */
-__private_extern__ enum multiply_defined_check_level
+extern enum multiply_defined_check_level
     multiply_defined_flag = MULTIPLY_DEFINED_WARNING;
-__private_extern__ enum multiply_defined_check_level
+extern enum multiply_defined_check_level
     multiply_defined_unused_flag = MULTIPLY_DEFINED_SUPPRESS;
 /* the -nomultidefs option */
-__private_extern__ enum bool nomultidefs = FALSE;
+extern enum bool nomultidefs = FALSE;
 #ifndef RLD
 static enum bool multiply_defined_flag_specified = FALSE;
 static enum bool multiply_defined_unused_flag_specified = FALSE;
 #endif
 
 /* The checking for read only relocs */
-__private_extern__ enum read_only_reloc_check_level
+extern enum read_only_reloc_check_level
     read_only_reloc_flag = READ_ONLY_RELOC_ERROR;
 
 /* The checking for section difference relocs */
-__private_extern__ enum sect_diff_reloc_check_level
+extern enum sect_diff_reloc_check_level
     sect_diff_reloc_flag = SECT_DIFF_RELOC_SUPPRESS;
 
 /* The handling for weak reference mismatches */
-__private_extern__ enum weak_reference_mismatches_handling
+extern enum weak_reference_mismatches_handling
     weak_reference_mismatches = WEAK_REFS_MISMATCH_ERROR;
 
 /* The Mac OS X deployment target */
-__private_extern__ enum macosx_deployment_target_value
-	macosx_deployment_target = 0;
-__private_extern__ const char *macosx_deployment_target_name = NULL;
+extern struct macosx_deployment_target
+	macosx_deployment_target = { 0 };
 
 /* The prebinding optimization */
 #ifndef RLD
 static enum bool prebinding_flag_specified = FALSE;
 #endif
-__private_extern__ enum bool prebinding = FALSE;
-__private_extern__ enum bool prebind_allow_overlap = FALSE;
-__private_extern__ enum bool prebind_all_twolevel_modules = FALSE;
+extern enum bool prebinding = FALSE;
+extern enum bool prebind_allow_overlap = FALSE;
+extern enum bool prebind_all_twolevel_modules = FALSE;
 #ifndef RLD
 static enum bool read_only_reloc_flag_specified = FALSE;
 static enum bool sect_diff_reloc_flag_specified = FALSE;
@@ -295,29 +294,29 @@ static enum bool unprebound_library(
 #endif
 
 /* True if -m is specified to allow multiply symbols, as a warning */
-__private_extern__ enum bool allow_multiply_defined_symbols = FALSE;
+extern enum bool allow_multiply_defined_symbols = FALSE;
 
 /* The segment alignment and pagezero_size, note the segalign is reset in
  * layout() by get_segalign_from_flag() based on the target architecture.
  */
-__private_extern__ unsigned long segalign = 0x2000;
+extern unsigned long segalign = 0x2000;
 #ifndef RLD
-__private_extern__ enum bool segalign_specified = FALSE;
+extern enum bool segalign_specified = FALSE;
 #endif /* !defined(RLD) */
-__private_extern__ unsigned long pagezero_size = 0;
+extern unsigned long pagezero_size = 0;
 
 /* The default section alignment */
-__private_extern__ unsigned long defaultsectalign = DEFAULTSECTALIGN;
+extern unsigned long defaultsectalign = DEFAULTSECTALIGN;
 
 /* The first segment address */
-__private_extern__ unsigned long seg1addr = 0;
-__private_extern__ enum bool seg1addr_specified = FALSE;
+extern unsigned long seg1addr = 0;
+extern enum bool seg1addr_specified = FALSE;
 
 /* read-only and read-write segment addresses */
-__private_extern__ unsigned long segs_read_only_addr = 0;
-__private_extern__ enum bool segs_read_only_addr_specified = FALSE;
-__private_extern__ unsigned long segs_read_write_addr = 0;
-__private_extern__ enum bool segs_read_write_addr_specified = FALSE;
+extern unsigned long segs_read_only_addr = 0;
+extern enum bool segs_read_only_addr_specified = FALSE;
+extern unsigned long segs_read_write_addr = 0;
+extern enum bool segs_read_write_addr_specified = FALSE;
 
 #ifndef RLD
 /* file name of the segment address table */
@@ -327,13 +326,13 @@ static char *seg_addr_table_filename = NULL;
 #endif /* !defined(RLD) */
 
 /* The stack address and size */
-__private_extern__ unsigned long stack_addr = 0;
-__private_extern__ enum bool stack_addr_specified = FALSE;
-__private_extern__ unsigned long stack_size = 0;
-__private_extern__ enum bool stack_size_specified = FALSE;
+extern unsigned long stack_addr = 0;
+extern enum bool stack_addr_specified = FALSE;
+extern unsigned long stack_size = 0;
+extern enum bool stack_size_specified = FALSE;
 
 /* TRUE if -allow_stack_execute is specified */
-__private_extern__ enum bool allow_stack_execute = FALSE;
+extern enum bool allow_stack_execute = FALSE;
 
 #ifndef RLD
 /* A -segaddr option was specified */
@@ -345,7 +344,7 @@ static enum bool segaddr_specified = FALSE;
  * that if /bin/objcunique is run on the result and up to two sections can be
  * added.
  */
-__private_extern__ unsigned long headerpad = sizeof(struct section) * 2;
+extern unsigned long headerpad = sizeof(struct section) * 2;
 #ifndef RLD
 static enum bool headerpad_specified = FALSE;
 #endif /* !defined(RLD) */
@@ -353,38 +352,38 @@ static enum bool headerpad_specified = FALSE;
  * If specified makes sure the header pad is big enough to change all the
  * install name of the dylibs in the output to MAXPATHLEN.
  */
-__private_extern__ enum bool headerpad_max_install_names = FALSE;
+extern enum bool headerpad_max_install_names = FALSE;
 
 /* The name of the specified entry point */
-__private_extern__ char *entry_point_name = NULL;
+extern char *entry_point_name = NULL;
 
 /* The name of the specified library initialization routine */
-__private_extern__ char *init_name = NULL;
+extern char *init_name = NULL;
 
 /* The dylib information */
-__private_extern__ char *dylib_install_name = NULL;
-__private_extern__ unsigned long dylib_current_version = 0;
-__private_extern__ unsigned long dylib_compatibility_version = 0;
+extern char *dylib_install_name = NULL;
+extern unsigned long dylib_current_version = 0;
+extern unsigned long dylib_compatibility_version = 0;
 
 /* the umbrella/sub/client framework information */
-__private_extern__ enum bool sub_framework = FALSE;
-__private_extern__ enum bool umbrella_framework = FALSE;
-__private_extern__ char *sub_framework_name = NULL;
-__private_extern__ char *umbrella_framework_name = NULL;
-__private_extern__ char *client_name = NULL;
-__private_extern__ char **allowable_clients = NULL;
-__private_extern__ unsigned long nallowable_clients = 0;
+extern enum bool sub_framework = FALSE;
+extern enum bool umbrella_framework = FALSE;
+extern char *sub_framework_name = NULL;
+extern char *umbrella_framework_name = NULL;
+extern char *client_name = NULL;
+extern char **allowable_clients = NULL;
+extern unsigned long nallowable_clients = 0;
 
 /* The list of sub_umbrella frameworks */
-__private_extern__ char **sub_umbrellas = NULL;
-__private_extern__ unsigned long nsub_umbrellas = 0;
+extern char **sub_umbrellas = NULL;
+extern unsigned long nsub_umbrellas = 0;
 
 /* The list of sub_library dynamic libraries */
-__private_extern__ char **sub_librarys = NULL;
-__private_extern__ unsigned long nsub_librarys = 0;
+extern char **sub_librarys = NULL;
+extern unsigned long nsub_librarys = 0;
 
 /* The dylinker information */
-__private_extern__ char *dylinker_install_name = NULL;
+extern char *dylinker_install_name = NULL;
 
 #ifndef RLD
 /* set to the -bundle_loader argument if specified */
@@ -392,25 +391,25 @@ static char *bundle_loader = NULL;
 #endif
 
 /* set to TRUE if -private_bundle is specified */
-__private_extern__ enum bool private_bundle = FALSE;
+extern enum bool private_bundle = FALSE;
 
 /* The value of the environment variable NEXT_ROOT or the -syslibroot argument*/
-__private_extern__ char *next_root = NULL;
+extern char *next_root = NULL;
 #ifndef RLD
 static enum bool syslibroot_specified = FALSE;
 #endif
 
 /* TRUE if the environment variable LD_TRACE_ARCHIVES
    (or temporarily RC_TRACE_ARCHIVES) is set */
-__private_extern__ enum bool ld_trace_archives = FALSE;
+extern enum bool ld_trace_archives = FALSE;
 
 /* TRUE if the environment variable LD_TRACE_DYLIBS
    (or temporarily RC_TRACE_DYLIBS) is set */
-__private_extern__ enum bool ld_trace_dylibs = FALSE;
+extern enum bool ld_trace_dylibs = FALSE;
 
 /* TRUE if the environment variable LD_TRACE_PREBINDING_DISABLED
    (or temporarily LD_TRACE_PREBINDING_DISABLED) is set */
-__private_extern__ enum bool ld_trace_prebinding_disabled = FALSE;
+extern enum bool ld_trace_prebinding_disabled = FALSE;
 
 #ifndef KLD
 /* The file LD_TRACE_FILE references, or NULL if none is set */
@@ -418,12 +417,12 @@ static const char *trace_file_path = NULL;
 #endif
 
 /* the argument to -final_output if any */
-__private_extern__ char *final_output = NULL;
+extern char *final_output = NULL;
 
 /* The variables to support namespace options */
-__private_extern__ enum bool namespace_specified = FALSE;
-__private_extern__ enum bool twolevel_namespace = TRUE;
-__private_extern__ enum bool force_flat_namespace = FALSE;
+extern enum bool namespace_specified = FALSE;
+extern enum bool twolevel_namespace = TRUE;
+extern enum bool force_flat_namespace = FALSE;
 
 /* Variable to support options logging.  */
 static enum bool ld_print_options = FALSE;
@@ -439,15 +438,15 @@ static enum bool ld_print_options = FALSE;
 #ifndef RLD
 static enum bool twolevel_namespace_hints_specified = FALSE;
 #endif
-__private_extern__ enum bool twolevel_namespace_hints = TRUE;
+extern enum bool twolevel_namespace_hints = TRUE;
 
 #ifdef DEBUG
-__private_extern__ unsigned long debug = 0;	/* link-editor debugging */
+extern unsigned long debug = 0;	/* link-editor debugging */
 #endif /* DEBUG */
 
 #ifdef RLD
 /* the cleanup routine for fatal errors to remove the output file */
-__private_extern__ void cleanup(void);
+extern void cleanup(void);
 #else /* !defined(RLD) */
 static void cleanup(void);
 static void ld_exit(int exit_value);
@@ -567,19 +566,18 @@ char *envp[])
 	        if (ld_print_options == TRUE)
 		  print("[Logging ld options]\t%s\n", argv[i]);
 
-	        p = &(argv[i][1]);
+		p = &(argv[i][1]);
 
-        /* iPhone binutils local: allow -compatibility_version and
-         * -current_version as synonyms for -dylib_compatibility_version and
-         * -dylib_current_version, for compatibility with GNU libtool */
-        if (!strcmp(p, "compatibility_version") || !strcmp(p,
-            "current_version"))
-            asprintf(&p, "dylib_%s", p);
+		/* iPhone binutils local: allow -compatibility_version and
+		 * -current_version as synonyms for -dylib_compatibility_version and
+		 * -dylib_current_version, for compatibility with GNU libtool */
+		if (!strcmp(p, "compatibility_version") || !strcmp(p, "current_version"))
+		    asprintf(&p, "dylib_%s", p);
 
 		switch(*p){
 		case 'B': 
-			if(strcmp(p, "Bstatic") && strcmp(p, "Bdynamic")) goto unknown_flag;
-			break;
+		    if(strcmp(p, "Bstatic") && strcmp(p, "Bdynamic")) goto unknown_flag;
+		    break;
 		case 'l':
 		    if(p[1] == '\0')
 			fatal("-l: argument missing");
@@ -807,16 +805,12 @@ char *envp[])
 		    else if(strcmp(p, "dylib_install_name") == 0){
 			if(i + 1 >= argc)
 			    fatal("-dylib_install_name: argument missing");
-			if(dylib_install_name != NULL)
-			    fatal("-dylib_install_name multiply specified");
 			dylib_install_name = argv[i + 1];
 			i += 1;
 		    }
-		    else if(strcmp(p, "dylib_current_version") == 0) {
+  		    else if(strcmp(p, "dylib_current_version") == 0){
 			if(i + 1 >= argc)
 			    fatal("-dylib_current_version: argument missing");
-			if(dylib_current_version != 0)
-			    fatal("-dylib_current_version multiply specified");
 			if(get_version_number("-dylib_current_version",
 			    argv[i+1], &dylib_current_version) == FALSE)
 			    cleanup();
@@ -825,13 +819,10 @@ char *envp[])
 				  "zero");
 			i += 1;
 		    }
-		    else if(strcmp(p, "dylib_compatibility_version") == 0) {
+		    else if(strcmp(p, "dylib_compatibility_version") == 0){
 			if(i + 1 >= argc)
 			    fatal("-dylib_compatibility_version: argument "
 				  "missing");
-			if(dylib_compatibility_version != 0)
-			    fatal("-dylib_compatibility_version multiply "
-				  "specified");
 			if(get_version_number("-dylib_compatibility_version",
 			    argv[i+1], &dylib_compatibility_version) == FALSE)
 			    cleanup();
@@ -930,6 +921,10 @@ char *envp[])
 		    }
 		    else if(strcmp(p, "no_uuid") == 0){
 			 output_uuid_info.suppress = TRUE;
+		    }
+		    else if(strcmp(p, "noall_load") == 0){
+		      /* Ignore the flag.  */
+		      ;
 		    }
 		    else
 			goto unknown_flag;
@@ -1467,6 +1462,31 @@ char *envp[])
 			i += 1;
 			break;
 		    }
+		    else if(strcmp(p, "compatibility_version") == 0){
+		        if(i + 1 >= argc)
+			    fatal("-compatibility_version: argument "
+				  "missing");
+			if(get_version_number("-compatibility_version",
+			    argv[i+1], &dylib_compatibility_version) == FALSE)
+			    cleanup();
+			if(dylib_compatibility_version == 0)
+			    fatal("-compatibility_version must be "
+				  "greater than zero");
+			i += 1;
+			break;
+		    }
+		    else if(strcmp(p, "current_version") == 0){
+		        if(i + 1 >= argc)
+			    fatal("-current_version: argument missing");
+			if(get_version_number("-current_version",
+			    argv[i+1], &dylib_current_version) == FALSE)
+			    cleanup();
+			if(dylib_current_version == 0)
+			    fatal("-current_version must be greater than "
+				  "zero");
+			i += 1;
+			break;
+		    }
 		    if(p[1] != '\0')
 			goto unknown_flag;
 		    break;
@@ -1493,6 +1513,12 @@ char *envp[])
 			if(++i >= argc)
 			    fatal("-init: argument missing");
 			init_name = argv[i];
+		    }
+		    else if(strcmp(p, "install_name") == 0){
+		        if(i + 1 >= argc)
+			    fatal("-install_name: argument missing");
+			dylib_install_name = argv[i + 1];
+			i += 1;
 		    }
 		    else{
 			/* create an indirect symbol, symbol_name, to be an
@@ -1883,11 +1909,11 @@ unknown_flag:
 	else{
 	    next_root = p;
 	}
-       if(next_root == NULL) {
+	if(next_root == NULL) {
 #ifdef CROSS_SYSROOT
-         next_root = CROSS_SYSROOT;
+	    next_root = CROSS_SYSROOT;
 #endif
-       }
+	}
 	if(next_root != NULL){
 	    for(i = 0; standard_dirs[i] != NULL; i++){
 		p = allocate(strlen(next_root) +
@@ -2041,12 +2067,10 @@ unknown_flag:
 	if(arch_flag.name != NULL){
 
 	    /*
-	     * 64-bit architectures are handled by ld64
+	     * 64-bit architectures are an error.
 	     */
-	    if(arch_flag.cputype & CPU_ARCH_ABI64) {
-	        argv[0] = BINDIR "/" LD64PROG;
-	        ld_exit(!execute(argv, 0));
-	    }
+	    if(arch_flag.cputype & CPU_ARCH_ABI64)
+		fatal("does not support 64-bit architectures");
 
 	    family_arch_flag = get_arch_family_from_cputype(arch_flag.cputype);
 	    if(family_arch_flag == NULL)
@@ -2056,9 +2080,7 @@ unknown_flag:
 	    /*
 	     * Pick up the Mac OS X deployment target.
 	     */
-	    get_macosx_deployment_target(&macosx_deployment_target,
-					 &macosx_deployment_target_name,
-					 arch_flag.cputype);
+	    get_macosx_deployment_target(&macosx_deployment_target);
 	    /*
 	     * If for this cputype we are to always output the ALL cpusubtype
 	     * then set force_cpusubtype_ALL.
@@ -2098,9 +2120,8 @@ unknown_flag:
 	     * target architecture is not yet known so we can check to see if
 	     * the flags specified are valid.
 	     */
-	    get_macosx_deployment_target(&macosx_deployment_target,
-					 &macosx_deployment_target_name,
-					 CPU_TYPE_ANY);
+	    if(macosx_deployment_target.major == 0)
+		get_macosx_deployment_target(&macosx_deployment_target);
 	}
 
 	/*
@@ -2334,8 +2355,7 @@ unknown_flag:
 				seg_addr_table_entry->segs_read_write_addr;
 			if(segs_read_only_addr == 0 &&
 			   segs_read_write_addr == 0){
-			    segs_read_write_addr = get_shared_region_sz_from_flag(
-                    &arch_flag);
+			    segs_read_write_addr = get_shared_region_sz_from_flag(&arch_flag);
 			    warning("-segs_read_write_addr 0x0 ignored from "
 				    "segment address table: %s %s line %lu "
 				    "using -segs_read_write_addr 0x%x",
@@ -2454,7 +2474,7 @@ unknown_flag:
 	 * shared libraries. So if this is not a split library then turn off
 	 * prebinding.
 	 */
-	if(macosx_deployment_target >= MACOSX_DEPLOYMENT_TARGET_10_4){
+	if(macosx_deployment_target.major >= 4){
 	    if(filetype != MH_DYLIB){
 		if(prebinding_via_LD_PREBIND == FALSE &&
 		   prebinding_flag_specified == TRUE &&
@@ -2475,7 +2495,7 @@ unknown_flag:
 		 * If this library was not in the seg_addr_table see if it is
 		 * on the list of libraries not to be prebound. And if so turn
 		 * off prebinding.  Note this list is only ever used when
-		 * macosx_deployment_target >= MACOSX_DEPLOYMENT_TARGET_10_4 .
+		 * macosx_deployment_target.major >= 4 .
 		 */
 		if(seg_addr_table_entry == NULL &&
 		   unprebound_library(dylib_install_name,
@@ -2505,7 +2525,7 @@ unknown_flag:
 				    "-segs_read_write_addr 0x%x because "
 				    "LD_SPLITSEGS_NEW_LIBRARIES environment is "
 				    "set",(unsigned int)seg1addr, 0,
-                    get_shared_region_sz_from_flag(&arch_flag));
+				    get_shared_region_sz_from_flag(&arch_flag));
 			}
 			seg1addr_specified = FALSE;
 			seg1addr = 0;
@@ -2596,7 +2616,7 @@ unknown_flag:
 	   undefined_flag != UNDEFINED_ERROR &&
 	   undefined_flag != UNDEFINED_DYNAMIC_LOOKUP &&
 	   undefined_flag != UNDEFINED_DEFINE_A_WAY){
-	    if(macosx_deployment_target >=MACOSX_DEPLOYMENT_TARGET_10_3)
+	    if(macosx_deployment_target.major >= 3)
 		fatal("-undefined error, -undefined dynamic_lookup or "
 		      "-undefined define_a_way must be used when "
 		      "-twolevel_namespace is in effect");
@@ -2608,10 +2628,10 @@ unknown_flag:
 	    if(dynamic == FALSE)
 		fatal("incompatible flag -undefined dynamic_lookup used (must "
 		      "specify \"-dynamic\" to be used)");
-	    if(macosx_deployment_target < MACOSX_DEPLOYMENT_TARGET_10_3)
+	    if(macosx_deployment_target.major < 3)
 		fatal("flag: -undefined dynamic_lookup can't be used with "
 		      "MACOSX_DEPLOYMENT_TARGET environment variable set to: "
-		      "%s", macosx_deployment_target_name);
+		      "%s", macosx_deployment_target.name);
 	}
 	if(twolevel_namespace == TRUE && nundef_syms != 0){
 	    fatal("can't use -U flags when -twolevel_namespace is in effect");
@@ -2707,15 +2727,15 @@ unknown_flag:
 		p = &(argv[i][1]);
 		switch(*p){
 		case 'B':
-			if(strcmp(p, "Bstatic") == 0){
-				search_lib_extensions[0]=".a";
-				search_lib_extensions[1]=".dylib";
-				break;
-			} else if (strcmp(p, "Bdynamic") == 0){
-				search_lib_extensions[0]=".dylib";
-				search_lib_extensions[1]=".a";
-				break;
-			}
+		    if(strcmp(p, "Bstatic") == 0){
+			search_lib_extensions[0]=".a";
+			search_lib_extensions[1]=".dylib";
+			break;
+		    } else if (strcmp(p, "Bdynamic") == 0){
+			search_lib_extensions[0]=".dylib";
+			search_lib_extensions[1]=".a";
+			break;
+		    }
 		case 'b':
 		    if(strcmp(p, "bundle_loader") == 0){
 			/*
@@ -2822,6 +2842,10 @@ unknown_flag:
 		    }
 		    else if(strcmp(p, "init") == 0){
 			i++;
+			break;
+		    }
+		    else if(strcmp(p, "install_name") == 0){
+		        i++;
 			break;
 		    }
 		    /* create an indirect symbol, symbol_name, to be an indirect
@@ -2941,12 +2965,11 @@ unknown_flag:
 
  	/*
 	 * If the architecture was not specified, and was inferred
-	 * from the object files, see again if ld64 must be invoked.
+	 * from the object files, if it is a 64-bit architecture it is an error.
 	 */
 	if(arch_flag.cputype != 0 &&
 	    arch_flag.cputype & CPU_ARCH_ABI64){
-	    argv[0] = BINDIR "/" LD64PROG;
-	    ld_exit(!execute(argv, 0));
+	    fatal("does not support 64-bit architectures");
 	}
 
 	/*
@@ -3334,7 +3357,7 @@ check_for_ProjectBuilder(void)
  * tell_ProjectBuilder() sends the message to project builder if talking to
  * project builder.
  */
-__private_extern__
+extern
 void
 tell_ProjectBuilder(
 char *message)
@@ -3398,7 +3421,7 @@ int sig)
  * allocate() is just a wrapper around malloc that prints and error message and
  * exits if the malloc fails.
  */
-__private_extern__
+extern
 void *
 allocate(
 unsigned long size)
@@ -3416,7 +3439,7 @@ unsigned long size)
  * reallocate() is just a wrapper around realloc that prints and error message
  * and exits if the realloc fails.
  */
-__private_extern__
+extern
 void *
 reallocate(
 void *p,
@@ -3433,7 +3456,7 @@ unsigned long size)
  * savestr() malloc's space for the string passed to it, copys the string into
  * the space and returns a pointer to that space.
  */
-__private_extern__
+extern
 char *
 savestr(
 const char *s)
@@ -3493,7 +3516,7 @@ const char *args,
 /*
  * round() rounds v to a multiple of r.
  */
-__private_extern__
+extern
 unsigned long
 round(
 unsigned long v,
@@ -3510,7 +3533,7 @@ unsigned long r)
 /*
  * All printing of all messages goes through this function.
  */
-__private_extern__
+extern
 void
 vprint(
 const char *format,
@@ -3526,7 +3549,7 @@ va_list ap)
 /*
  * The print function that just calls the above vprint() function.
  */
-__private_extern__
+extern
 void
 print(
 const char *format,
@@ -3542,7 +3565,7 @@ const char *format,
 /*
  * The ld_trace function that logs things for B&I.
  */
-__private_extern__
+extern
 void
 ld_trace(
 const char *format,
@@ -3603,7 +3626,7 @@ print_architecture_banner(void)
 /*
  * Print the warning message.  This is non-fatal and does not set 'errors'.
  */
-__private_extern__
+extern
 void
 warning(
 const char *format,
@@ -3625,7 +3648,7 @@ const char *format,
 /*
  * Print the error message and set the 'error' indication.
  */
-__private_extern__
+extern
 void
 error(
 const char *format,
@@ -3646,7 +3669,7 @@ const char *format,
 /*
  * Print the fatal error message, and exit non-zero.
  */
-__private_extern__
+extern
 void
 fatal(
 const char *format,
@@ -3667,7 +3690,7 @@ const char *format,
 /*
  * Print the current object file name and warning message.
  */
-__private_extern__
+extern
 void
 warning_with_cur_obj(
 const char *format,
@@ -3691,7 +3714,7 @@ const char *format,
  * Print the current object file name and error message, set the non-fatal
  * error indication.
  */
-__private_extern__
+extern
 void
 error_with_cur_obj(
 const char *format,
@@ -3714,7 +3737,7 @@ const char *format,
 /*
  * Print the warning message along with the system error message.
  */
-__private_extern__
+extern
 void
 system_warning(
 const char *format,
@@ -3737,7 +3760,7 @@ const char *format,
  * Print the error message along with the system error message, set the
  * non-fatal error indication.
  */
-__private_extern__
+extern
 void
 system_error(
 const char *format,
@@ -3761,7 +3784,7 @@ const char *format,
  * Print the fatal message along with the system error message, and exit
  * non-zero.
  */
-__private_extern__
+extern
 void
 system_fatal(
 const char *format,
@@ -3786,7 +3809,7 @@ const char *format,
  * Print the fatal error message along with the mach error string, and exit
  * non-zero.
  */
-__private_extern__
+extern
 void
 mach_fatal(
 kern_return_t r,
