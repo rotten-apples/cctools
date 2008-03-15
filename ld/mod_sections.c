@@ -56,8 +56,8 @@
  */
 static struct merged_section *dylib_ms_init = NULL;
 static struct merged_section *dylib_ms_term = NULL;
-extern unsigned long ninit = 0;
-extern unsigned long nterm = 0;
+unsigned long ninit = 0;
+unsigned long nterm = 0;
 #endif /* !defined(RLD) */
 
 /*

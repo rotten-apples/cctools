@@ -24,6 +24,7 @@
 #include <stdlib.h> /* first to get rid of pre-comp warning */
 #include <mach/mach.h> /* first to get rid of pre-comp warning */
 #include "stdio.h"
+#include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include "stuff/errors.h"

@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <sys/param.h>
 #include <unistd.h>
+#include <time.h>
 #ifndef __OPENSTEP__
 #include <utime.h>
 #endif
