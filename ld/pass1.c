@@ -42,7 +42,8 @@
 #include <mach-o/reloc.h>
 #include <mach-o/ldsyms.h>
 #if !(defined(KLD) && defined(__STATIC__))
-#include <libc.h>
+#include <stdlib.h>
+#include <sys/param.h>
 #include <stdio.h>
 #include <mach/mach.h>
 #include <errno.h>

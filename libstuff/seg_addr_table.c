@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach/mach.h>
-#include <libc.h>
+#include <stdlib.h>
 
 #include "stuff/bool.h"
 #include "stuff/errors.h"

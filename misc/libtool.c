@@ -27,7 +27,10 @@
  */
 #include <mach/mach.h>
 #include "stuff/openstep_mach.h"
-#include <libc.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/param.h>
+#include <unistd.h>
 #ifndef __OPENSTEP__
 #include <utime.h>
 #endif

@@ -31,7 +31,7 @@
  */
 #include <stdlib.h>
 #if !(defined(KLD) && defined(__STATIC__))
-#include <libc.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <mach/mach.h>
 #else /* defined(KLD) && defined(__STATIC__) */

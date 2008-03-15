@@ -193,14 +193,14 @@
 #define __dr6 dr6
 #define __dr7 dr7
 
-#include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
 #include <limits.h>
 #include <ar.h>
-#include <libc.h>
+#include <stdio.h>
+#include <sys/stat.h>
 #include "stuff/target_arch.h"
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>

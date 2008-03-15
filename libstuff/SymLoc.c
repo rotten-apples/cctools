@@ -21,7 +21,9 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 #ifndef RLD
-#include <libc.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/param.h>
 #include <ctype.h>
 #include <sys/types.h>
 #ifdef __OPENSTEP__

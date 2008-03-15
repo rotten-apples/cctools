@@ -47,7 +47,10 @@
 #if !(defined(KLD) && defined(__STATIC__))
 #include <signal.h>
 #include <errno.h>
-#include <libc.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/param.h>
 #include <ar.h>
 #include <mach/mach.h>
 #include <mach/mach_error.h>

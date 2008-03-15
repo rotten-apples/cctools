@@ -26,7 +26,7 @@
 #include <limits.h>
 #include <ar.h>
 #include <mach-o/ranlib.h>
-#include <libc.h>
+#include <stdlib.h>
 #include "stuff/target_arch.h"
 #include "stuff/bool.h"
 #include "stuff/ofile.h"

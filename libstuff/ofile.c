@@ -28,7 +28,8 @@
 #ifdef SHLIB
 #include "shlib.h"
 #endif
-#include <libc.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <mach/mach.h>
 #include "stuff/openstep_mach.h"
 #include <stddef.h>

@@ -30,7 +30,10 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <libc.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/param.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach-o/loader.h>

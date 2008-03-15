@@ -9,7 +9,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include "libc.h"
+#include "stdlib.h"
 #include <sys/file.h>
 #include <mach/mach.h>
 #include "stuff/arch.h"

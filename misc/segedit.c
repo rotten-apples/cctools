@@ -37,7 +37,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <libc.h>
+#include <stdlib.h>
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
 #include <mach/mach.h>

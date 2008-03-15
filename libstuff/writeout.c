@@ -24,7 +24,12 @@
 #include <sys/time.h>
 #include <mach/mach.h>
 #include "stuff/openstep_mach.h"
-#include <libc.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <limits.h>
 #ifndef __OPENSTEP__
 #include <utime.h>
 #endif

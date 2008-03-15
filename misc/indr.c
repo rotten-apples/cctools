@@ -25,7 +25,7 @@
 #include <string.h>
 #include <limits.h>
 #include <time.h>
-#include <libc.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach-o/nlist.h>
