@@ -20,9 +20,6 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#define __darwin_i386_exception_state i386_exception_state
-#define __darwin_i386_float_state i386_float_state
-#define __darwin_i386_thread_state i386_thread_state
 
 #ifndef RLD
 #ifdef SHLIB
@@ -31,6 +28,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <mach/mach.h>
+#include <stdlib.h>
 #include "stuff/openstep_mach.h"
 #include <stddef.h>
 #include <stdarg.h>
@@ -43,7 +41,15 @@
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach/m68k/thread_status.h>
+#undef MACHINE_THREAD_STATE    /* need to undef these to avoid warnings */
+#undef MACHINE_THREAD_STATE_COUNT
+#undef THREAD_STATE_NONE
+#undef VALID_THREAD_STATE_FLAVOR
 #include <mach/ppc/thread_status.h>
+#undef MACHINE_THREAD_STATE /* need to undef these to avoid warnings */
+#undef MACHINE_THREAD_STATE_COUNT
+#undef THREAD_STATE_NONE
+#undef VALID_THREAD_STATE_FLAVOR
 #include <mach/m88k/thread_status.h>
 #include <mach/i860/thread_status.h>
 #include <mach/i386/thread_status.h>

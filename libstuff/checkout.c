@@ -23,6 +23,7 @@
 #ifndef RLD
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "stuff/ofile.h"
 #include "stuff/breakout.h"
 #include "stuff/round.h"

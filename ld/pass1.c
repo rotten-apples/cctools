@@ -35,6 +35,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "stuff/openstep_mach.h"
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>

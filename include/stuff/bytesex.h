@@ -234,7 +234,7 @@ extern void swap_i386_thread_state(
 /* current i386 thread states */
 #if i386_THREAD_STATE == 1
 extern void swap_i386_float_state(
-    struct __darwin_i386_float_state *fpu,
+    struct i386_float_state *fpu,
     enum byte_sex target_byte_sex);
 
 extern void swap_i386_exception_state(
