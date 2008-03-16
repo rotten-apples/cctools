@@ -65,7 +65,7 @@ unsigned int instruction;
 %type  <nval> vfp_maybe_imm_offset generic_reg vfp_data_proc_inst
 %type  <nval> vfp_store_inst vfp_misc_inst vfp2_inst vfp_imm_offset_with_u_bit
 %type  <nval> vfp_store_am armv3_inst clz_class_inst armv2_inst
-%type  <nval> bxj_class_inst floating_inst fp_reg
+%type  <nval> bxj_class_inst floating_inst fp_reg load_am_simple
 %type  <nval> load_store_copro_am imm_div_4_with_u_bit mcr_opcode_2
 
 %%
@@ -117,7 +117,11 @@ floating_inst:
     ;
 
 load_inst:
-      OP_LDR dest_reg ',' load_am
+      OP_LDR dest_reg ',' load_am_simple
+        {
+            $$ = ($1 | (1 << 26) | $2 | $4);
+        }
+    | OP_LDR dest_reg ',' load_am
         {
             unsigned int n;
             n = ($1 | (1 << 26) | $2 | $4);
@@ -305,26 +309,28 @@ imm_with_u_bit:
     ;
 
 load_am:
+      '[' OPRD_REG ',' load_am_indexed ']' maybe_bang
+        {
+            $$ = ((1 << 24) | ($2 << 16) | $4 | $6);
+        }
+    | '[' OPRD_REG ']' ',' load_am_indexed
+        {
+            $$ = (($2 << 16) | $5);
+        }
+    ;
+
+load_am_simple:
       expr
         {
             /* assumes PC-relative addressing */
             int n;
             n = $1 - 8;
             register_reloc_type(ARM_RELOC_PCREL_DATA_IMM12, 4, 1);
-            $$ = ((1 << 26) | (1 << 24) | (15 << 16) |
-                (n < 0 ? -n : (n | (1 << 23)))); 
-        }
-    | '[' OPRD_REG ',' load_am_indexed ']' maybe_bang
-        {
-            $$ = ((1 << 26) | (1 << 24) | ($2 << 16) | $4 | $6);
-        }
-    | '[' OPRD_REG ']' ',' load_am_indexed
-        {
-            $$ = ((1 << 26) | ($2 << 16) | $5);
+            $$ = ((1 << 24) | (15 << 16));
         }
     | '[' OPRD_REG ']'
         {
-            $$ = ((1 << 26) | (1 << 24) | (1 << 23) | ($2 << 16));
+            $$ = ((1 << 24) | (1 << 23) | ($2 << 16));
         }
     ;
 
