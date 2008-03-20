@@ -93,6 +93,7 @@ struct object *object)
 	object->hints_cmd = NULL;
 	object->seg_linkedit = NULL;
 	object->seg_linkedit64 = NULL;
+	object->code_sig_cmd = NULL;
 	dl_id = NULL;
 	lc = object->load_commands;
 	if(object->mh != NULL){
@@ -121,6 +122,18 @@ struct object *object)
 		    fatal_arch(arch, member, "malformed file (more than one "
 			"LC_TWOLEVEL_HINTS load command): ");
 		object->hints_cmd = (struct twolevel_hints_command *)lc;
+	    }
+	    else if(lc->cmd == LC_CODE_SIGNATURE){
+		if(object->code_sig_cmd != NULL)
+		    fatal_arch(arch, member, "malformed file (more than one "
+			"LC_CODE_SIGNATURE load command): ");
+		object->code_sig_cmd = (struct linkedit_data_command *)lc;
+	    }
+	    else if(lc->cmd == LC_SEGMENT_SPLIT_INFO){
+		if(object->split_info_cmd != NULL)
+		    fatal_arch(arch, member, "malformed file (more than one "
+			"LC_SEGMENT_SPLIT_INFO load command): ");
+		object->split_info_cmd = (struct linkedit_data_command *)lc;
 	    }
 	    else if(lc->cmd == LC_SEGMENT){
 		sg = (struct segment_command *)lc;
@@ -153,7 +166,8 @@ struct object *object)
 	    lc = (struct load_command *)((char *)lc + lc->cmdsize);
 	}
 	if((object->mh_filetype == MH_DYLIB ||
-	    object->mh_filetype == MH_DYLIB_STUB) && dl_id == NULL)
+ 	    (object->mh_filetype == MH_DYLIB_STUB && ncmds > 0)) &&
+		dl_id == NULL)
 	    fatal_arch(arch, member, "malformed file (no LC_ID_DYLIB load "
 		"command in %s file): ", object->mh_filetype == MH_DYLIB ?
 		"MH_DYLIB" : "MH_DYLIB_STUB");
@@ -202,6 +216,7 @@ struct object *object)
 		 *	string table
 		 *		strings for external symbols
 		 *		strings for local symbols
+		 *	code signature data (16 byte aligned)
 		 */
 		dyld_order(arch, member, object);
 	    }
@@ -222,6 +237,7 @@ struct object *object)
 		 *	string table
 		 *		strings for external symbols
 		 *		strings for local symbols
+		 *	code signature data (16 byte aligned)
 		 */
 		dyld_order(arch, member, object);
 	    }
@@ -267,7 +283,7 @@ struct arch *arch,
 struct member *member,
 struct object *object)
 {
-    unsigned long offset, isym;
+    unsigned long offset, rounded_offset, isym;
 
 	if(object->mh != NULL){
 	    if(object->seg_linkedit == NULL)
@@ -301,6 +317,11 @@ struct object *object)
 		    "out of place");
 	    offset += object->dyst->nlocrel *
 		      sizeof(struct relocation_info);
+	}
+	if(object->split_info_cmd != NULL){
+	    if(object->split_info_cmd->dataoff != offset)
+		order_error(arch, member, "split info data out of place");
+	    offset += object->split_info_cmd->datasize;
 	}
 	if(object->st->nsyms != 0){
 	    if(object->st->symoff != offset)
@@ -344,37 +365,104 @@ struct object *object)
 		order_error(arch, member, "indirect symbol table "
 		    "out of place");
 	    offset += object->dyst->nindirectsyms *
-		      sizeof(unsigned long);
+		      sizeof(uint32_t);
 	}
+
+	/*
+	 * If this is a 64-bit Mach-O file and has an odd number of indirect
+	 * symbol table entries the next offset MAYBE rounded to a multiple of
+	 * 8 or MAY NOT BE. This should done to keep all the tables aligned but
+	 * was not done for 64-bit Mach-O in Mac OS X 10.4.
+	 */
+ 	object->input_indirectsym_pad = 0;
+	if(object->mh64 != NULL &&
+	   (object->dyst->nindirectsyms % 2) != 0){
+	    rounded_offset = round(offset, 8);
+	}
+	else{
+	    rounded_offset = offset;
+	}
+
 	if(object->dyst->ntoc != 0){
-	    if(object->dyst->tocoff != offset)
+	    if(object->dyst->tocoff != offset &&
+	       object->dyst->tocoff != rounded_offset)
 		order_error(arch, member, "table of contents out of place");
-	    offset += object->dyst->ntoc *
-		      sizeof(struct dylib_table_of_contents);
+	    if(object->dyst->tocoff == offset){
+		offset += object->dyst->ntoc *
+			  sizeof(struct dylib_table_of_contents);
+		rounded_offset = offset;
+	    }
+	    else if(object->dyst->tocoff == rounded_offset){
+		object->input_indirectsym_pad = rounded_offset - offset;
+		rounded_offset += object->dyst->ntoc *
+			          sizeof(struct dylib_table_of_contents);
+		offset = rounded_offset;
+	    }
 	}
 	if(object->dyst->nmodtab != 0){
-	    if(object->dyst->modtaboff != offset)
+	    if(object->dyst->modtaboff != offset &&
+	       object->dyst->modtaboff != rounded_offset)
 		order_error(arch, member, "module table out of place");
-	    if(object->mh != NULL)
+	    if(object->mh != NULL){
 		offset += object->dyst->nmodtab *
 			  sizeof(struct dylib_module);
-	    else
-		offset += object->dyst->nmodtab *
-			  sizeof(struct dylib_module_64);
+		rounded_offset = offset;
+	    }
+	    else{
+		if(object->dyst->modtaboff == offset){
+		    offset += object->dyst->nmodtab *
+			      sizeof(struct dylib_module_64);
+		    rounded_offset = offset;
+		}
+		else if(object->dyst->modtaboff == rounded_offset){
+		    object->input_indirectsym_pad = rounded_offset - offset;
+		    rounded_offset += object->dyst->nmodtab *
+				      sizeof(struct dylib_module_64);
+		    offset = rounded_offset;
+		}
+	    }
 	}
 	if(object->dyst->nextrefsyms != 0){
-	    if(object->dyst->extrefsymoff != offset)
+	    if(object->dyst->extrefsymoff != offset &&
+	       object->dyst->extrefsymoff != rounded_offset)
 		order_error(arch, member, "reference table out of place");
-	    offset += object->dyst->nextrefsyms *
-		      sizeof(struct dylib_reference);
+	    if(object->dyst->extrefsymoff == offset){
+		offset += object->dyst->nextrefsyms *
+			  sizeof(struct dylib_reference);
+		rounded_offset = offset;
+	    }
+	    else if(object->dyst->extrefsymoff == rounded_offset){
+		object->input_indirectsym_pad = rounded_offset - offset;
+		rounded_offset += object->dyst->nextrefsyms *
+			          sizeof(struct dylib_reference);
+		offset = rounded_offset;
+	    }
 	}
 	if(object->st->strsize != 0){
-	    if(object->st->stroff != offset)
+	    if(object->st->stroff != offset &&
+	       object->st->stroff != rounded_offset)
 		order_error(arch, member, "string table out of place");
-	    offset += object->st->strsize;
+	    if(object->st->stroff == offset){
+		offset += object->st->strsize;
+		rounded_offset = offset;
+	    }
+	    else if(object->st->stroff == rounded_offset){
+		object->input_indirectsym_pad = rounded_offset - offset;
+		rounded_offset += object->st->strsize;
+		offset = rounded_offset;
+	    }
 	}
-	if(offset != object->object_size)
-	    order_error(arch, member, "string table out of place");
+	if(object->code_sig_cmd != NULL){
+	    rounded_offset = round(rounded_offset, 16);
+	    if(object->code_sig_cmd->dataoff != rounded_offset)
+		order_error(arch, member, "code signature data out of place");
+	    rounded_offset += object->code_sig_cmd->datasize;
+	    offset = rounded_offset;
+	}
+	if(offset != object->object_size &&
+	   rounded_offset != object->object_size)
+	    order_error(arch, member, "link edit information does not fill the "
+			SEG_LINKEDIT " segment");
 }
 
 static
@@ -396,6 +484,7 @@ struct member *member,
 struct object *object)
 {
     unsigned long end, strend, rounded_strend;
+    unsigned long indirectend, rounded_indirectend;
 
 	if(object->st != NULL && object->st->nsyms != 0){
 	    end = object->object_size;
@@ -425,12 +514,30 @@ struct object *object)
 	       object->dyst->nindirectsyms != 0 &&
 	       object->st->nsyms != 0 &&
 	       object->dyst->indirectsymoff > object->st->symoff){
-		if(object->dyst->indirectsymoff +
-		   object->dyst->nindirectsyms * sizeof(unsigned long) != end){
+
+		indirectend = object->dyst->indirectsymoff + 
+		    object->dyst->nindirectsyms * sizeof(uint32_t);
+
+		/*
+		 * If this is a 64-bit Mach-O file and has an odd number of indirect
+		 * symbol table entries the next offset MAYBE rounded to a multiple of
+		 * 8 or MAY NOT BE. This should done to keep all the tables aligned but
+		 * was not done for 64-bit Mach-O in Mac OS X 10.4.
+		 */
+		if(object->mh64 != NULL &&
+		   (object->dyst->nindirectsyms % 2) != 0){
+		    rounded_indirectend = round(indirectend, 8);
+		}
+		else{
+		    rounded_indirectend = indirectend;
+		}
+
+		if(indirectend != end && rounded_indirectend != end){
 		    fatal_arch(arch, member, "indirect symbol table does not "
 			"directly preceed the string table (can't be "
 			"processed) in file: ");
 		}
+		object->input_indirectsym_pad = end - indirectend;
 		end = object->dyst->indirectsymoff;
 		if(object->mh != NULL){
 		    if(object->st->symoff +

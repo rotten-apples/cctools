@@ -129,7 +129,7 @@ extern long get_stack_direction_from_flag(
  * get_stack_addr_from_flag() returns the default starting address of the user
  * stack.
  */
-extern unsigned long get_stack_addr_from_flag(
+extern uint64_t get_stack_addr_from_flag(
     const struct arch_flag *flag);
 
 /*

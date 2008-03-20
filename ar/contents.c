@@ -75,7 +75,6 @@ static char rcsid[] = "$OpenBSD: contents.c,v 1.2 1996/06/26 05:31:19 deraadt Ex
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <unistd.h>
 
 #include "archive.h"
@@ -104,7 +103,7 @@ contents(argv)
 		if (options & AR_V) {
 			(void)strmode(chdr.mode, buf);
 			(void)printf("%s %6d/%-6d %8qd ",
-			    buf + 1, chdr.uid, chdr.gid, (int64_t)chdr.size);
+			    buf + 1, chdr.uid, chdr.gid, chdr.size);
 			tp = localtime(&chdr.date);
 			(void)strftime(buf, sizeof(buf), "%b %e %H:%M %Y", tp);
 			(void)printf("%s %s\n", buf, file);

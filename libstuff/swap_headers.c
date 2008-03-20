@@ -87,8 +87,11 @@ struct load_command *load_commands)
     struct twolevel_hints_command *hints;
     struct prebind_cksum_command *cs;
     struct uuid_command *uuid;
-    unsigned long flavor, count, nflavor;
-    char *p, *state;
+    struct linkedit_data_command *ld;
+    struct rpath_command *rpath;
+    uint32_t flavor, count;
+    unsigned long nflavor;
+    char *p, *state, *cmd_name;
 
 	magic = *((uint32_t *)mach_header);
 	if(magic == MH_MAGIC){
@@ -206,24 +209,30 @@ struct load_command *load_commands)
 		break;
 
 	    case LC_ID_DYLIB:
+		cmd_name = "LC_ID_DYLIB";
+		goto check_dylib_command;
 	    case LC_LOAD_DYLIB:
+		cmd_name = "LC_LOAD_DYLIB";
+		goto check_dylib_command;
 	    case LC_LOAD_WEAK_DYLIB:
+		cmd_name = "LC_LOAD_WEAK_DYLIB";
+		goto check_dylib_command;
+	    case LC_REEXPORT_DYLIB:
+		cmd_name = "LC_REEXPORT_DYLIB";
+		goto check_dylib_command;
+check_dylib_command:
 		dl = (struct dylib_command *)lc;
 		if(dl->cmdsize < sizeof(struct dylib_command)){
 		    error("in swap_object_headers(): malformed load commands "
 			  "(%s command %lu has too small cmdsize field)",
-			  dl->cmd == LC_ID_DYLIB ? "LC_ID_DYLIB" :
-			  (dl->cmd == LC_LOAD_DYLIB ? "LC_LOAD_DYLIB" :
-			  "LC_LOAD_WEAK_DYLIB"), i);
+			  cmd_name, i);
 		    return(FALSE);
 		}
 		if(dl->dylib.name.offset >= dl->cmdsize){
 		    error("in swap_object_headers(): truncated or malformed "
 			  "load commands (name.offset field of %s command %lu "
 			  "extends past the end of all load commands)",
-			  dl->cmd == LC_ID_DYLIB ? "LC_ID_DYLIB" :
-			  (dl->cmd == LC_LOAD_DYLIB ? "LC_LOAD_DYLIB" :
-			  "LC_LOAD_WEAK_DYLIB"), i);
+			  cmd_name, i);
 		    return(FALSE);
 		}
 		break;
@@ -353,10 +362,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case M68K_THREAD_STATE_REGS:
 			    if(count != M68K_THREAD_STATE_REGS_COUNT){
@@ -404,7 +413,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -425,10 +434,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case PPC_THREAD_STATE:
 			    if(count != PPC_THREAD_STATE_COUNT){
@@ -489,7 +498,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -508,10 +517,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case M88K_THREAD_STATE_GRF:
 			    if(count != M88K_THREAD_STATE_GRF_COUNT){
@@ -572,7 +581,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -588,10 +597,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case I860_THREAD_STATE_REGS:
 			    if(count != I860_THREAD_STATE_REGS_COUNT){
@@ -610,7 +619,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -645,10 +654,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case i386_THREAD_STATE:
 /* current i386 thread states */
@@ -772,7 +781,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -790,10 +799,10 @@ struct load_command *load_commands)
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case HPPA_INTEGER_THREAD_STATE:
 			    if(count != HPPA_INTEGER_THREAD_STATE_COUNT){
@@ -840,7 +849,7 @@ struct load_command *load_commands)
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
-				"flavor %lu for flavor number %lu in %s command"
+				"flavor %u for flavor number %lu in %s command"
 				" %lu can't byte swap it)", flavor, nflavor,
 				ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
 				"LC_THREAD", i);
@@ -857,10 +866,10 @@ struct load_command *load_commands)
 		  nflavor = 0;
 		  p = (char *)ut + ut->cmdsize;
 		  while (state < p) {
-		    flavor = *((unsigned long *) state);
-		    state += sizeof(unsigned long);
-		    count = *((unsigned int *) state);
-		    state += sizeof(unsigned long);
+		    flavor = *((uint32_t *) state);
+		    state += sizeof(uint32_t);
+		    count = *((uint32_t *) state);
+		    state += sizeof(uint32_t);
 		    switch (flavor) {
 		    case SPARC_THREAD_STATE_REGS:
 		      if (count != SPARC_THREAD_STATE_REGS_COUNT) {
@@ -972,6 +981,43 @@ struct load_command *load_commands)
 		}
 		break;
 
+	    case LC_CODE_SIGNATURE:
+		ld = (struct linkedit_data_command *)lc;
+		if(ld->cmdsize != sizeof(struct linkedit_data_command)){
+		    error("in swap_object_headers(): malformed load commands "
+			  "(LC_CODE_SIGNATURE command %lu has incorrect "
+			  "cmdsize", i);
+		    return(FALSE);
+		}
+		break;
+
+	    case LC_SEGMENT_SPLIT_INFO:
+		ld = (struct linkedit_data_command *)lc;
+		if(ld->cmdsize != sizeof(struct linkedit_data_command)){
+		    error("in swap_object_headers(): malformed load commands "
+			  "(LC_SEGMENT_SPLIT_INFO command %lu has incorrect "
+			  "cmdsize", i);
+		    return(FALSE);
+		}
+		break;
+
+	    case LC_RPATH:
+		rpath = (struct rpath_command *)lc;
+		if(rpath->cmdsize < sizeof(struct rpath_command)){
+		    error("in swap_object_headers(): malformed load commands "
+			  "(LC_RPATH command %lu has too small cmdsize field)",
+			  i);
+		    return(FALSE);
+		}
+		if(rpath->path.offset >= rpath->cmdsize){
+		    error("in swap_object_headers(): truncated or malformed "
+			  "load commands (path.offset field of LC_RPATH "
+			  "command %lu extends past the end of all load "
+			  "commands)", i);
+		    return(FALSE);
+		}
+		break;
+
 	    default:
 		error("in swap_object_headers(): malformed load commands "
 		      "(unknown load command %lu)", i);
@@ -1043,6 +1089,7 @@ struct load_command *load_commands)
 	    case LC_ID_DYLIB:
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
+	    case LC_REEXPORT_DYLIB:
 		dl = (struct dylib_command *)lc;
 		swap_dylib_command(dl, target_byte_sex);
 		break;
@@ -1091,12 +1138,12 @@ struct load_command *load_commands)
 		    struct m68k_thread_state_user_reg *user_reg;
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case M68K_THREAD_STATE_REGS:
 			    cpu = (struct m68k_thread_state_regs *)state;
@@ -1128,12 +1175,12 @@ struct load_command *load_commands)
 		    ppc_exception_state_t *except;
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case PPC_THREAD_STATE:
 			    cpu = (ppc_thread_state_t *)state;
@@ -1165,12 +1212,12 @@ struct load_command *load_commands)
 		    m88110_thread_state_impl_t *spu;
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case M88K_THREAD_STATE_GRF:
 			    cpu = (m88k_thread_state_grf_t *)state;
@@ -1204,12 +1251,12 @@ struct load_command *load_commands)
 		    struct i860_thread_state_regs *cpu;
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case I860_THREAD_STATE_REGS:
 			    cpu = (struct i860_thread_state_regs *)state;
@@ -1243,12 +1290,12 @@ struct load_command *load_commands)
 #endif /* i386_THREAD_STATE == -1 */
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case i386_THREAD_STATE:
 /* current i386 thread states */
@@ -1312,12 +1359,12 @@ struct load_command *load_commands)
 		    struct hp_pa_fp_thread_state *fpu;
 
 		    while(state < p){
-			flavor = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(flavor);
-			state += sizeof(unsigned long);
-			count = *((unsigned long *)state);
-			*((unsigned long *)state) = SWAP_LONG(count);
-			state += sizeof(unsigned long);
+			flavor = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(flavor);
+			state += sizeof(uint32_t);
+			count = *((uint32_t *)state);
+			*((uint32_t *)state) = SWAP_INT(count);
+			state += sizeof(uint32_t);
 			switch(flavor){
 			case HPPA_INTEGER_THREAD_STATE:
 			    cpu = (struct hp_pa_integer_thread_state *)state;
@@ -1347,12 +1394,12 @@ struct load_command *load_commands)
 		  struct sparc_thread_state_fpu *fpu;
 
 		  while (state < p) {
-		    flavor = *((unsigned long *) state);
-		    *((unsigned long *) state) = SWAP_LONG(flavor);
-		    state += sizeof(unsigned long);
+		    flavor = *((uint32_t *) state);
+		    *((uint32_t *) state) = SWAP_INT(flavor);
+		    state += sizeof(uint32_t);
 		    count = *((unsigned int *) state);
-		    *((unsigned int *) state) = SWAP_LONG(count);
-		    state += sizeof(unsigned long);
+		    *((unsigned int *) state) = SWAP_INT(count);
+		    state += sizeof(uint32_t);
 		    switch (flavor) {
 		    case SPARC_THREAD_STATE_REGS:
 		      cpu = (struct sparc_thread_state_regs *) state;
@@ -1413,6 +1460,17 @@ struct load_command *load_commands)
 	    case LC_UUID:
 		uuid = (struct uuid_command *)lc;
 		swap_uuid_command(uuid, target_byte_sex);
+		break;
+
+	    case LC_CODE_SIGNATURE:
+	    case LC_SEGMENT_SPLIT_INFO:
+		ld = (struct linkedit_data_command *)lc;
+		swap_linkedit_data_command(ld, target_byte_sex);
+		break;
+
+	    case LC_RPATH:
+		rpath = (struct rpath_command *)lc;
+		swap_rpath_command(rpath, target_byte_sex);
 		break;
 	    }
 

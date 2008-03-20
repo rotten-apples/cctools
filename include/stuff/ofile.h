@@ -29,17 +29,17 @@
 #endif
 
 #include "stuff/target_arch.h"
-#include <ar.h>
+#import <ar.h>
 #ifndef AR_EFMT1
 #define	AR_EFMT1	"#1/"		/* extended format #1 */
 #endif
-#include <mach-o/loader.h>
+#import <mach-o/loader.h>
 #ifdef OFI
-#include <mach-o/dyld.h>
+#import <mach-o/dyld.h>
 #endif
-#include "stuff/bytesex.h"
-#include "stuff/bool.h"
-#include "stuff/arch.h"
+#import "stuff/bytesex.h"
+#import "stuff/bool.h"
+#import "stuff/arch.h"
 
 enum ofile_type {
     OFILE_UNKNOWN,
@@ -94,6 +94,8 @@ struct ofile {
     /* If this structure is currently referencing an object file these are
        valid and filled in.  The mach_header and load commands have been 
        converted to the host byte sex if needed */
+    enum bool headers_swapped;	    /* true if the headers have already been
+				       swapped to host byte sex */
     char *object_addr;		    /* the address of the object file */
     unsigned long object_size;	    /* the size of the object file */
     enum byte_sex object_byte_sex;  /* the byte sex of the object file */
@@ -107,7 +109,7 @@ struct ofile {
     uint32_t mh_filetype;	    /* type of file */
 };
 
-extern void ofile_process(
+__private_extern__ void ofile_process(
     char *name,
     struct arch_flag *arch_flags,
     unsigned long narch_flags,
@@ -118,9 +120,9 @@ extern void ofile_process(
     void (*processor)(struct ofile *ofile, char *arch_name, void *cookie),
     void *cookie);
 #ifdef OFI
-extern NSObjectFileImageReturnCode ofile_map(
+__private_extern__ NSObjectFileImageReturnCode ofile_map(
 #else
-extern enum bool ofile_map(
+__private_extern__ enum bool ofile_map(
 #endif
     const char *file_name,
     const struct arch_flag *arch_flag,	/* can be NULL */
@@ -128,9 +130,9 @@ extern enum bool ofile_map(
     struct ofile *ofile,
     enum bool archives_with_fat_objects);
 #ifdef OFI
-extern NSObjectFileImageReturnCode ofile_map_from_memory(
+__private_extern__ NSObjectFileImageReturnCode ofile_map_from_memory(
 #else
-extern enum bool ofile_map_from_memory(
+__private_extern__ enum bool ofile_map_from_memory(
 #endif
     char *addr,
     unsigned long size,
@@ -139,49 +141,49 @@ extern enum bool ofile_map_from_memory(
     const char *object_name,		/* can be NULL */
     struct ofile *ofile,
     enum bool archives_with_fat_objects);
-extern void ofile_unmap(
+__private_extern__ void ofile_unmap(
     struct ofile *ofile);
-extern enum bool ofile_first_arch(
+__private_extern__ enum bool ofile_first_arch(
     struct ofile *ofile);
-extern enum bool ofile_next_arch(
+__private_extern__ enum bool ofile_next_arch(
     struct ofile *ofile);
-extern enum bool ofile_first_member(
+__private_extern__ enum bool ofile_first_member(
     struct ofile *ofile);
-extern enum bool ofile_next_member(
+__private_extern__ enum bool ofile_next_member(
     struct ofile *ofile);
-extern enum bool ofile_specific_member(
+__private_extern__ enum bool ofile_specific_member(
     const char *object_name,
     struct ofile *ofile);
-extern enum bool ofile_first_module(
+__private_extern__ enum bool ofile_first_module(
     struct ofile *ofile);
-extern enum bool ofile_next_module(
+__private_extern__ enum bool ofile_next_module(
     struct ofile *ofile);
-extern enum bool ofile_specific_module(
+__private_extern__ enum bool ofile_specific_module(
     const char *module_name,
     struct ofile *ofile);
-extern void ofile_print(
+__private_extern__ void ofile_print(
     struct ofile *ofile);
-extern unsigned long size_ar_name(
+__private_extern__ unsigned long size_ar_name(
     const struct ar_hdr *ar_hdr);
-extern long ofile_get_word(
-    unsigned long addr,
-    unsigned long *word,
+__private_extern__ long ofile_get_word(
+    uint64_t addr,
+    uint32_t *word,
     void *get_word_data /* struct ofile *ofile */);
-extern void archive_error(
+__private_extern__ void archive_error(
     struct ofile *ofile,
     const char *format, ...)
 #ifndef __MWERKS__
     __attribute__ ((format (printf, 2, 3)))
 #endif
     ;
-extern void archive_member_error(
+__private_extern__ void archive_member_error(
     struct ofile *ofile,
     const char *format, ...)
 #ifndef __MWERKS__
     __attribute__ ((format (printf, 2, 3)))
 #endif
     ;
-extern void Mach_O_error(
+__private_extern__ void Mach_O_error(
     struct ofile *ofile,
     const char *format, ...)
 #ifndef __MWERKS__

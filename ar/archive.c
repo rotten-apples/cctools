@@ -68,6 +68,7 @@ static char rcsid[] = "$NetBSD: archive.c,v 1.7 1995/03/26 03:27:46 glass Exp $"
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 
 #include <ar.h>
 #include <dirent.h>
@@ -151,7 +152,7 @@ opened:
 		/* Locking seems to not be working */
 		case ENOTSUP:
 		case EHOSTUNREACH:
-		  /*		case EBADRPC: */
+		/*case EBADRPC:*/
 		default:
 			/* Filesystem does not support locking */
 			break;
@@ -313,21 +314,21 @@ put_arobj(cfp, sb)
 			(void)sprintf(hb, HDR3, name, (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-				      sb->st_mode, (int64_t)sb->st_size, ARFMAG);
+			    sb->st_mode, (long long int) sb->st_size, ARFMAG);
 			lname = 0;
 		} else if (lname > sizeof(hdr->ar_name) || strchr(name, ' '))
 			(void)sprintf(hb, HDR1, AR_EFMT1, (lname + 3) & ~3,
 			    (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-				      sb->st_mode, (int64_t)sb->st_size + ((lname + 3) & ~3),
+			    sb->st_mode, (long long int) sb->st_size + ((lname + 3) & ~3),
 			    ARFMAG);
 		else {
 			lname = 0;
 			(void)sprintf(hb, HDR2, name, (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-				      sb->st_mode, (int64_t)sb->st_size, ARFMAG);
+			    sb->st_mode, (long long int) sb->st_size, ARFMAG);
 		}
 		size = sb->st_size;
 	} else {

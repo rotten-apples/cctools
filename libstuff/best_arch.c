@@ -47,16 +47,15 @@ struct fat_arch *fat_archs,
 unsigned long nfat_archs)
 {
     unsigned long i;
-#ifndef ARCH64
     long lowest_family, lowest_model, lowest_index;
-#endif
 
 	/*
 	 * Look for the first exact match.
 	 */
 	for(i = 0; i < nfat_archs; i++){
 	    if(fat_archs[i].cputype == cputype &&
-	       fat_archs[i].cpusubtype == cpusubtype)
+	       (fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+	       (cpusubtype & ~CPU_SUBTYPE_MASK))
 		return(fat_archs + i);
 	}
 
@@ -66,7 +65,7 @@ unsigned long nfat_archs)
 	 */
 	switch(cputype){
 
-#ifdef ARCH64 /* 64-bit architectures */
+	/* 64-bit architectures */
 
 	case CPU_TYPE_POWERPC64:
 	    /*
@@ -77,7 +76,7 @@ unsigned long nfat_archs)
 	     *	970 (currently only the one 64-bit subtype)
 	     * For an unknown subtype pick only the ALL type if it exists.
 	     */
-	    switch(cpusubtype){
+	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_POWERPC_ALL:
 		/*
 		 * The CPU_SUBTYPE_POWERPC_ALL is only used by the development
@@ -89,14 +88,16 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_970)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_970)
 			return(fat_archs + i);
 		}
 	    default:
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_ALL)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_ALL)
 			return(fat_archs + i);
 		}
 	    }
@@ -106,21 +107,22 @@ unsigned long nfat_archs)
 	    /*
 	     * We have no subtypes for x86-64, so treat all cases the same here.
 	     */
-	    switch(cpusubtype){
+	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
 	    default:
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_I386_ALL)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_I386_ALL)
 			return(fat_archs + i);
 		}
 	    }
 	    break;
 
-#else /* !defined(ARCH64) 32-bit architectures */
+	/* 32-bit architectures */
 
 	case CPU_TYPE_I386:
-	    switch(cpusubtype){
+	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
 	    default:
 		/*
 		 * Intel cpusubtypes after the pentium (same as 586) are handled
@@ -131,7 +133,8 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_PENT)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_PENT)
 			return(fat_archs + i);
 		}
 	    case CPU_SUBTYPE_PENT:
@@ -143,7 +146,8 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_486)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_486)
 			return(fat_archs + i);
 		}
 		break;
@@ -155,7 +159,8 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_I386_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_I386_ALL)
 		    return(fat_archs + i);
 	    }
 
@@ -165,19 +170,22 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_486)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_486)
 		    return(fat_archs + i);
 	    }
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_486SX)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_486SX)
 		    return(fat_archs + i);
 	    }
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_586)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_586)
 		    return(fat_archs + i);
 	    }
 	    /*
@@ -187,10 +195,11 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(CPU_SUBTYPE_INTEL_FAMILY(fat_archs[i].cpusubtype) <
+		if(CPU_SUBTYPE_INTEL_FAMILY(fat_archs[i].cpusubtype &
+					    ~CPU_SUBTYPE_MASK) <
 		   lowest_family)
 		    lowest_family = CPU_SUBTYPE_INTEL_FAMILY(
-					fat_archs[i].cpusubtype);
+				fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK);
 	    }
 	    /* if no intel cputypes found return NULL */
 	    if(lowest_family == CPU_SUBTYPE_INTEL_FAMILY_MAX + 1)
@@ -200,12 +209,14 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(CPU_SUBTYPE_INTEL_FAMILY(fat_archs[i].cpusubtype) ==
+		if(CPU_SUBTYPE_INTEL_FAMILY(fat_archs[i].cpusubtype &
+					    ~CPU_SUBTYPE_MASK) ==
 		   lowest_family){
-		    if(CPU_SUBTYPE_INTEL_MODEL(fat_archs[i].cpusubtype) <
+		    if(CPU_SUBTYPE_INTEL_MODEL(fat_archs[i].cpusubtype &
+					       ~CPU_SUBTYPE_MASK) <
 		       lowest_model){
 		        lowest_model = CPU_SUBTYPE_INTEL_MODEL(
-					fat_archs[i].cpusubtype);
+				fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK);
 			lowest_index = i;
 		    }
 		}
@@ -215,24 +226,27 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_MC680x0_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_MC680x0_ALL)
 		    return(fat_archs + i);
 	    }
 	    /*
 	     * Try to promote if starting from CPU_SUBTYPE_MC680x0_ALL and
 	     * favor the CPU_SUBTYPE_MC68040 over the CPU_SUBTYPE_MC68030_ONLY.
 	     */
-	    if(cpusubtype == CPU_SUBTYPE_MC680x0_ALL){
+	    if((cpusubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC680x0_ALL){
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_MC68040)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_MC68040)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_MC68030_ONLY)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_MC68030_ONLY)
 			return(fat_archs + i);
 		}
 	    }
@@ -248,7 +262,7 @@ unsigned long nfat_archs)
 	     * an exact match.  For an unknown subtype pick only the ALL type if
 	     * it exists.
 	     */
-	    switch(cpusubtype){
+	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_POWERPC_ALL:
 		/*
 		 * The CPU_SUBTYPE_POWERPC_ALL is only used by the development
@@ -260,7 +274,8 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_970)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_970)
 			return(fat_archs + i);
 		}
 	    case CPU_SUBTYPE_POWERPC_7450:
@@ -268,13 +283,15 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_7450)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_7450)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_7400)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_7400)
 			return(fat_archs + i);
 		}
 	    case CPU_SUBTYPE_POWERPC_750:
@@ -286,44 +303,94 @@ unsigned long nfat_archs)
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_750)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_750)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_604e)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_604e)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_604)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK)
+		        == CPU_SUBTYPE_POWERPC_604)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_603ev)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_603ev)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_603e)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_603e)
 			return(fat_archs + i);
 		}
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_603)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_603)
 			return(fat_archs + i);
 		}
 	    default:
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_POWERPC_ALL)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_POWERPC_ALL)
+			return(fat_archs + i);
+		}
+	    }
+	    break;
+	case CPU_TYPE_ARM:
+	    switch(cpusubtype){
+	    case CPU_SUBTYPE_ARM_ALL:
+		/*
+		 * The CPU_SUBTYPE_POWERPC_ALL is only used by the development
+		 * environment tools when building a generic ALL type binary.
+		 * In the case of a non-exact match we pick the most current
+		 * processor.
+		 */
+	    case CPU_SUBTYPE_ARM_V6:
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_ARM_V6)
+			return(fat_archs + i);
+		}
+	    case CPU_SUBTYPE_ARM_V5TEJ:
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_ARM_V5TEJ)
+			return(fat_archs + i);
+		}
+	    case CPU_SUBTYPE_ARM_V4T:
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_ARM_V4T)
+			return(fat_archs + i);
+		}
+	    default:
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_ARM_ALL)
 			return(fat_archs + i);
 		}
 	    }
@@ -331,15 +398,33 @@ unsigned long nfat_archs)
 	case CPU_TYPE_VEO:
 	    /*
 	     * An exact match was not found.  So for the VEO subtypes if VEO1
-	     * is wanted then VEO2 can be used.  But if VEO2 is wanted only
-	     * VEO2 can be used.  Any unknown values don't match.
+	     * or VEO3 is wanted then VEO2 can be used.  If VEO4 is wanted then
+	     * either VEO2 or (preferably) VEO3 can be used.  But if VEO2 is
+	     * wanted only VEO2 can be used.  Any unknown values don't match.
 	     */
-	    switch(cpusubtype){
+	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_VEO_1:
+	    case CPU_SUBTYPE_VEO_3:
 		for(i = 0; i < nfat_archs; i++){
 		    if(fat_archs[i].cputype != cputype)
 			continue;
-		    if(fat_archs[i].cpusubtype == CPU_SUBTYPE_VEO_2)
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_VEO_2)
+			return(fat_archs + i);
+		}
+	    case CPU_SUBTYPE_VEO_4:
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_VEO_3)
+			return(fat_archs + i);
+		}
+		for(i = 0; i < nfat_archs; i++){
+		    if(fat_archs[i].cputype != cputype)
+			continue;
+		    if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		       CPU_SUBTYPE_VEO_2)
 			return(fat_archs + i);
 		}
 	    }
@@ -348,7 +433,8 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_MC88000_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_MC88000_ALL)
 		    return(fat_archs + i);
 	    }
 	    break;
@@ -356,7 +442,8 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_I860_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_I860_ALL)
 		    return(fat_archs + i);
 	    }
 	    break;
@@ -364,7 +451,8 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_HPPA_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_HPPA_ALL)
 		    return(fat_archs + i);
 	    }
 	    break;
@@ -372,12 +460,11 @@ unsigned long nfat_archs)
 	    for(i = 0; i < nfat_archs; i++){
 		if(fat_archs[i].cputype != cputype)
 		    continue;
-		if(fat_archs[i].cpusubtype == CPU_SUBTYPE_SPARC_ALL)
+		if((fat_archs[i].cpusubtype & ~CPU_SUBTYPE_MASK) ==
+		   CPU_SUBTYPE_SPARC_ALL)
 		    return(fat_archs + i);
 	    }
 	    break;
-
-#endif /* 32-bit architectures */
 
 	default:
 	    return(NULL);
@@ -408,33 +495,34 @@ cpu_subtype_t cpusubtype2)
 	if(cputype == CPU_TYPE_I386 || cputype == CPU_TYPE_X86_64)
 	    return(CPU_SUBTYPE_I386_ALL);
 
-	if(cpusubtype1 == cpusubtype2)
+	if((cpusubtype1 & ~CPU_SUBTYPE_MASK) ==
+	   (cpusubtype2 & ~CPU_SUBTYPE_MASK))
 	    return(cpusubtype1);
 
 	switch(cputype){
 	case CPU_TYPE_MC680x0:
-	    if(cpusubtype1 != CPU_SUBTYPE_MC680x0_ALL &&
-	       cpusubtype1 != CPU_SUBTYPE_MC68030_ONLY &&
-	       cpusubtype1 != CPU_SUBTYPE_MC68040)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC680x0_ALL &&
+	       (cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC68030_ONLY &&
+	       (cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC68040)
 		return((cpu_subtype_t)-1);
-	    if(cpusubtype2 != CPU_SUBTYPE_MC680x0_ALL &&
-	       cpusubtype2 != CPU_SUBTYPE_MC68030_ONLY &&
-	       cpusubtype2 != CPU_SUBTYPE_MC68040)
-		return((cpu_subtype_t)-1);
-
-	    if(cpusubtype1 == CPU_SUBTYPE_MC68030_ONLY &&
-	       cpusubtype2 == CPU_SUBTYPE_MC68040)
-		return((cpu_subtype_t)-1);
-	    if(cpusubtype1 == CPU_SUBTYPE_MC68040 &&
-	       cpusubtype2 == CPU_SUBTYPE_MC68030_ONLY)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC680x0_ALL &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC68030_ONLY &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC68040)
 		return((cpu_subtype_t)-1);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_MC68030_ONLY ||
-	       cpusubtype2 == CPU_SUBTYPE_MC68030_ONLY)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68030_ONLY &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68040)
+		return((cpu_subtype_t)-1);
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK)  == CPU_SUBTYPE_MC68040 &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK)  == CPU_SUBTYPE_MC68030_ONLY)
+		return((cpu_subtype_t)-1);
+
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68030_ONLY ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68030_ONLY)
 		return(CPU_SUBTYPE_MC68030_ONLY);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_MC68040 ||
-	       cpusubtype2 == CPU_SUBTYPE_MC68040)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68040 ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC68040)
 		return(CPU_SUBTYPE_MC68040);
 	    break; /* logically can't get here */
 
@@ -444,16 +532,17 @@ cpu_subtype_t cpusubtype2)
 	     * anything with the 601 becomes 601.  All other non exact matches
 	     * combine to the higher value subtype.
 	     */
-	    if(cpusubtype1 == CPU_SUBTYPE_POWERPC_ALL)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype2);
-	    if(cpusubtype2 == CPU_SUBTYPE_POWERPC_ALL)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype1);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_POWERPC_601 ||
-	       cpusubtype2 == CPU_SUBTYPE_POWERPC_601)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_601 ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_601)
 		return(CPU_SUBTYPE_POWERPC_601);
 
-	    if(cpusubtype1 > cpusubtype2)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) >
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK))
 		return(cpusubtype1);
 	    else
 		return(cpusubtype2);
@@ -465,16 +554,17 @@ cpu_subtype_t cpusubtype2)
 	     * anything with the 601 becomes 601.  All other non exact matches
 	     * combine to the higher value subtype.
 	     */
-	    if(cpusubtype1 == CPU_SUBTYPE_ARM_ALL)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype2);
-	    if(cpusubtype2 == CPU_SUBTYPE_ARM_ALL)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype1);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_ARM_V6 ||
-	       cpusubtype2 == CPU_SUBTYPE_ARM_V6)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM_V6 ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM_V6)
 		return(CPU_SUBTYPE_ARM_V6);
 
-	    if(cpusubtype1 > cpusubtype2)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) >
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK))
 		return(cpusubtype1);
 	    else
 		return(cpusubtype2);
@@ -485,12 +575,13 @@ cpu_subtype_t cpusubtype2)
 	     * Combining with the ALL type becomes the other type.  All other
 	     * non exact matches combine to the higher value subtype.
 	     */
-	    if(cpusubtype1 == CPU_SUBTYPE_POWERPC_ALL)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype2);
-	    if(cpusubtype2 == CPU_SUBTYPE_POWERPC_ALL)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_POWERPC_ALL)
 		return(cpusubtype1);
 
-	    if(cpusubtype1 > cpusubtype2)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) >
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK))
 		return(cpusubtype1);
 	    else
 		return(cpusubtype2);
@@ -501,57 +592,79 @@ cpu_subtype_t cpusubtype2)
 	     * Combining VEO1 with VEO2 returns VEO1.  Any unknown values don't
 	     * combine.
 	     */
-	    if(cpusubtype1 == CPU_SUBTYPE_VEO_1 &&
-	       cpusubtype2 == CPU_SUBTYPE_VEO_2)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_1 &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2)
 		return(CPU_SUBTYPE_VEO_1);
-	    if(cpusubtype1 == CPU_SUBTYPE_VEO_2 &&
-	       cpusubtype2 == CPU_SUBTYPE_VEO_1)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2 &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_1)
 		return(CPU_SUBTYPE_VEO_1);
+	    /*
+	     * Combining VEO3 with VEO2 returns VEO3.  Any unknown values don't
+	     * combine.
+	     */
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_3 &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2)
+		return(CPU_SUBTYPE_VEO_3);
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2 &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_3)
+		return(CPU_SUBTYPE_VEO_3);
+	    /*
+	     * Combining VEO4 with VEO2 or VEO3 returns VEO4.  Any unknown
+	     * values don't combine.
+	     */
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_4 &&
+	       ((cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2
+	        || (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_3))
+		return(CPU_SUBTYPE_VEO_4);
+	    if(((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_2
+		|| (cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_3) &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_VEO_4)
+		return(CPU_SUBTYPE_VEO_4);
 	    return((cpu_subtype_t)-1);
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_MC88000:
-	    if(cpusubtype1 != CPU_SUBTYPE_MC88000_ALL &&
-	       cpusubtype1 != CPU_SUBTYPE_MC88110)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC88000_ALL &&
+	       (cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC88110)
 		return((cpu_subtype_t)-1);
-	    if(cpusubtype2 != CPU_SUBTYPE_MC88000_ALL &&
-	       cpusubtype2 != CPU_SUBTYPE_MC88110)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC88000_ALL &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_MC88110)
 		return((cpu_subtype_t)-1);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_MC88110 ||
-	       cpusubtype2 == CPU_SUBTYPE_MC88110)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC88110 ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_MC88110)
 		return(CPU_SUBTYPE_MC88110);
 
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_I860:
-	    if(cpusubtype1 != CPU_SUBTYPE_I860_ALL &&
-	       cpusubtype1 != CPU_SUBTYPE_I860_860)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_I860_ALL &&
+	       (cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_I860_860)
 		return((cpu_subtype_t)-1);
-	    if(cpusubtype2 != CPU_SUBTYPE_I860_ALL &&
-	       cpusubtype2 != CPU_SUBTYPE_I860_860)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_I860_ALL &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_I860_860)
 		return((cpu_subtype_t)-1);
 
-	    if(cpusubtype1 == CPU_SUBTYPE_I860_860 ||
-	       cpusubtype2 == CPU_SUBTYPE_I860_860)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_I860_860 ||
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_I860_860)
 		return(CPU_SUBTYPE_I860_860);
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_HPPA:
-	    if(cpusubtype1 != CPU_SUBTYPE_HPPA_ALL &&
-	       cpusubtype1 != CPU_SUBTYPE_HPPA_7100LC)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_HPPA_ALL &&
+	       (cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_HPPA_7100LC)
 		return((cpu_subtype_t)-1);
-	    if(cpusubtype2 != CPU_SUBTYPE_HPPA_ALL &&
-	       cpusubtype2 != CPU_SUBTYPE_HPPA_7100LC)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_HPPA_ALL &&
+	       (cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_HPPA_7100LC)
 		return((cpu_subtype_t)-1);
 
 	    return(CPU_SUBTYPE_HPPA_7100LC);
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_SPARC:
-	    if(cpusubtype1 != CPU_SUBTYPE_SPARC_ALL)
+	    if((cpusubtype1 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_SPARC_ALL)
 			return((cpu_subtype_t)-1);
-	    if(cpusubtype2 != CPU_SUBTYPE_SPARC_ALL)
+	    if((cpusubtype2 & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_SPARC_ALL)
 			return((cpu_subtype_t)-1);
 	    break; /* logically can't get here */
 
@@ -580,7 +693,8 @@ cpu_type_t host_cputype,
 cpu_subtype_t host_cpusubtype, /* can NOT be the ALL type */
 cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 {
-	if(host_cpusubtype == exec_cpusubtype)
+	if((host_cpusubtype & ~CPU_SUBTYPE_MASK) ==
+	   (exec_cpusubtype & ~CPU_SUBTYPE_MASK))
 	    return(TRUE);
 
 	switch(host_cputype){
@@ -592,9 +706,9 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	     * other known subtypes can execute anywhere
 	     * unknown hosts will only be allowed to execute the ALL subtype
 	     */
-	    switch(host_cpusubtype){
+	    switch(host_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_POWERPC_970:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_POWERPC_970:
 		case CPU_SUBTYPE_POWERPC_7450:
 		case CPU_SUBTYPE_POWERPC_7400:
@@ -616,7 +730,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 
 	    case CPU_SUBTYPE_POWERPC_7450:
 	    case CPU_SUBTYPE_POWERPC_7400:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_POWERPC_7450:
 		case CPU_SUBTYPE_POWERPC_7400:
 		case CPU_SUBTYPE_POWERPC_750:
@@ -644,7 +758,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	    case CPU_SUBTYPE_POWERPC_603e:
 	    case CPU_SUBTYPE_POWERPC_603:
 	    case CPU_SUBTYPE_POWERPC_602:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_POWERPC_750:
 		case CPU_SUBTYPE_POWERPC_620:
 		case CPU_SUBTYPE_POWERPC_604e:
@@ -665,7 +779,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    case CPU_SUBTYPE_POWERPC_601:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_POWERPC_750:
 		case CPU_SUBTYPE_POWERPC_620:
 		case CPU_SUBTYPE_POWERPC_604e:
@@ -686,7 +800,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    default: /* unknown host */
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_POWERPC_ALL:
 		    return(TRUE);
 		default:
@@ -703,7 +817,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	     * have code to avoid instuctions that will not execute on the
 	     * host cpu.
 	     */
-	    switch(exec_cpusubtype){
+	    switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_I386_ALL: /* same as CPU_SUBTYPE_386 */
 	    case CPU_SUBTYPE_486:
 	    case CPU_SUBTYPE_486SX:
@@ -719,9 +833,9 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_MC680x0:
-	    switch(host_cpusubtype){
+	    switch(host_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_MC68040:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_MC68040:
 		case CPU_SUBTYPE_MC680x0_ALL: /* same as CPU_SUBTYPE_MC68030 */
 		    return(TRUE);
@@ -732,7 +846,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    case CPU_SUBTYPE_MC68030:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_MC680x0_ALL: /* same as CPU_SUBTYPE_MC68030 */
 		case CPU_SUBTYPE_MC68030_ONLY:
 		    return(TRUE);
@@ -743,7 +857,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 		
 	    default: /* unknown host */
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_MC680x0_ALL: /* same as CPU_SUBTYPE_MC68030 */
 		    return(TRUE);
 		default:
@@ -754,9 +868,9 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	    break; /* logically can't get here */
 
 	case CPU_TYPE_MC88000:
-	    switch(host_cpusubtype){
+	    switch(host_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_MC88110:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_MC88110:
 		case CPU_SUBTYPE_MC88000_ALL:
 		    return(TRUE);
@@ -766,7 +880,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    default: /* unknown host */
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_MC88000_ALL:
 		    return(TRUE);
 		default:
@@ -777,9 +891,9 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	    break; /* logically can't get here */
 	    
 	case CPU_TYPE_HPPA:
-	    switch(host_cpusubtype){
+	    switch(host_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_HPPA_7100LC:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_HPPA_ALL: /* same as CPU_SUBTYPE_HPPA_7100 */
 		case CPU_SUBTYPE_HPPA_7100LC:
 		    return(TRUE);
@@ -789,7 +903,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    case CPU_SUBTYPE_HPPA_7100:
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_HPPA_ALL: /* same as CPU_SUBTYPE_HPPA_7100 */
 		    return(TRUE);
 		case CPU_SUBTYPE_HPPA_7100LC:
@@ -799,7 +913,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 		break; /* logically can't get here */
 
 	    default: /* unknown host */
-		switch(exec_cpusubtype){
+		switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 		case CPU_SUBTYPE_HPPA_ALL: /* same as CPU_SUBTYPE_HPPA_7100 */
 		    return(TRUE);
 		default:
@@ -813,7 +927,7 @@ cpu_subtype_t exec_cpusubtype) /* can be the ALL type */
 	    /*
 	     * For Sparc we only have the ALL subtype defined.
 	     */
-	    switch(exec_cpusubtype){
+	    switch(exec_cpusubtype & ~CPU_SUBTYPE_MASK){
 	    case CPU_SUBTYPE_SPARC_ALL:
 		return(TRUE);
 	    default:
