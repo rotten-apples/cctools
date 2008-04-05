@@ -86,12 +86,15 @@ static const char *VFP_STATUS_REGS[] = { "fpsid", "fpscr", 0, 0, 0, 0, 0, 0, "fp
 static const char *arm_symbol_name(
 	unsigned long addr,
 	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
+	nlist_t *symbols,
+        struct nlist_64 *symbols64,
+        unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
 	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds,
 	enum bool verbose
 );
 static struct section *arm_find_addr(
@@ -106,9 +109,10 @@ static char *arm_redirect_mem_string(
 	nlist_t *symbols, unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
-	struct load_command *load_commands
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
+	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds
 );
 static void print_verbose_mem(
 	int imm,
@@ -118,12 +122,15 @@ static void print_verbose_mem(
 	unsigned long addr,
 	unsigned long sect_addr,
 	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
+	nlist_t *symbols,
+        struct nlist_64 *symbols64,
+        unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
-	struct load_command *load_commands
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
+	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds
 );
 
 unsigned long arm_disassemble(
@@ -133,12 +140,15 @@ unsigned long arm_disassemble(
 	unsigned long sect_addr,
 	enum byte_sex object_byte_sex,
 	struct relocation_info *relocs, unsigned long nrelocs,
-	nlist_t *symbols, unsigned long nsymbols,
+	nlist_t *symbols,
+        struct nlist_64 *symbols64,
+        unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
 	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds,
 	enum bool verbose
 ) {
     enum byte_sex host_byte_sex;
@@ -448,11 +458,11 @@ unsigned long arm_disassemble(
 												TYPE_POINTER,
 												sect, left, addr, sect_addr,
 												object_byte_sex,
-												symbols, nsymbols,
+												symbols, symbols64, nsymbols,
 												sorted_symbols, nsorted_symbols,
 												strings, strings_size,
 												indirect_symbols, nindirect_symbols,
-												mh, load_commands
+												load_commands, ncmds, sizeofcmds
 											);
 										}
 										printf("\n");
@@ -554,11 +564,11 @@ unsigned long arm_disassemble(
 												TYPE_POINTER,
 												sect, left, addr, sect_addr,
 												object_byte_sex,
-												symbols, nsymbols,
+												symbols, symbols64, nsymbols,
 												sorted_symbols, nsorted_symbols,
 												strings, strings_size,
 												indirect_symbols, nindirect_symbols,
-												mh, load_commands
+												load_commands, ncmds, sizeofcmds
 											);
 										}
 										printf("\n");
@@ -595,11 +605,11 @@ unsigned long arm_disassemble(
 											TYPE_POINTER,
 											sect, left, addr, sect_addr,
 											object_byte_sex,
-											symbols, nsymbols,
+											symbols, symbols64, nsymbols,
 											sorted_symbols, nsorted_symbols,
 											strings, strings_size,
 											indirect_symbols, nindirect_symbols,
-											mh, load_commands
+											load_commands, ncmds, sizeofcmds
 										);
 									}
 									printf("\n");
@@ -696,11 +706,11 @@ unsigned long arm_disassemble(
 						TYPE_POINTER,
 						sect, left, addr, sect_addr,
 						object_byte_sex,
-						symbols, nsymbols,
+						symbols, symbols64, nsymbols,
 						sorted_symbols, nsorted_symbols,
 						strings, strings_size,
 						indirect_symbols, nindirect_symbols,
-						mh, load_commands
+						load_commands, ncmds, sizeofcmds
 					);
 				}
 				printf("\n");
@@ -788,12 +798,11 @@ unsigned long arm_disassemble(
 				symbol_name = arm_symbol_name(
 					imm,
 					object_byte_sex,
-					symbols, nsymbols,
+					symbols, symbols64, nsymbols,
 					sorted_symbols, nsorted_symbols,
 					strings, strings_size,
 					indirect_symbols, nindirect_symbols,
-					mh,
-					load_commands,
+					load_commands, ncmds, sizeofcmds,
 					verbose
 				);
 				if (symbol_name) {
@@ -919,11 +928,11 @@ unsigned long arm_disassemble(
 								TYPE_SINGLE,
 								sect, left, addr, sect_addr,
 								object_byte_sex,
-								symbols, nsymbols,
+								symbols, symbols64, nsymbols,
 								sorted_symbols, nsorted_symbols,
 								strings, strings_size,
 								indirect_symbols, nindirect_symbols,
-								mh, load_commands
+								load_commands, ncmds, sizeofcmds
 							);
 							break;
 						case 1:
@@ -932,11 +941,11 @@ unsigned long arm_disassemble(
 								TYPE_DOUBLE,
 								sect, left, addr, sect_addr,
 								object_byte_sex,
-								symbols, nsymbols,
+								symbols, symbols64, nsymbols,
 								sorted_symbols, nsorted_symbols,
 								strings, strings_size,
 								indirect_symbols, nindirect_symbols,
-								mh, load_commands
+								load_commands, ncmds, sizeofcmds
 							);
 							break;
 						}
@@ -1135,22 +1144,24 @@ unsigned long arm_disassemble(
 static const char *arm_symbol_name(
 	unsigned long addr,
 	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
+	nlist_t *symbols,
+        struct nlist_64 *symbols64,
+        unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
 	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds,
 	enum bool verbose
 ) {
 	const char *symbol_name;
 	symbol_name = guess_indirect_symbol(
-		addr,
-		mh,
+		addr, ncmds, sizeofcmds,
 		load_commands,
 		object_byte_sex,
 		indirect_symbols, nindirect_symbols,
-		symbols, nsymbols,
+		symbols, symbols64, nsymbols,
 		strings, strings_size
 	);
 	if (!symbol_name) {
@@ -1220,10 +1231,13 @@ static char *arm_redirect_mem_string(
 	nlist_t *symbols, unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
-	struct load_command *load_commands
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
+	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds
 ) {
+return NULL;
+#if 0
 	char *ret, *temp;
 	unsigned long off;
 	void *data;
@@ -1235,7 +1249,7 @@ static char *arm_redirect_mem_string(
 	host_byte_sex = get_host_byte_sex();
 	swapped = host_byte_sex != object_byte_sex;
 	
-	sect = arm_find_addr(addr, load_commands, mh->ncmds, swapped);
+	sect = arm_find_addr(addr, load_commands, ncmds, swapped);
 	if (sect) {
 		//printf("\n<%s::%s>\n", sect->segname, sect->sectname);
 		off = sect->offset + addr - sect->addr;
@@ -1253,8 +1267,7 @@ static char *arm_redirect_mem_string(
 				sorted_symbols, nsorted_symbols,
 				strings, strings_size,
 				indirect_symbols, nindirect_symbols,
-				mh,
-				load_commands
+				load_commands, ncmds, sizeofcmds
 			);
 			if (ret) {
 				asprintf(&temp, "@%s", ret);
@@ -1288,8 +1301,7 @@ static char *arm_redirect_mem_string(
 					sorted_symbols, nsorted_symbols,
 					strings, strings_size,
 					indirect_symbols, nindirect_symbols,
-					mh,
-					load_commands
+					load_commands, ncmds, sizeofcmds
 				);
 				if (ret) {
 					asprintf(&temp, "*%s", ret);
@@ -1308,6 +1320,7 @@ static char *arm_redirect_mem_string(
 		ret = NULL;
 	}
 	return ret;
+#endif
 }
 
 static void print_verbose_mem(
@@ -1318,12 +1331,15 @@ static void print_verbose_mem(
 	unsigned long addr,
 	unsigned long sect_addr,
 	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
+	nlist_t *symbols,
+        struct nlist_64 *symbols64,
+        unsigned long nsymbols,
 	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
 	char *strings, unsigned long strings_size,
-	unsigned long *indirect_symbols, unsigned long nindirect_symbols,
-	mach_header_t *mh,
-	struct load_command *load_commands
+	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
+	struct load_command *load_commands,
+        uint32_t ncmds,
+        uint32_t sizeofcmds
 ) {
 	unsigned int size, imm_addr, redir_imm;
 	unsigned long sect_offset;
@@ -1367,12 +1383,11 @@ static void print_verbose_mem(
 			symbol_name = arm_symbol_name(
 				redir_imm,
 				object_byte_sex,
-				symbols, nsymbols,
+				symbols, symbols64, nsymbols,
 				sorted_symbols, nsorted_symbols,
 				strings, strings_size,
 				indirect_symbols, nindirect_symbols,
-				mh,
-				load_commands,
+				load_commands, ncmds, sizeofcmds,
 				TRUE
 			);
 			if (symbol_name) {
@@ -1387,8 +1402,7 @@ static void print_verbose_mem(
 				sorted_symbols, nsorted_symbols,
 				strings, strings_size,
 				indirect_symbols, nindirect_symbols,
-				mh,
-				load_commands
+				load_commands, ncmds, sizeofcmds
 			);
 			if (mem_string) {
 				printf(" (%s)", mem_string);

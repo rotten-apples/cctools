@@ -20,11 +20,10 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#include "stuff/target_arch.h"
-#include <stuff/bytesex.h>
-#include <mach-o/reloc.h>
-#include <mach-o/nlist.h>
-#include <stuff/bool.h>
+#import <stuff/bytesex.h>
+#import <mach-o/reloc.h>
+#import <mach-o/nlist.h>
+#import <stuff/bool.h>
 #include "stuff/symbol.h"
 
 extern unsigned long ppc_disassemble(
@@ -33,16 +32,18 @@ extern unsigned long ppc_disassemble(
     unsigned long addr,
     unsigned long sect_addr,
     enum byte_sex object_byte_sex,
-    struct relocation_info *sorted_relocs,
-    unsigned long nsorted_relocs,
-    nlist_t *symbols,
+    struct relocation_info *relocs,
+    unsigned long nrelocs,
+    struct nlist *symbols,
+    struct nlist_64 *symbols64,
     unsigned long nsymbols,
     struct symbol *sorted_symbols,
     unsigned long nsorted_symbols,
     char *strings,
     unsigned long strings_size,
-    unsigned long *indirect_symbols,
+    uint32_t *indirect_symbols,
     unsigned long nindirect_symbols,
-    mach_header_t *mh,
     struct load_command *load_commands,
+    uint32_t ncmds,
+    uint32_t sizeofcmds,
     enum bool verbose);

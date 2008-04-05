@@ -7,7 +7,7 @@
 struct symbol {
     char *name;
     char *indr_name;
-    nlist_t nl;
+    uint64_t n_value;
 };
 
 #endif /* _STUFF_SYMBOL_H_ */

@@ -20,7 +20,7 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#include <stuff/bool.h>
+#import <stuff/bool.h>
 
 /* Name of this program for error messages (argv[0]) */
 extern char *progname;

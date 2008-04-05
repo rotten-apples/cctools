@@ -20,10 +20,10 @@
  * 
  * @APPLE_LICENSE_HEADER_END@
  */
-#include <stuff/bytesex.h>
-#include <mach-o/reloc.h>
-#include <mach-o/nlist.h>
-#include <stuff/bool.h>
+#import <stuff/bytesex.h>
+#import <mach-o/reloc.h>
+#import <mach-o/nlist.h>
+#import <stuff/bool.h>
 #include "stuff/symbol.h"
 
 extern unsigned long i860_disassemble(
@@ -34,7 +34,7 @@ extern unsigned long i860_disassemble(
     enum byte_sex object_byte_sex,
     struct relocation_info *sorted_relocs,
     unsigned long nsorted_relocs,
-    nlist_t *symbols,
+    struct nlist *symbols,
     unsigned long nsymbols,
     struct symbol *sorted_symbols,
     unsigned long nsorted_symbols,
