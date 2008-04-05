@@ -47,7 +47,7 @@ MYLINKFLAGS	= $(LDFLAGS) $(MYLDFLAGS) $(MYLIBS)
 CFILES = main.c ofile_print.c m68k_disasm.c i860_disasm.c \
          m88k_disasm.c i386_disasm.c ppc_disasm.c hppa_disasm.c \
          sparc_disasm.c arm_disasm.c
-CFILES_extra = print_objc.c ofile.c
+CFILES_extra = print_objc.c print_objc2.c ofile.c
 
 OBJS = $(CFILES:.c=.o) 
 OBJS64 = $(CFILES:.c=.64o) 
