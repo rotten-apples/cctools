@@ -336,6 +336,10 @@ load_am_simple:
 
 load_am_indexed:
       '#' OPRD_IMM { $$ = ($2 < 0 ? -$2 : ($2 | (1 << 23))); }
+    | '#' expr {
+        register_reloc_type(ARM_RELOC_OFFSET_IMM12, 4, 0);
+        $$ = 1;
+    }
     | load_am_sign OPRD_REG maybe_am_lsl_subclause
         {
             $$ = ($1 | $2 | $3 | (1 << 25));
