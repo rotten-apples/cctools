@@ -13,6 +13,7 @@ VPATH = @srcdir@
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA	= @INSTALL_DATA@
+transform	= @program_transform_name@
 
 MANPAGES1	= as.1 gprof.1 ld.1 nm.1 otool.1 ranlib.1 \
 		segedit.1 size.1 strings.1 strip.1 lipo.1 \
@@ -35,15 +36,15 @@ install:
 	mkdir -p $(DESTDIR)/$(mandir)/man5
 	for m in $(MANPAGES1); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man1/$$m;		\
+			$(DESTDIR)/$(mandir)/man1/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 	for m in $(MANPAGES3); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man3/$$m;		\
+			$(DESTDIR)/$(mandir)/man3/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 	for m in $(MANPAGES5); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man5/$$m;		\
+			$(DESTDIR)/$(mandir)/man5/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 
 
