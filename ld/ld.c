@@ -1451,15 +1451,21 @@ char *envp[])
 		    }
 		    /* -aspen_version_min for overriding
 		       MACOSX_DEPLOYMENT_TARGET on command line */
-		    else if(strcmp (p, "aspen_version_min") == 0){
+		    else if(
+                        strcmp (p, "aspen_version_min") == 0 ||
+                        strcmp (p, "iphoneos_version_min") == 0
+                    ){
 			if(++i >= argc)
-			    fatal("-aspen_version_min: argument missing");
+			    fatal("%s: argument missing", argv[i]);
 			if (strcmp(argv[i], "1.0"))
 			    put_macosx_deployment_target ("10.4");
-			else if (strcmp(argv[i], "1.2"))
+			else if (
+                            strcmp(argv[i], "1.2") ||
+			    strcmp(argv[i], "2.0")
+                        )
 			    put_macosx_deployment_target ("10.5");
 			else
-			    fatal("-aspen_version_min: unknown version");
+			    fatal("%s: unknown version", argv[i]);
 			break;
 		    }
 		    else
