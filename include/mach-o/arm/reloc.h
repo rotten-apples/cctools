@@ -20,6 +20,7 @@ enum reloc_type_arm
     ARM_RELOC_UNKNOWN,
     ARM_RELOC_PCREL_DATA_IMM12, /* Load and Store Word/Immediate Offset, r15 */
     ARM_RELOC_OFFSET_IMM12, /* Load and Store Word/Immediate Offset */
+    ARM_RELOC_OFFSET_MISC, /* Miscellaneous Loads and Stores */
     ARM_RELOC_SHIFT_IMM12,      /* Data-processing operands - Immediate */
     ARM_RELOC_PCREL_VFP_IMM8_TIMES_4,   /* VFP Load and Store Word, r15 */
     ARM_RELOC_SHIFT_IMM,         /* immediate shifter operand */

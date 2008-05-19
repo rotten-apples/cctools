@@ -294,6 +294,10 @@ misc_ls_am_index:
             $$ = ((1 << 22) | ((($2 & 0xf0) >> 4) << 8) | ($2 & 0x0f) |
                 ($2 & (1 << 23)));
         }
+    | '#' expr {
+        register_reloc_type(ARM_RELOC_OFFSET_MISC, 4, 0);
+        $$ = (1 << 22);
+    }
     | load_am_sign OPRD_REG
         { $$ = ((1 << 7) | (1 << 4) | $1 | $2); }
     ;
