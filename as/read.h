@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "expr.h"
+#import "expr.h"
 
 /* Define to make whitespace be allowed in many syntactically
    unnecessary places.  Normally undefined.  For compatibility with
@@ -29,10 +29,7 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 #ifdef PERMIT_WHITESPACE
 #define SKIP_WHITESPACE()			\
-    do {                                                                    \
-        while (*input_line_pointer == ' ' || *input_line_pointer == '\t')   \
-            input_line_pointer++;                                           \
-    } while (0)
+  ((*input_line_pointer == ' ') ? ++input_line_pointer : 0)
 #else
 #define SKIP_WHITESPACE() know(*input_line_pointer != ' ' )
 #endif
@@ -55,6 +52,10 @@ typedef struct {
 
 extern char *input_line_pointer; /* -> char we are parsing now. */
 extern char *buffer_limit;	 /* -> 1 + last char in buffer. */
+
+/* FROM line 60 */
+extern int target_big_endian;
+
 extern
 #ifndef PPC
 const

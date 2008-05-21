@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include <mach-o/loader.h>
-#include "struc-symbol.h"
+#import <mach-o/loader.h>
+#import "struc-symbol.h"
 
 /*
  * For every section the user mentions in the assembley program, we make one
@@ -76,6 +76,9 @@ extern unsigned long is_section_non_lazy_symbol_pointers(
     unsigned long n_sect);
 
 extern unsigned long is_section_debug(
+    unsigned long n_sect);
+
+extern unsigned long is_section_cstring_literals(
     unsigned long n_sect);
 
 extern unsigned long is_end_section_address(

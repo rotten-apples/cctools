@@ -29,12 +29,11 @@ endif
 
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM	= @INSTALL_PROGRAM@
-ASLIBEXECDIR    = @ASLIBEXECDIR@
 
 MYINCLUDES      = -I$(builddir) -I$(srcdir)/.. -I$(top_builddir)/include \
 			-I$(top_srcdir)/include $(INCPRIVEXT) $(FORHDRS)
 MYWARNINGS      =
-MYDEFS          = -DNeXT_MOD -DASLIBEXECDIR="\"$(ASLIBEXECDIR)/\"" $(MYDEFS_$(ARCH))
+MYDEFS          = -DNeXT_MOD $(MYDEFS_$(ARCH))
 MYLDFLAGS	= -L$(top_builddir)/libstuff
 MYLIBS		= $(MYLIBS_$(ARCH))
 
@@ -61,8 +60,8 @@ as: $(OBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: as
-	mkdir -p $(DESTDIR)/$(ASLIBEXECDIR)/$(ARCH)
-	$(INSTALL_PROGRAM) as $(DESTDIR)/$(ASLIBEXECDIR)/$(ARCH)/as
+	mkdir -p $(DESTDIR)/$(libexecdir)/gcc/darwin/$(ARCH)
+	$(INSTALL_PROGRAM) as $(DESTDIR)/$(libexecdir)/gcc/darwin/$(ARCH)/as
 
 clean::
 	rm -r -f *.o

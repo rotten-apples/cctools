@@ -1,6 +1,6 @@
 ARCH    =   arm
 
-CFILES_arm =	army.c arm.c armop.c 
+CFILES_arm =	arm.c
 MYDEFS_arm =	-DARM
 MYLIBS_arm =	-lstuff
 
@@ -9,16 +9,3 @@ VPATH=@srcdir@/arm
 all:	default
 
 .PHONY:	all
-
-army.c: army.y
-	bison -v -o $@ -d $<
-
-arm.c:	army.c
-
-army.h:	arm.c
-
-armop.c:	army.h
-
-clean::
-	rm -f ../army.c ../army.h
-

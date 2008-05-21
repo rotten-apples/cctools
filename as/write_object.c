@@ -1,12 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <unistd.h>
 #include <sys/file.h>
-#include <stdlib.h>
-#include <sys/stat.h>
+#include <libc.h>
 #include <mach/mach.h>
-#include "stuff/target_arch.h"
+#include "arch64_32.h"
 #include "stuff/openstep_mach.h"
 #include <mach-o/loader.h>
 #include <mach-o/reloc.h>
@@ -46,6 +44,9 @@
 #include "messages.h"
 #include "xmalloc.h"
 #include "input-scrub.h"
+#if defined(I386) && defined(ARCH64)
+#include "i386.h"
+#endif
 #ifdef I860
 #define RELOC_SECTDIFF		I860_RELOC_SECTDIFF
 #define RELOC_LOCAL_SECTDIFF	I860_RELOC_SECTDIFF
@@ -72,15 +73,15 @@
 #define RELOC_LOCAL_SECTDIFF	SPARC_RELOC_SECTDIFF
 #define RELOC_PAIR		SPARC_RELOC_PAIR
 #endif
-#ifdef ARM
-#define RELOC_SECTDIFF          ARM_RELOC_SECTDIFF
-#define RELOC_LOCAL_SECTDIFF    ARM_RELOC_SECTDIFF
-#define RELOC_PAIR              ARM_RELOC_PAIR
-#endif
 #if defined(M68K) || defined(I386)
 #define RELOC_SECTDIFF		GENERIC_RELOC_SECTDIFF
 #define RELOC_LOCAL_SECTDIFF	GENERIC_RELOC_LOCAL_SECTDIFF
 #define RELOC_PAIR		GENERIC_RELOC_PAIR
+#endif
+#ifdef ARM
+#define RELOC_SECTDIFF		ARM_RELOC_SECTDIFF
+#define RELOC_LOCAL_SECTDIFF	ARM_RELOC_SECTDIFF
+#define RELOC_PAIR		ARM_RELOC_PAIR
 #endif
 
 /*
@@ -120,7 +121,8 @@ static unsigned long nrelocs_for_fix(
 static unsigned long fix_to_relocation_entries(
     struct fix *fixP,
     unsigned long sect_addr,
-    struct relocation_info *riP);
+    struct relocation_info *riP,
+    unsigned long debug_section);
 #ifdef I860
 static void
     I860_tweeks(void);
@@ -138,7 +140,8 @@ char *out_file_name)
     segment_command_t		reloc_segment;
     struct symtab_command	symbol_table;
     struct dysymtab_command	dynamic_symbol_table;
-    unsigned long		section_type, *indirect_symbols;
+    unsigned long		section_type;
+    uint32_t			*indirect_symbols;
     isymbolS			*isymbolP;
     unsigned long		i, j, nsects, nsyms, strsize, nindirectsyms;
 
@@ -518,7 +521,9 @@ char *out_file_name)
 					fixP,
 					frchainP->frch_section.addr,
 					(struct relocation_info *)(output_addr +
-								   offset));
+								   offset),
+				        frchainP->frch_section.flags &
+					  S_ATTR_DEBUG);
 	    }
 	}
 	if(host_byte_sex != md_target_byte_sex)
@@ -570,7 +575,7 @@ char *out_file_name)
 		}
 	    }
 	    if(host_byte_sex != md_target_byte_sex){
-		indirect_symbols = (unsigned long *)(output_addr +
+		indirect_symbols = (uint32_t *)(output_addr +
 				    dynamic_symbol_table.indirectsymoff);
 		swap_indirect_symbols(indirect_symbols, nindirectsyms, 
 				      md_target_byte_sex);
@@ -876,7 +881,11 @@ long *string_byte_count)
 		    /* don't keep this symbol */
 		    *symbolPP = symbolP->sy_next;
 		}
-	        else if(flagseen['L'] || (symbolP->sy_type & N_EXT) != 0){
+	        else if(flagseen['L'] || (symbolP->sy_type & N_EXT) != 0
+#if defined(I386) && defined(ARCH64)
+			|| is_section_cstring_literals(symbolP->sy_other)
+#endif
+		){
 		    if((symbolP->sy_type & N_EXT) == 0){
 			nlocalsym++;
 			symbolP->sy_number = *symbol_number;
@@ -1027,7 +1036,7 @@ struct fix *fixP)
 	/*
 	 * If fx_addsy is NULL then this fix needs no relocation entry.
 	 */
-	if(fixP->fx_addsy == NULL)
+	if(fixP->fx_addsy == NULL || fixP->fx_done)
 	    return(0);
 
 	/*
@@ -1086,7 +1095,8 @@ unsigned long
 fix_to_relocation_entries(
 struct fix *fixP,
 unsigned long sect_addr,
-struct relocation_info *riP)
+struct relocation_info *riP,
+unsigned long debug_section)
 {
     struct symbol *symbolP;
     unsigned long count;
@@ -1099,7 +1109,7 @@ struct relocation_info *riP)
 	/*
 	 * If fx_addsy is NULL then this fix needs no relocation entry.
 	 */
-	if(fixP->fx_addsy == NULL)
+	if(fixP->fx_addsy == NULL || fixP->fx_done)
 	    return(0);
 
 #ifdef TC_VALIDATE_FIX
@@ -1144,7 +1154,11 @@ struct relocation_info *riP)
 	 * Or if this is an external coalesced symbol.
 	 */
 #if defined(I386) && defined(ARCH64)
-	if (fixP->fx_subsy == NULL && !is_local_symbol(symbolP)) {
+	if(fixP->fx_subsy == NULL &&
+	   (!debug_section || (symbolP->sy_type & N_TYPE) == N_UNDF) &&
+	   (!is_local_symbol(symbolP) ||
+	    ((symbolP->sy_type & N_TYPE) == N_SECT &&
+	     is_section_cstring_literals(symbolP->sy_other)) ) ) {
 #else
 	if((symbolP->sy_type & N_TYPE) == N_UNDF ||
 	   ((symbolP->sy_type & N_EXT) == N_EXT &&
@@ -1228,6 +1242,11 @@ struct relocation_info *riP)
 		    sectdiff = SPARC_RELOC_LO10_SECTDIFF;
 		else
 #endif
+#ifdef ARM
+		if(fixP->fx_r_type == ARM_RELOC_OI12)
+		    sectdiff = ARM_RELOC_OI12_SECTDIFF;
+		else
+#endif
 		{
 		    if(fixP->fx_r_type != 0){
 			layout_file = fixP->file;
@@ -1294,6 +1313,13 @@ struct relocation_info *riP)
 				      fixP->fx_offset) >> 10) & 0x3fffff;
 		}
 #endif
+#ifdef ARM
+		else if(sectdiff == ARM_RELOC_OI12_SECTDIFF){
+		    sri.r_address = ((symbolP->sy_value -
+				     fixP->fx_subsy->sy_value
+				     + fixP->fx_offset) >> 12) & 0xfffff;
+		}
+#endif
 		*riP = *((struct relocation_info *)&sri);
 		return(2 * sizeof(struct relocation_info));
 	    }
@@ -1349,7 +1375,7 @@ struct relocation_info *riP)
 	count = 1;
 	riP++;
 
-#if !defined(M68K) && !defined(I386) && !defined(ARM)
+#if !defined(M68K) && !defined(I386)
 	/*
 	 * For RISC machines whenever we have a relocation item using the half
 	 * of an address we also emit a relocation item describing the other
@@ -1380,6 +1406,9 @@ struct relocation_info *riP)
 #ifdef SPARC
 	if(fixP->fx_r_type == SPARC_RELOC_HI22 ||
 	   fixP->fx_r_type == SPARC_RELOC_LO10)
+#endif
+#ifdef ARM
+	if(fixP->fx_r_type == ARM_RELOC_OI12)
 #endif
 	{
 	    memset(riP, '\0', sizeof(struct relocation_info));
@@ -1477,6 +1506,11 @@ struct relocation_info *riP)
 		riP->r_address = fixP->fx_value & 0x3ff;
 	    else if (fixP->fx_r_type == SPARC_RELOC_LO10)
 		riP->r_address = (fixP->fx_value >> 10) & 0x3fffff;
+#endif
+#ifdef ARM
+	    riP->r_type	 = ARM_RELOC_PAIR;
+	    if (fixP->fx_r_type == ARM_RELOC_OI12)
+		riP->r_address = (fixP->fx_value >> 12) & 0xfffff;
 #endif
 	    count = 2;
 	}

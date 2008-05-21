@@ -17,6 +17,9 @@ You should have received a copy of the GNU General Public License
 along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
+/* FROM line 25 */
+#include "as.h"
+
 /*
  * Mach-O sections are chains of fragments.
  */
@@ -285,6 +288,21 @@ unsigned long n_sect)
 	    if(frchainP->frch_nsect == n_sect &&
 	       (frchainP->frch_section.flags & SECTION_ATTRIBUTES) ==
 	        S_ATTR_DEBUG)
+		return(1); /* TRUE */
+	}
+	return(0); /* FALSE */
+}
+
+unsigned long
+is_section_cstring_literals(
+unsigned long n_sect)
+{
+    struct frchain *frchainP;
+
+	for(frchainP = frchain_root; frchainP; frchainP = frchainP->frch_next){
+	    if(frchainP->frch_nsect == n_sect &&
+	       (frchainP->frch_section.flags & SECTION_TYPE) ==
+		S_CSTRING_LITERALS)
 		return(1); /* TRUE */
 	}
 	return(0); /* FALSE */

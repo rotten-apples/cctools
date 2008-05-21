@@ -19,13 +19,13 @@ so you can know your rights and responsibilities.  It should be
 in a file named COPYING.  Among other things, the copyright
 notice and this notice must be preserved on all copies.  */
 
-#include <mach/machine.h>
-#include "stuff/bytesex.h"
-#include "frags.h"
-#include "relax.h"
-#include "struc-symbol.h"
-#include "fixes.h"
-#include "read.h"
+#import <mach/machine.h>
+#import "stuff/bytesex.h"
+#import "frags.h"
+#import "relax.h"
+#import "struc-symbol.h"
+#import "fixes.h"
+#import "read.h"
 
 /* These are the default cputype and cpusubtype for this target MACHINE */
 extern const cpu_type_t md_cputype;
@@ -119,6 +119,8 @@ extern void md_number_to_chars(
     char *buf,
     signed_expr_t val,
     int n);
+/* FROM tc.h line 55 */
+void   md_apply_fix3 (fixS *, valueT *, segT);
 
 /*
  * md_number_to_imm() is the target machine dependent routine that puts out

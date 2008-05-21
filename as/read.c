@@ -18,6 +18,7 @@ along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 /* iPhone binutils additions by Patrick Walton <pcwalton@uchicago.edu>. */
+/* random other iPhone additions by Jay Freeman (saurik) <saurik@saurik.com>. */
 
 #define MASK_CHAR (0xFF)	/* If your chars aren't 8 bits, you will
 				   change this a bit.  But then, GNU isnt
@@ -78,6 +79,13 @@ char *input_line_pointer = NULL;
  * and restore it.
  */
 char *buffer_limit = NULL;	/* -> 1 + last char in buffer. */
+
+/* FROM line 164 */
+#define TARGET_BYTES_BIG_ENDIAN 0 /* HACK */
+/* TARGET_BYTES_BIG_ENDIAN is required to be defined to either 0 or 1
+   in the tc-<CPU>.h file.  See the "Porting GAS" section of the
+   internals manual.  */
+int target_big_endian = TARGET_BYTES_BIG_ENDIAN;
 
 /*
  * This table is used by the macros is_name_beginner() and is_part_of_name()
@@ -310,9 +318,9 @@ static const struct builtin_section builtin_sections[] = {
     /*
      * The text section must be first in this list as it is used by
      * read_a_source_file() to do the equivalent of a .text at the start
-     * of the file and for s_builtin_section() to set S_ATTR_PURE_INSTRUCTIONS.
+     * of the file.
      */
-    { "text",                "__TEXT", "__text" },
+    { "text",                "__TEXT", "__text", S_ATTR_PURE_INSTRUCTIONS },
     { "const",               "__TEXT", "__const" },
     { "static_const",        "__TEXT", "__static_const" },
     { "cstring",             "__TEXT", "__cstring", S_CSTRING_LITERALS },
@@ -2059,7 +2067,7 @@ int value)
     char *name;
     char c;
     char *p;
-    int size;
+    signed_target_addr_t size;
     symbolS *symbolP;
     int align;
     static frchainS *bss = NULL;
@@ -2079,7 +2087,7 @@ int value)
 	}
 	input_line_pointer ++;
 	if((size = get_absolute_expression()) < 0){
-	    as_bad("BSS length (%d.) <0! Ignored.", size);
+	    as_bad("BSS length (" TA_DFMT ".) <0! Ignored.", size);
 	    ignore_rest_of_line();
 	    return;
 	}
@@ -2415,31 +2423,18 @@ const struct builtin_section *s)
 	    if((s->flags & SECTION_TYPE) == S_NON_LAZY_SYMBOL_POINTERS ||
 	       (s->flags & SECTION_TYPE) == S_LAZY_SYMBOL_POINTERS ||
 	       (s->flags & SECTION_TYPE) == S_SYMBOL_STUBS ||
+#if !(defined(I386) && defined(ARCH64))
 	       (s->flags & SECTION_TYPE) == S_MOD_INIT_FUNC_POINTERS ||
 	       (s->flags & SECTION_TYPE) == S_MOD_TERM_FUNC_POINTERS ||
-	       (s->flags & SECTION_ATTRIBUTES) != 0)
+#endif
+	       (s->flags & SECTION_ATTRIBUTES & ~S_ATTR_PURE_INSTRUCTIONS) != 0)
 		as_fatal("incompatible feature used: directive .%s (must "
 			 "specify \"-dynamic\" to be used)", s->directive);
 	}
-	/*
-	 * If we allowed to use the new features that are incompatible with 3.2
-	 * and this is the text section (which relys on the fact that the text
-	 * section is first in the built in sections list) then add the
-	 * S_ATTR_PURE_INSTRUCTIONS to the section attributes.
-	 */
-	if(flagseen['k'] && s == builtin_sections){
-	    frcP = section_new(s->segname, s->sectname,
-			       s->flags & SECTION_TYPE,
-			       (s->flags & SECTION_ATTRIBUTES) |
-					S_ATTR_PURE_INSTRUCTIONS,
-			       s->sizeof_stub);
-	}
-	else{
-	    frcP = section_new(s->segname, s->sectname,
-			       s->flags & SECTION_TYPE,
-			       s->flags & SECTION_ATTRIBUTES, 
-			       s->sizeof_stub);
-	}
+	frcP = section_new(s->segname, s->sectname,
+			   s->flags & SECTION_TYPE,
+			   s->flags & SECTION_ATTRIBUTES, 
+			   s->sizeof_stub);
 	if(frcP->frch_section.align < s->default_align)
 	    frcP->frch_section.align = s->default_align;
 	return(frcP->frch_nsect);
@@ -2477,7 +2472,7 @@ int value)
 	}
 	p = input_line_pointer - 1;
 
-    SKIP_WHITESPACE();
+	SKIP_WHITESPACE();
 	sectname = input_line_pointer;
 	do{
 	    d = *input_line_pointer++ ;
@@ -2648,11 +2643,11 @@ int value)
 	}
 	p = input_line_pointer - 1;
 
-    SKIP_WHITESPACE();
+	SKIP_WHITESPACE();
 	sectname = input_line_pointer;
 	do{
 	    d = *input_line_pointer++ ;
-	}while(d != ',' && d != '\0' && d != '\n' && c != ' ' && c != '\t');
+        }while(d != ',' && d != '\0' && d != '\n' && c != ' ' && c != '\t');
 	if(p + 1 == input_line_pointer){
 	    as_bad("Expected section-name after comma");
 	    ignore_rest_of_line();
@@ -2965,10 +2960,8 @@ void)
 	SKIP_WHITESPACE();
 	if(is_end_of_line(*input_line_pointer))
 	    input_line_pointer++;
-	else {
-        as_bad("Rest of this line needed to be empty but wasn't");
+	else
 	    ignore_rest_of_line();
-    }
 }
 
 /* we simply ignore the rest of this statement */
@@ -4253,16 +4246,16 @@ int value)
         *input_line_pointer++;
 
 	    while(is_part_of_name(c = *input_line_pointer ++))
-            obstack_1grow (&macros, c);
+		obstack_1grow (&macros, c);
 	    obstack_1grow(&macros, '\0');
 	    --input_line_pointer;
 	    macro_name = obstack_finish(&macros);
 	    if(macro_name == "")
-            as_bad("Missing name of macro");
+		as_bad("Missing name of macro");
 	    if(*macro_name == '.'){
-            pop = (pseudo_typeS *)hash_find(po_hash, macro_name + 1);
-            if(pop != NULL)
-                as_bad("Pseudo-op name: %s can't be a macro name",
+		pop = (pseudo_typeS *)hash_find(po_hash, macro_name + 1);
+		if(pop != NULL)
+		    as_bad("Pseudo-op name: %s can't be a macro name",
 			    macro_name);
 	    }
 #endif
@@ -4623,10 +4616,9 @@ struct macro_info *info)
 	buffer_limit = obstack_next_free (&macros) - 1;
 	buffer = obstack_finish (&macros);
 	count_lines = FALSE;
-
-#if 0
+	/*
 	printf("expanded macro: %s", buffer + 1);
-#endif
+	*/
 #ifdef PPC
 	if(flagseen[(int)'p'] == TRUE)
 	    ppcasm_parse_a_buffer(buffer + 1);
@@ -4992,4 +4984,3 @@ int value)
       demand_empty_rest_of_line();
 }
 #endif /* PPC */
-

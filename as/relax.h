@@ -1,6 +1,3 @@
-#ifndef _RELAX_H_
-#define _RELAX_H_
-
 /* The type used for a target address */
 typedef unsigned long relax_addressT;
 
@@ -45,6 +42,3 @@ typedef struct relax_type {
     relax_substateT rlx_more;	  /* Next longer relax-state. */
 				  /* 0 means there is no 'next' relax-state. */
 } relax_typeS;
-
-#endif // _RELAX_H_
-

@@ -372,7 +372,14 @@ char *filename)
   fprintf (stderr,"as:file(%s) %s! ",
 	   filename, gripe
 	   );
-      fprintf (stderr, "%s.", strerror(errno));
+  if (errno > sys_nerr)
+    {
+      fprintf (stderr, "Unknown error #%d.", errno);
+    }
+  else
+    {
+      fprintf (stderr, "%s.", sys_errlist [errno]);
+    }
   (void)putc('\n', stderr);
   errno = 0;			/* After reporting, clear it. */
   if (input_file_is_open())	/* RMS says don't mention line # if not needed. */

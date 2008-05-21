@@ -29,10 +29,6 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "app.h"
 #include "messages.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 FILE *scrub_file = NULL;
 char *scrub_string = NULL;
 char *scrub_last_string = NULL;
@@ -40,6 +36,9 @@ char *scrub_last_string = NULL;
 #ifdef NeXT_MOD	/* .include feature */
 /* These are moved out of do_scrub() so save_scrub_context() can save them */
 static int state;
+#ifdef I386
+static int substate = 0;
+#endif
 static int old_state;
 static char *out_string;
 static char out_buf[20];
@@ -131,9 +130,20 @@ FILE *fp)
 		6: putting out \ escape in a "d string.
 		7: After putting out a .file, put out string.
 		8: After putting out a .file string, flush until newline.
+	        FROM line 358
+		9: After seeing symbol char in state 3 (keep 1white after symchar)
+	       10: After seeing whitespace in state 9 (keep white before symchar)
 		-1: output string in out_string and go to the state in old_state
 		-2: flush text until a '*' '/' is seen, then go to state old_state
 	*/
+
+			       
+  /* FROM line 379 */
+  /* I added states 9 and 10 because the MIPS ECOFF assembler uses
+     constructs like ``.loc 1 20''.  This was turning into ``.loc
+     120''.  States 9 and 10 ensure that a space is never dropped in
+     between characters which could appear in an identifier.  Ian
+     Taylor, ian@cygnus.com.  */
 
 #ifndef NeXT_MOD	/* .include feature */
 	static state;
@@ -297,21 +307,30 @@ FILE *fp)
 		}
 		ungetc(ch, fp);
 		if(state==0 || state==2) {
+#ifdef I386
+			if(state == 2){
+			    if(substate == 0){
+				/* if in state 2 don't change to state 3
+				   the first time, and leave white space
+				   after the first two tokens */
+				substate = 1;
+				return ' ';
+			    }
+			    substate = 0;
+			}
+#endif
 			state++;
 			return ' ';
 		}
-#ifdef ARM
-        /* because it COULDN'T POSSIBLY BE THE CASE that spaces could be
-         * significant between keywords?!?! */
-        if (state == 3)
-            return ' ';
-#endif
 #ifdef PPC
 		if(flagseen[(int)'p'] == TRUE && state == 3){
 			return ' ';
 		}
 #endif
-		else goto flushchar;
+		/* FROM line 900 */
+		if (state == 9)
+		  state = 10;
+		goto flushchar;
 
 	case '/':
 		ch=getc_unlocked(fp);
@@ -404,6 +423,33 @@ FILE *fp)
 
 	default:
 	deal_misc:
+		/* FROM line 1234 */
+		if (IS_SYMBOL_COMPONENT (ch))
+		  {
+		    if (state == 10)
+		      {
+			/* This is a symbol character following another symbol
+			   character, with whitespace in between.  We skipped
+			   the whitespace earlier, so output it now.  */
+			ungetc(ch, fp);
+			state = 3;
+			ch = ' ';
+			return ch;
+		      }
+
+		    if (state == 3)
+		      state = 9;
+		  }
+		/* FROM line 1321 */
+		else if (state == 9)
+		  {
+		    /* FROM line 1324 */
+		    state = 3;
+		  }
+		else if (state == 10)
+		  /* FROM line 1345 */
+		  state = 3;
+
 		if(state==0 && IS_LINE_COMMENT(ch)) {
 			do ch=getc_unlocked(fp);
 			while(ch!=EOF && IS_WHITESPACE(ch));
@@ -633,10 +679,6 @@ do_scrub_next_char_from_string()
 			state++;
 			return ' ';
 		}
-#ifdef ARM
-        if (state == 3)
-            return ' '; /* stupid stupid stupid. */
-#endif
 #ifdef PPC
 		if(flagseen[(int)'p'] == TRUE && state == 3){
 			return ' ';

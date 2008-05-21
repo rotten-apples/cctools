@@ -20,8 +20,8 @@ along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 #ifdef NeXT_MOD
-#include "stuff/target_arch.h"
-#include <mach-o/nlist.h>
+#include "arch64_32.h"
+#import <mach-o/nlist.h>
 #else /* !defined(NeXT_MOD) */
 #ifndef		VMS
 #include "a.out.h"		/* Needed to define struct nlist. Sigh. */
@@ -48,6 +48,11 @@ struct symbol			/* our version of an nlist node */
   struct frag   *sy_frag;	/* NULL or -> frag this symbol attaches to. */
   struct symbol *sy_forward;	/* value is really that of this other symbol */
   void *expression;
+/* FROM line tc-arm.h 104 */
+#define TC_SYMFIELD_TYPE 	unsigned int
+#ifdef TC_SYMFIELD_TYPE
+  TC_SYMFIELD_TYPE sy_tc;
+#endif
 };
 
 typedef struct symbol symbolS;

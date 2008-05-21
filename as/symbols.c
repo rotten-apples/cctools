@@ -33,8 +33,6 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "fixes.h"
 #include "input-scrub.h"
 
-#define LOCAL_LABEL_MAX     256
-
 /* symbol-name => struct symbol pointer */
 struct hash_control *sy_hash = NULL;
 
@@ -71,10 +69,10 @@ symbolS	abs_symbol = { {{0}} };
 
 typedef short unsigned int local_label_countT;
 
-static local_label_countT local_label_counter[LOCAL_LABEL_MAX];
+static local_label_countT local_label_counter[10];
 
 static				/* Returned to caller, then copied. */
-  char symbol_name_build[32];	/* used for created names ("4f") */
+  char symbol_name_build[12];	/* used for created names ("4f") */
 
 static long int symbol_count = 0;	/* The number of symbols we've declared. */
 
@@ -98,28 +96,18 @@ void)
  *			local_label_name()
  *
  * Caller must copy returned name: we re-use the area for the next name.
- *
- * iPhone binutils extension: allow more than 10 local labels 
- *   -- How old is this code anyway? This must be ANCIENT.
  */
 char *				/* Return local label name. */
 local_label_name(
 int n,		/* we just saw "n:", "nf" or "nb" : n a digit */
 int augend)	/* 0 for nb, 1 for n:, nf */
 {
-#if 0
   register char *	p;
   register char *	q;
   char symbol_name_temporary[10]; /* build up a number, BACKWARDS */
-#endif
 
   know( n >= 0 );
   know( augend == 0 || augend == 1 );
-
-    sprintf(symbol_name_build, "L%d%c%d", n, 1, local_label_counter[n] +
-        augend);
-
-#if 0
   p = symbol_name_build;
   * p ++ = 'L';
   * p ++ = n + '0';		/* Make into ASCII */
@@ -141,8 +129,6 @@ int augend)	/* 0 for nb, 1 for n:, nf */
   while (( * p ++ = * -- q ))
     {
     }
-#endif
-
   /* The label, as a '\0' ended string, starts at symbol_name_build. */
   return (symbol_name_build);
 }
@@ -220,6 +206,17 @@ struct frag    *frag)	/* For sy_frag. */
 
   return (symbolP);
 }
+
+/* FROM line 136 */
+symbolS *
+symbol_create (const char *name, /* It is copied, the caller can destroy/modify.  */
+	       segT segment,	/* Segment identifier (SEG_<something>).  */
+	       valueT valu,	/* Symbol value.  */
+	       fragS *frag	/* Associated fragment.  */)
+{
+  /* FIXME */
+  return symbol_new ((char *)name, 0, segment, 0, valu, frag);
+}
 
 /*
  *			symbol_assign_index()
@@ -278,7 +275,7 @@ char *sym_name) /* symbol name, as a cannonical string */
 	     /* bug #50416 -O causes this not to work for:
 	     && ((symbolP->sy_desc) & (~REFERENCE_TYPE)) == 0
 	     */
-	     && (temp & (~(REFERENCE_TYPE | N_WEAK_REF | N_WEAK_DEF |
+	     && (temp & (~(REFERENCE_TYPE | N_WEAK_REF | N_WEAK_DEF | N_ARM_THUMB_DEF |
 			   N_NO_DEAD_STRIP | REFERENCED_DYNAMICALLY))) == 0
 	     && symbolP -> sy_value == 0)
 	    {
@@ -330,6 +327,9 @@ char *sym_name) /* symbol name, as a cannonical string */
 	  make_stab_for_symbol(symbolP);
 #endif
     }
+#ifdef tc_frob_label
+    tc_frob_label(symbolP);
+#endif
 }
 
 
@@ -581,5 +581,38 @@ unsigned long	offset)	  /* Offset from frag address. */
 	}
 	return(isymbolP);
 }
+
+const char *
+S_GET_NAME (symbolS *s)
+{
+  return s->sy_name;
+}
+
+int
+S_IS_DEFINED (symbolS *s)
+{
+  return (s->sy_type & N_TYPE) != N_UNDF;
+}
+
+/* FROM line 2317 */
+#ifdef TC_SYMFIELD_TYPE
+
+/* Get a pointer to the processor information for a symbol.  */
+
+TC_SYMFIELD_TYPE *
+symbol_get_tc (symbolS *s)
+{
+  return &s->sy_tc;
+}
+
+/* Set the processor information for a symbol.  */
+
+void
+symbol_set_tc (symbolS *s, TC_SYMFIELD_TYPE *o)
+{
+  s->sy_tc = *o;
+}
+
+#endif /* TC_SYMFIELD_TYPE */
 
 /* end: symbols.c */

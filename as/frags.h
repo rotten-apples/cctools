@@ -19,9 +19,9 @@ You should have received a copy of the GNU General Public License
 along with GAS; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "as.h"
-#include "relax.h"
-#include "struc-symbol.h"
+#import "as.h"
+#import "relax.h"
+#import "struc-symbol.h"
 
 /*
  * A code fragment (frag) is some known number of chars, followed by some
@@ -58,7 +58,6 @@ struct frag			/* a code fragment */
     char fr_literal[1];		/* Chars begin here. */
 				/* One day we will compile fr_literal[0]. */
 };
-typedef struct frag fragS;
 
 /* We want to say fr_literal[0] below */
 #define SIZEOF_STRUCT_FRAG \

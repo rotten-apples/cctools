@@ -204,14 +204,14 @@ char **envp)
 			out_file_name = *++work_argv;
 		    }
 		    else
-			as_warn("%s: I expected a filename after -o. \"%s\" "
+			as_fatal("%s: I expected a filename after -o. \"%s\" "
 				"assumed.", progname, out_file_name);
 		    arg = "";	/* Finished with this arg. */
 		    break;
 
 		case 'R':
 		    /* -R means put data into text segment */
-		    as_warn("%s: -R option not supported (use the "
+		    as_fatal("%s: -R option not supported (use the "
 			    ".const directive)", progname);
 		    flagseen['R'] = FALSE;
 		    break;
@@ -221,7 +221,7 @@ char **envp)
 			    "%s, ", apple_version);
 		    fprintf(stderr, version_string);
 		    if(*arg && strcmp(arg,"ersion"))
-			as_warn("Unknown -v option ignored");
+			as_fatal("Unknown -v option ignored");
 		    while(*arg)
 			arg++;	/* Skip the rest */
 		    break;
@@ -253,7 +253,7 @@ char **envp)
 			dirtmp->fname = *++work_argv;
 		    }
 		    else
-			as_warn("I expected a filename after -I.");
+			as_fatal("I expected a filename after -I.");
 		    arg = "";	/* Finished with this arg. */
 		    break;
 
@@ -627,6 +627,66 @@ char **envp)
 				as_fatal("I expected 'sparc' after "
 					 "-arch for this assembler.");
 #endif
+#ifdef ARM
+			    if(strcmp(*work_argv,
+					   "arm") == 0){
+				if(archflag_cpusubtype != -1 &&
+				   archflag_cpusubtype !=
+					CPU_SUBTYPE_ARM_V4T)
+				    as_fatal("can't specify more "
+				       "than one -arch flag ");
+				specific_archflag = *work_argv;
+				archflag_cpusubtype =
+				    CPU_SUBTYPE_ARM_V4T;
+			    }
+			    else if(strcmp(*work_argv,
+					   "armv4t") == 0){
+				if(archflag_cpusubtype != -1 &&
+				   archflag_cpusubtype !=
+					CPU_SUBTYPE_ARM_V4T)
+				    as_fatal("can't specify more "
+				       "than one -arch flag ");
+				specific_archflag = *work_argv;
+				archflag_cpusubtype =
+				    CPU_SUBTYPE_ARM_V4T;
+			    }
+			    else if(strcmp(*work_argv,
+					   "armv5") == 0){
+				if(archflag_cpusubtype != -1 &&
+				   archflag_cpusubtype !=
+					CPU_SUBTYPE_ARM_V5TEJ)
+				    as_fatal("can't specify more "
+				       "than one -arch flag ");
+				specific_archflag = *work_argv;
+				archflag_cpusubtype =
+				    CPU_SUBTYPE_ARM_V5TEJ;
+			    }
+			    else if(strcmp(*work_argv,
+					   "xscale") == 0){
+				if(archflag_cpusubtype != -1 &&
+				   archflag_cpusubtype !=
+					CPU_SUBTYPE_ARM_XSCALE)
+				    as_fatal("can't specify more "
+				       "than one -arch flag ");
+				specific_archflag = *work_argv;
+				archflag_cpusubtype =
+				    CPU_SUBTYPE_ARM_XSCALE;
+			    }
+			    else if(strcmp(*work_argv,
+					   "armv6") == 0){
+				if(archflag_cpusubtype != -1 &&
+				   archflag_cpusubtype !=
+					CPU_SUBTYPE_ARM_V6)
+				    as_fatal("can't specify more "
+				       "than one -arch flag ");
+				specific_archflag = *work_argv;
+				archflag_cpusubtype =
+				    CPU_SUBTYPE_ARM_V6;
+			    }
+			    else
+				as_fatal("I expected 'arm' after "
+					 "-arch for this assembler.");
+#endif
 			}
 			else
 			    as_fatal("I expected an <arch_type> "
@@ -638,7 +698,7 @@ char **envp)
 unknown_flag:
 		    --arg;
 		    if(md_parse_option(&arg, &work_argc, &work_argv) == 0)
-			as_warn("%s: I don't understand '%c' flag!", progname,
+			as_fatal("%s: I don't understand '%c' flag!", progname,
 				a);
 		    if(arg && *arg)
 			arg++;

@@ -1,35 +1,44 @@
-/* ----------------------------------------------------------------------------
- *   iphone-binutils: development tools for the Apple iPhone       07/18/2007
- *   Copyright (c) 2007 Patrick Walton <pcwalton@uchicago.edu> but freely
- *   redistributable under the terms of the GNU General Public License v2.
+/*
+ * Copyright (c) 1999 Apple Computer, Inc. All rights reserved.
  *
- *   mach-o/arm/reloc.h - relocation information for the ARM 
- * ------------------------------------------------------------------------- */
-
-#ifndef MACH_O_ARM_H
-#define MACH_O_ARM_H 
-
+ * @APPLE_LICENSE_HEADER_START@
+ * 
+ * This file contains Original Code and/or Modifications of Original Code
+ * as defined in and that are subject to the Apple Public Source License
+ * Version 2.0 (the 'License'). You may not use this file except in
+ * compliance with the License. Please obtain a copy of the License at
+ * http://www.opensource.apple.com/apsl/ and read it before using this
+ * file.
+ * 
+ * The Original Code and all software distributed under the License are
+ * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
+ * Please see the License for the specific language governing rights and
+ * limitations under the License.
+ * 
+ * @APPLE_LICENSE_HEADER_END@
+ */
+/*
+ * Relocation types used in the arm implementation.  Relocation entries for
+ * things other than instructions use the same generic relocation as discribed
+ * in <mach-o/reloc.h> and their r_type is ARM_RELOC_VANILLA, one of the
+ * *_SECTDIFF or the *_PB_LA_PTR types.  The rest of the relocation types are
+ * for instructions.  Since they are for instructions the r_address field
+ * indicates the 32 bit instruction that the relocation is to be preformed on.
+ */
 enum reloc_type_arm
 {
-    ARM_RELOC_VANILLA,          /* generic relocation */
-    ARM_RELOC_PAIR,             /* second entry of a pair */
-    ARM_RELOC_SECTDIFF,
-    ARM_RELOC_LOCAL_SECTDIFF,
-    ARM_RELOC_PB_LA_PTR,
-    ARM_RELOC_PCREL_IMM24,      /* signed branch offset */
-    ARM_RELOC_UNKNOWN,
-    ARM_RELOC_PCREL_DATA_IMM12, /* Load and Store Word/Immediate Offset, r15 */
-    ARM_RELOC_OFFSET_IMM12, /* Load and Store Word/Immediate Offset */
-    ARM_RELOC_OFFSET_MISC, /* Miscellaneous Loads and Stores */
-    ARM_RELOC_SHIFT_IMM12,      /* Data-processing operands - Immediate */
-    ARM_RELOC_PCREL_VFP_IMM8_TIMES_4,   /* VFP Load and Store Word, r15 */
-    ARM_RELOC_SHIFT_IMM,         /* immediate shifter operand */
-    ARM_RELOC_ADR               /* immediate shifter operand with add/sub */
+    ARM_RELOC_VANILLA,	/* generic relocation as discribed above */
+    ARM_RELOC_PAIR,	/* the second relocation entry of a pair */
+    ARM_RELOC_SECTDIFF,	/* a PAIR follows with subtract symbol value */
+    ARM_RELOC_LOCAL_SECTDIFF, /* like ARM_RELOC_SECTDIFF, but the symbol
+				 referenced was local.  */
+    ARM_RELOC_PB_LA_PTR,/* prebound lazy pointer */
+    ARM_RELOC_BR24,	/* 24 bit branch displacement (to a word address) */
+    ARM_THUMB_RELOC_BR22, /* 22 bit branch displacement (to a half-word
+			     address) */
+    ARM_RELOC_OI12, /* 12 bit immediate offset into hell */
+    ARM_RELOC_OI12_SECTDIFF, /* 12 bit immediate offset into a pair */
 };
-
-/* Determines whether a reloc can be exported to object files (1) or whether
- * it's purely for assembler-internal use (0). */
-#define ARM_RELOC_IS_EXPORTABLE(n)  ((n) < ARM_RELOC_PCREL_DATA_IMM12)
-
-#endif
-
