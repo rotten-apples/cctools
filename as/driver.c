@@ -58,7 +58,7 @@ char **envp)
 	/*
 	 * Construct the prefix to the assembler driver.
 	 */
-#if 0
+#ifdef __APPLE__
 	bufsize = MAXPATHLEN;
 	p = buf;
 	i = _NSGetExecutablePath(p, &bufsize);
