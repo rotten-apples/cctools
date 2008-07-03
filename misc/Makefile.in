@@ -48,7 +48,7 @@ MYLINKFLAGS	= $(LDFLAGS) $(MYLDFLAGS) $(MYLIBS)
 
 PROGRAMS = checksyms lipo size strings nm libtool redo_prebinding seg_addr_table \
 		seg_hack install_name_tool indr strip nmedit segedit pagestuff \
-		ranlib
+		ranlib codesign_allocate
 
 CFILES_checksyms	= checksyms.c
 OBJS_checksyms	= $(CFILES_checksyms:.c=.o)
@@ -79,6 +79,9 @@ OBJS_seg_addr_table	= $(CFILES_seg_addr_table:.c=.o)
 
 CFILES_seg_hack	= seg_hack.c
 OBJS_seg_hack	= $(CFILES_seg_hack:.c=.o)
+
+CFILES_codesign_allocate	= codesign_allocate.c
+OBJS_codesign_allocate		= $(CFILES_codesign_allocate:.c=.o)
 
 CFILES_install_name_tool	= install_name_tool.c
 OBJS_install_name_tool		= $(CFILES_install_name_tool:.c=.o)
@@ -128,6 +131,8 @@ redo_prebinding: $(OBJS_redo_prebinding)
 seg_addr_table: $(OBJS_seg_addr_table)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 seg_hack: $(OBJS_seg_hack)
+	$(CC) -o $@ $^ $(MYLINKFLAGS)
+codesign_allocate: $(OBJS_codesign_allocate)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 install_name_tool: $(OBJS_install_name_tool)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
