@@ -2179,6 +2179,9 @@ unknown_flag:
 	    }
 	}
 
+	if(filetype == MH_EXECUTE && dynamic == TRUE)
+	    output_for_dyld = TRUE;
+
 	/*
 	 * Check for flag combinations that would result in a bad output file.
 	 */
