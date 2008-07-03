@@ -49,6 +49,14 @@ struct symtab_info {
 extern struct symtab_info output_symtab_info;
 
 /*
+ * The output file's dynamic linker load command.
+ */
+struct dylinker_info {
+    struct dylinker_command dylinker_command;
+};
+extern struct dylinker_info output_dylinker_info;
+
+/*
  * The output file's dynamic symbol table load command.
  */
 struct dysymtab_info {

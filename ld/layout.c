@@ -108,6 +108,11 @@ struct mach_header output_mach_header = { 0 };
 struct symtab_info output_symtab_info = { {0} };
 
 /*
+ * The output file's dynamic linker load command.
+ */
+struct dylinker_info output_dylinker_info = { {0} };
+
+/*
  * The output file's dynamic symbol table load command.
  */
 struct dysymtab_info output_dysymtab_info = { {0} };
@@ -191,6 +196,7 @@ layout(void)
 #ifdef RLD
 	memset(&output_mach_header, '\0', sizeof(struct mach_header));
 	memset(&output_symtab_info, '\0', sizeof(struct symtab_info));
+	memset(&output_dylinker_info, '\0', sizeof(struct dylinker_info));
 	memset(&output_dysymtab_info, '\0', sizeof(struct dysymtab_info));
 	memset(&output_hints_info, '\0', sizeof(struct hints_info));
 	memset(&output_cksum_info, '\0', sizeof(struct cksum_info));
@@ -1141,6 +1147,17 @@ layout_segments(void)
 	}
 	ncmds++;
 	sizeofcmds += output_symtab_info.symtab_command.cmdsize;
+	/*
+	 * Create the dynamic symbol table load command.
+	 */
+	if(filetype == MH_EXECUTE && output_for_dyld){
+	    output_dylinker_info.dylinker_command.cmd = LC_DYLINKER_LOAD;
+	    output_dylinker_info.dylinker_command.cmdsize =
+						sizeof(struct dylinker_command);
+	    output_dylinker_info.dylinker_command.nindirectsyms = nindirectsyms;
+	    ncmds++;
+	    sizeofcmds += output_dylinker_info.dylinker_command.cmdsize;
+	}
 	/*
 	 * Create the dynamic symbol table load command.
 	 */
