@@ -30,10 +30,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/param.h>
-#include <unistd.h>
+#include <libc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach-o/loader.h>
@@ -2116,6 +2113,8 @@ enum byte_sex host_byte_sex)
 		    if(object->mh_filetype != MH_DYLIB_STUB){
 			if(object->mh != NULL){
 			    value = symbols[index].n_value;
+			    if (symbols[index].n_desc & N_ARM_THUMB_DEF)
+				value |= 1;
 			    if(object->object_byte_sex != host_byte_sex)
 				value = SWAP_LONG(value);
 			    *(uint32_t *)(contents + k * 4) = value;
