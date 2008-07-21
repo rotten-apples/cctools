@@ -75,10 +75,10 @@
 #include "ofile_print.h"
 static enum bool otool_first_ofile_map = TRUE;
 #else /* !define(OTOOL) */
-#if (!defined(m68k) && !defined(__i386__) && !defined(__ppc__))
+#if (!defined(m68k) && !defined(__i386__) && !defined(__ppc__) && !defined(__arm__))
 #define ALIGNMENT_CHECKS_ARCHIVE_64_BIT
 static enum bool archive_64_bit_align_warning = FALSE;
-#endif /* (!defined(m68k) && !defined(__i386__)) && !defined(__ppc__) */
+#endif /* (!defined(m68k) && !defined(__i386__) && !defined(__ppc__) && !defined(__arm__)) */
 #endif /* OTOOL */
 
 /* <mach/loader.h> */
@@ -3031,6 +3031,7 @@ struct ofile *ofile)
     struct twolevel_hints_command *hints;
     struct linkedit_data_command *code_sig, *split_info;
     struct prebind_cksum_command *cs;
+    struct encryption_info_command *encrypt_info;
     struct uuid_command *uuid;
     struct rpath_command *rpath;
     uint32_t flavor, count, nflavor;
@@ -3108,6 +3109,7 @@ struct ofile *ofile)
 	split_info = NULL;
 	cs = NULL;
 	uuid = NULL;
+	encrypt_info = NULL;
 	for(i = 0, lc = load_commands; i < ncmds; i++){
 	    l = *lc;
 	    if(swapped)
@@ -3523,6 +3525,30 @@ struct ofile *ofile)
 		    Mach_O_error(ofile, "truncated or malformed object "
 			"(datasize field of LC_SEGMENT_SPLIT_INFO command %lu "
 			"is not a multple of %lu)", i, load_command_multiple);
+		    return(CHECK_BAD);
+		}
+		break;
+
+	    case LC_ENCRYPTION_INFO:
+		encrypt_info = (struct encryption_info_command *)lc;
+		if(swapped)
+		    swap_encryption_command(encrypt_info, host_byte_sex);
+		if(encrypt_info->cmdsize != sizeof(struct encryption_info_command)){
+		    Mach_O_error(ofile, "malformed object (LC_ENCRYPTION_INFO"
+				 "command %lu has incorrect cmdsize)", i);
+		    return(CHECK_BAD);
+		}
+		if(encrypt_info->cryptoff > size){
+		    Mach_O_error(ofile, "truncated or malformed object "
+			"(cryptoff field of LC_ENCRYPTION_INFO command %lu "
+			"extends past the end of the file)", i);
+		    return(CHECK_BAD);
+		}
+		if(encrypt_info->cryptoff + encrypt_info->cryptsize > size){
+		    Mach_O_error(ofile, "truncated or malformed object "
+			"(cryptoff field plus cryptsize field of "
+			"LC_ENCRYPTION_INFO command %lu extends past "
+			"the end of the file)", i);
 		    return(CHECK_BAD);
 		}
 		break;
@@ -4437,6 +4463,56 @@ check_dylib_command:
 			    if(swapped)
 				swap_sparc_thread_state_fpu(fpu, host_byte_sex);
 			    state += sizeof(struct sparc_thread_state_fpu);
+			    break;
+			default:
+			    if(swapped){
+				Mach_O_error(ofile, "malformed object (unknown "
+				    "flavor for flavor number %u in %s command"
+				    " %lu can't byte swap it)", nflavor,
+				    ut->cmd == LC_UNIXTHREAD ? "LC_UNIXTHREAD" :
+				    "LC_THREAD", i);
+				return(CHECK_BAD);
+			    }
+			    state += count * sizeof(long);
+			    break;
+			}
+			nflavor++;
+		    }
+		    break;
+		}
+	    	if(cputype == CPU_TYPE_ARM){
+		    arm_thread_state_t *cpu;
+
+		    nflavor = 0;
+		    p = (char *)ut + ut->cmdsize;
+		    while(state < p){
+			flavor = *((unsigned long *)state);
+			if(swapped){
+			    flavor = SWAP_LONG(flavor);
+			    *((unsigned long *)state) = flavor;
+			}
+			state += sizeof(unsigned long);
+			count = *((unsigned long *)state);
+			if(swapped){
+			    count = SWAP_LONG(count);
+			    *((unsigned long *)state) = count;
+			}
+			state += sizeof(unsigned long);
+			switch(flavor){
+			case ARM_THREAD_STATE:
+			    if(count != ARM_THREAD_STATE_COUNT){
+				Mach_O_error(ofile, "malformed object (count "
+				    "not ARM_THREAD_STATE_COUNT for "
+				    "flavor number %u which is a ARM_THREAD_"
+				    "STATE flavor in %s command %lu)",
+				    nflavor, ut->cmd == LC_UNIXTHREAD ? 
+				    "LC_UNIXTHREAD" : "LC_THREAD", i);
+				return(CHECK_BAD);
+			    }
+			    cpu = (arm_thread_state_t *)state;
+			    if(swapped)
+				swap_arm_thread_state_t(cpu, host_byte_sex);
+			    state += sizeof(arm_thread_state_t);
 			    break;
 			default:
 			    if(swapped){

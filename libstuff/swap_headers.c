@@ -89,6 +89,7 @@ struct load_command *load_commands)
     struct uuid_command *uuid;
     struct linkedit_data_command *ld;
     struct rpath_command *rpath;
+    struct encryption_info_command *ec;
     uint32_t flavor, count;
     unsigned long nflavor;
     char *p, *state, *cmd_name;
@@ -903,17 +904,43 @@ check_dylib_command:
 		  }
 		  break;
 		}
+	    	if(cputype == CPU_TYPE_ARM){
+		    arm_thread_state_t *cpu;
 
-        if (cputype == CPU_TYPE_ARM) {
-            nflavor = 0;
-
-            p = (char *)ut + ut->cmdsize;
-            while (state < p) {
-                state += 8 + sizeof(arm_thread_state_t);
-                nflavor++; 
-            }
-            break;
-        }
+		    nflavor = 0;
+		    p = (char *)ut + ut->cmdsize;
+		    while(state < p){
+			flavor = *((unsigned long *)state);
+			state += sizeof(unsigned long);
+			count = *((unsigned long *)state);
+			state += sizeof(unsigned long);
+			switch(flavor){
+			case ARM_THREAD_STATE:
+			    if(count != ARM_THREAD_STATE_COUNT){
+				error("in swap_object_headers(): malformed "
+				    "load commands (count "
+				    "not ARM_THREAD_STATE_COUNT for "
+				    "flavor number %lu which is a ARM_THREAD_"
+				    "STATE flavor in %s command %lu)",
+				    nflavor, ut->cmd == LC_UNIXTHREAD ? 
+				    "LC_UNIXTHREAD" : "LC_THREAD", i);
+				return(FALSE);
+			    }
+			    cpu = (arm_thread_state_t *)state;
+			    state += sizeof(arm_thread_state_t);
+			    break;
+			default:
+			    error("in swap_object_headers(): malformed load "
+				  "commands (unknown flavor for flavor number "
+				  "%lu in %s command %lu can't byte swap it)",
+				  nflavor, ut->cmd == LC_UNIXTHREAD ?
+				  "LC_UNIXTHREAD" : "LC_THREAD", i);
+			    return(FALSE);
+			}
+			nflavor++;
+		    }
+		    break;
+		}
 		    
 		error("in swap_object_headers(): malformed load commands "
 		    "(unknown cputype (%d) and cpusubtype (%d) of object and "
@@ -1014,6 +1041,16 @@ check_dylib_command:
 			  "load commands (path.offset field of LC_RPATH "
 			  "command %lu extends past the end of all load "
 			  "commands)", i);
+		    return(FALSE);
+		}
+		break;
+
+	    case LC_ENCRYPTION_INFO:
+		ld = (struct encryption_info_command *)lc;
+		if(ld->cmdsize != sizeof(struct encryption_info_command)){
+		    error("in swap_object_headers(): malformed load commands "
+			  "(LC_ENCRYPTION_INFO command %lu has incorrect "
+			  "cmdsize", i);
 		    return(FALSE);
 		}
 		break;
@@ -1415,21 +1452,26 @@ check_dylib_command:
 		  }
 		  break;
 		}
+	    	if(cputype == CPU_TYPE_ARM){
+		    arm_thread_state_t *cpu;
 
-        if (cputype == CPU_TYPE_ARM) {
-            arm_thread_state_t *thread_state;
-            while (state < p) {
-                u_int32_t n;
-                n = *((u_int32_t *)state); *((u_int32_t *)state) = SWAP_LONG(n);
-                state += 4;
-                n = *((u_int32_t *)state); *((u_int32_t *)state) = SWAP_LONG(n);
-                state += 4;
-                thread_state = (arm_thread_state_t *)state;
-                swap_arm_thread_state(thread_state, target_byte_sex);
-                state += sizeof(arm_thread_state_t);
-            }
-        }
-        
+		    while(state < p){
+			flavor = *((unsigned long *)state);
+			*((unsigned long *)state) = SWAP_LONG(flavor);
+			state += sizeof(unsigned long);
+			count = *((unsigned long *)state);
+			*((unsigned long *)state) = SWAP_LONG(count);
+			state += sizeof(unsigned long);
+			switch(flavor){
+			case ARM_THREAD_STATE:
+			    cpu = (arm_thread_state_t *)state;
+			    swap_arm_thread_state_t(cpu, target_byte_sex);
+			    state += sizeof(arm_thread_state_t);
+			    break;
+			}
+		    }
+		    break;
+		}
 		break;
 
 	    case LC_IDENT:
@@ -1471,6 +1513,11 @@ check_dylib_command:
 	    case LC_RPATH:
 		rpath = (struct rpath_command *)lc;
 		swap_rpath_command(rpath, target_byte_sex);
+		break;
+		
+	    case LC_ENCRYPTION_INFO:
+		ec = (struct encryption_info_command *)lc;
+		swap_encryption_command(ec, target_byte_sex);
 		break;
 	    }
 

@@ -27,7 +27,162 @@
  */
 /* byte_sex.c */
 
-#if 0
+#define __cr cr
+#define __ctr ctr
+#define __dar dar
+#define __dsisr dsisr
+#define __exception exception
+#define __fpregs fpregs
+#define __fpscr fpscr
+#define __fpscr_pad fpscr_pad
+#define __lr lr
+#define __mq mq
+#define __pad0 pad0
+#define __pad1 pad1
+#define __r0 r0
+#define __r1 r1
+#define __r10 r10
+#define __r11 r11
+#define __r12 r12
+#define __r13 r13
+#define __r14 r14
+#define __r15 r15
+#define __r16 r16
+#define __r17 r17
+#define __r18 r18
+#define __r19 r19
+#define __r2 r2
+#define __r20 r20
+#define __r21 r21
+#define __r22 r22
+#define __r23 r23
+#define __r24 r24
+#define __r25 r25
+#define __r26 r26
+#define __r27 r27
+#define __r28 r28
+#define __r29 r29
+#define __r3 r3
+#define __r30 r30
+#define __r31 r31
+#define __r4 r4
+#define __r5 r5
+#define __r6 r6
+#define __r7 r7
+#define __r8 r8
+#define __r9 r9
+#define __srr0 srr0
+#define __srr1 srr1
+#define __vrsave vrsave
+#define __xer xer
+
+#define __darwin_i386_exception_state i386_exception_state
+#define __darwin_i386_float_state i386_float_state
+#define __darwin_i386_thread_state i386_thread_state
+#define __busy busy
+#define __c0 c0
+#define __c1 c1
+#define __c2 c2
+#define __c3 c3
+#define __cs cs
+#define __darwin_fp_control fp_control
+#define __darwin_fp_status fp_status
+#define __darwin_mmst_reg mmst_reg
+#define __darwin_xmm_reg xmm_reg
+#define __denorm denorm
+#define __ds ds
+#define __eax eax
+#define __ebp ebp
+#define __ebx ebx
+#define __ecx ecx
+#define __edi edi
+#define __edx edx
+#define __eflags eflags
+#define __eip eip
+#define __err err
+#define __errsumm errsumm
+#define __es es
+#define __esi esi
+#define __esp esp
+#define __faultvaddr faultvaddr
+#define __fpu_cs fpu_cs
+#define __fpu_dp fpu_dp
+#define __fpu_ds fpu_ds
+#define __fpu_fcw fpu_fcw
+#define __fpu_fop fpu_fop
+#define __fpu_fsw fpu_fsw
+#define __fpu_ftw fpu_ftw
+#define __fpu_ip fpu_ip
+#define __fpu_mxcsr fpu_mxcsr
+#define __fpu_mxcsrmask fpu_mxcsrmask
+#define __fpu_reserved fpu_reserved
+#define __fpu_reserved1 fpu_reserved1
+#define __fpu_rsrv1 fpu_rsrv1
+#define __fpu_rsrv2 fpu_rsrv2
+#define __fpu_rsrv3 fpu_rsrv3
+#define __fpu_rsrv4 fpu_rsrv4
+#define __fpu_stmm0 fpu_stmm0
+#define __fpu_stmm1 fpu_stmm1
+#define __fpu_stmm2 fpu_stmm2
+#define __fpu_stmm3 fpu_stmm3
+#define __fpu_stmm4 fpu_stmm4
+#define __fpu_stmm5 fpu_stmm5
+#define __fpu_stmm6 fpu_stmm6
+#define __fpu_stmm7 fpu_stmm7
+#define __fpu_xmm0 fpu_xmm0
+#define __fpu_xmm1 fpu_xmm1
+#define __fpu_xmm2 fpu_xmm2
+#define __fpu_xmm3 fpu_xmm3
+#define __fpu_xmm4 fpu_xmm4
+#define __fpu_xmm5 fpu_xmm5
+#define __fpu_xmm6 fpu_xmm6
+#define __fpu_xmm7 fpu_xmm7
+#define __fs fs
+#define __gs gs
+#define __invalid invalid
+#define __mmst_reg mmst_reg
+#define __mmst_rsrv mmst_rsrv
+#define __ovrfl ovrfl
+#define __pc pc
+#define __precis precis
+#define __rc rc
+#define __ss ss
+#define __stkflt stkflt
+#define __tos tos
+#define __trapno trapno
+#define __undfl undfl
+#define __xmm_reg xmm_reg
+#define __zdiv zdiv
+
+#define __rax rax
+#define __rbx rbx
+#define __rcx rcx
+#define __rdx rdx
+#define __rdi rdi
+#define __rsi rsi
+#define __rbp rbp
+#define __rsp rsp
+#define __r8 r8
+#define __r9 r9
+#define __r10 r10
+#define __r11 r11
+#define __r12 r12
+#define __r13 r13
+#define __r14 r14
+#define __r15 r15
+#define __rip rip
+#define __rflags rflags
+
+#define __dr0 dr0
+#define __dr1 dr1
+#define __dr2 dr2
+#define __dr3 dr3
+#define __dr4 dr4
+#define __dr5 dr5
+#define __dr6 dr6
+#define __dr7 dr7
+
+#include <string.h>
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach/m68k/thread_status.h>
@@ -49,9 +204,8 @@
 #include <mach-o/nlist.h>
 #include <mach-o/reloc.h>
 #include <mach-o/ranlib.h>
-#endif
-#include <stuff/bytesex.h>
-#include <string.h>
+#include "stuff/bool.h"
+#include "stuff/bytesex.h"
 
 __private_extern__
 long long
@@ -2175,26 +2329,28 @@ enum byte_sex target_byte_sex)
 	}
 }
 
-__private_extern__ void swap_arm_thread_state(struct arm_thread_state *cpu,
-    enum byte_sex target_byte_sex)
+__private_extern__
+void
+swap_arm_thread_state_t(
+struct arm_thread_state *cpu,
+enum byte_sex target_byte_sex)
 {
-    cpu->r0 = SWAP_LONG(cpu->r0);
-    cpu->r1 = SWAP_LONG(cpu->r1);
-    cpu->r2 = SWAP_LONG(cpu->r2);
-    cpu->r3 = SWAP_LONG(cpu->r3);
-    cpu->r4 = SWAP_LONG(cpu->r4);
-    cpu->r5 = SWAP_LONG(cpu->r5);
-    cpu->r6 = SWAP_LONG(cpu->r6);
-    cpu->r7 = SWAP_LONG(cpu->r7);
-    cpu->r8 = SWAP_LONG(cpu->r8);
-    cpu->r9 = SWAP_LONG(cpu->r9);
-    cpu->r10 = SWAP_LONG(cpu->r10);
-    cpu->r11 = SWAP_LONG(cpu->r11);
-    cpu->r12 = SWAP_LONG(cpu->r12);
-    cpu->r13 = SWAP_LONG(cpu->r13);
-    cpu->r14 = SWAP_LONG(cpu->r14);
-    cpu->r15 = SWAP_LONG(cpu->r15);
-    cpu->r16 = SWAP_LONG(cpu->r16);
+	cpu->r0 = SWAP_LONG(cpu->r0);
+	cpu->r1 = SWAP_LONG(cpu->r1);
+	cpu->r2 = SWAP_LONG(cpu->r2);
+	cpu->r3 = SWAP_LONG(cpu->r3);
+	cpu->r4 = SWAP_LONG(cpu->r4);
+	cpu->r5 = SWAP_LONG(cpu->r5);
+	cpu->r6 = SWAP_LONG(cpu->r6);
+	cpu->r7 = SWAP_LONG(cpu->r7);
+	cpu->r8 = SWAP_LONG(cpu->r8);
+	cpu->r9 = SWAP_LONG(cpu->r9);
+	cpu->r10 = SWAP_LONG(cpu->r10);
+	cpu->r11 = SWAP_LONG(cpu->r11);
+	cpu->r12 = SWAP_LONG(cpu->r12);
+	cpu->r13 = SWAP_LONG(cpu->r13);
+	cpu->r14 = SWAP_LONG(cpu->r14);
+	cpu->r15 = SWAP_LONG(cpu->r15);
 }
 
 __private_extern__
@@ -2355,6 +2511,19 @@ enum byte_sex target_byte_sex)
 	rpath_cmd->cmd = SWAP_INT(rpath_cmd->cmd);
 	rpath_cmd->cmdsize = SWAP_INT(rpath_cmd->cmdsize);
 	rpath_cmd->path.offset = SWAP_INT(rpath_cmd->path.offset);
+}
+
+__private_extern__
+void
+swap_encryption_command(
+struct encryption_info_command *ec,
+enum byte_sex target_byte_sex)
+{
+	ec->cmd = SWAP_INT(ec->cmd);
+	ec->cmdsize = SWAP_INT(ec->cmdsize);
+	ec->cryptoff = SWAP_INT(ec->cryptoff);
+	ec->cryptsize = SWAP_INT(ec->cryptsize);
+	ec->cryptid = SWAP_INT(ec->cryptid);
 }
 
 __private_extern__
