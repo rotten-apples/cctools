@@ -24,8 +24,10 @@
 #ifndef _MACH_O_RANLIB_H_
 #define _MACH_O_RANLIB_H_
 
+#if !defined(__CYGWIN__)
 #include <stdint.h>
 #include <sys/types.h>		/* off_t */
+#endif
 
 /*
  * There are two known orders of table of contents for archives.  The first is

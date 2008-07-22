@@ -45,6 +45,10 @@
 #include "stuff/bytesex.h"
 #include "stuff/errors.h"
 
+#if defined(__CYGWIN__)
+typedef __uint32_t		u_int32_t;
+#endif
+
 /*
  * swap_object_headers() swaps the object file headers from the host byte sex
  * into the non-host byte sex.  It returns TRUE if it can and did swap the

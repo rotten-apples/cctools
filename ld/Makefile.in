@@ -63,9 +63,9 @@ ld: $(OBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: ld
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) ld \
-		$(DESTDIR)/$(bindir)/`echo ld | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo ld | sed '$(transform)'`
 
 clean:
 	rm -r -f *.o

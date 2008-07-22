@@ -64,9 +64,9 @@ driver: $(OBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: driver install-arch
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) driver \
-		$(DESTDIR)/$(bindir)/`echo as | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo as | sed '$(transform)'`
 
 install-arch:
 	for ast in $(ASTARGETS); do				\

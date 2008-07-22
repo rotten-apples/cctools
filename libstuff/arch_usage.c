@@ -21,7 +21,9 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 #ifndef RLD
+#if !defined(__CYGWIN__)
 #include <mach/mach.h> /* first to get rid of pre-comp warning */
+#endif
 #include <stdio.h>
 #include "stuff/arch.h"
 #include "stuff/errors.h"

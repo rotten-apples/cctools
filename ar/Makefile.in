@@ -61,11 +61,11 @@ ar: $(OBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: ar
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	mkdir -p $(DESTDIR)$(mandir)/man1
 	mkdir -p $(DESTDIR)$(mandir)/man5
 	$(INSTALL_PROGRAM) ar \
-		$(DESTDIR)/$(bindir)/`echo ar | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo ar | sed '$(transform)'`
 	$(INSTALL_DATA) $(srcdir)/ar.1 $(DESTDIR)$(mandir)/man1/`echo ar.1 | sed '$(transform)'`
 	$(INSTALL_DATA) $(srcdir)/ar.5 $(DESTDIR)$(mandir)/man5/`echo ar.5 | sed '$(transform)'`
 

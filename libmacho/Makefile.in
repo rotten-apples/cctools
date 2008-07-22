@@ -64,6 +64,6 @@ clean:
 	rm -f libmacho.a
 
 install: libmacho.a
-	mkdir -p $(DESTDIR)/$(libdir)
-	$(INSTALL_DATA) $< $(DESTDIR)/$(libdir)/$<
-	$(RANLIB) $(DESTDIR)/$(libdir)/$<
+	mkdir -p $(DESTDIR)$(libdir)
+	$(INSTALL_DATA) $< $(DESTDIR)$(libdir)/$<
+	$(RANLIB) $(DESTDIR)$(libdir)/$<

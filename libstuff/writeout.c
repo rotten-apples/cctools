@@ -39,6 +39,10 @@
 #include "stuff/round.h"
 #include "stuff/errors.h"
 
+#ifdef __CYGWIN__
+#define O_FSYNC O_SYNC
+#endif
+
 static void copy_new_symbol_info(
     char *p,
     unsigned long *size,

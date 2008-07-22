@@ -61,9 +61,9 @@ ld64: $(OBJS)
 	$(CXX) -o $@ $^ $(MYLINKFLAGS)
 
 install: ld64
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) ld64 \
-		$(DESTDIR)/$(bindir)/`echo ld64 | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo ld64 | sed '$(transform)'`
 
 clean:
 	rm -r -f *.o */*.o

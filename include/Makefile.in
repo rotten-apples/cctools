@@ -19,15 +19,15 @@ INSTALL_DATA	= @INSTALL_DATA@
 default:
 
 install: 
-	mkdir -p $(DESTDIR)/$(includedir)
-	mkdir -p $(DESTDIR)/$(includedir)/mach-o
+	mkdir -p $(DESTDIR)$(includedir)
+	mkdir -p $(DESTDIR)$(includedir)/mach-o
 	for h in loader.h fat.h; do		\
 		$(INSTALL_DATA) $(srcdir)/mach-o/$$h		\
-			$(DESTDIR)/$(includedir)/mach-o/$$h;	\
+			$(DESTDIR)$(includedir)/mach-o/$$h;	\
 	done
 	$(INSTALL_DATA) $(srcdir)/mach-o/arch-install.h \
-		$(DESTDIR)/$(includedir)/mach-o/arch.h
+		$(DESTDIR)$(includedir)/mach-o/arch.h
 	$(INSTALL_DATA) $(srcdir)/mach/machine.h \
-		$(DESTDIR)/$(includedir)/mach-o/
+		$(DESTDIR)$(includedir)/mach-o/
 
 clean:

@@ -60,8 +60,8 @@ as: $(OBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: as
-	mkdir -p $(DESTDIR)/$(libexecdir)/gcc/darwin/$(ARCH)
-	$(INSTALL_PROGRAM) as $(DESTDIR)/$(libexecdir)/gcc/darwin/$(ARCH)/as
+	mkdir -p $(DESTDIR)$(libexecdir)/gcc/darwin/$(ARCH)
+	$(INSTALL_PROGRAM) as $(DESTDIR)$(libexecdir)/gcc/darwin/$(ARCH)/as
 
 clean::
 	rm -r -f *.o

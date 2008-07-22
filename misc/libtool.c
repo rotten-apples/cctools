@@ -27,6 +27,7 @@
  */
 #include <mach/mach.h>
 #include "stuff/openstep_mach.h"
+#undef __uint32_t
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/param.h>
@@ -2291,7 +2292,7 @@ char *output)
 		}
 		memcpy(p, arch->members[j].object_addr,
 		       arch->members[j].object_size);
-#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE)
+#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE) && !defined(__CYGWIN__)
 		vm_msync(mach_task_self(),
 			 (vm_address_t)arch->members[j].object_addr,
 			 (vm_size_t)arch->members[j].object_size,
@@ -2351,7 +2352,11 @@ char *output)
 	   (int)sizeof(toc_ar_hdr.ar_date),
 	       (long int)stat_buf.st_mtime + 5);
 	for(i = 0; i < narchs; i++){
-	    if(lseek(fd, time_offsets[i], L_SET) == -1){
+#ifndef __CYGWIN__
+ 	    if(lseek(fd, time_offsets[i], L_SET) == -1){
+#else
+	    if(lseek(fd, time_offsets[i], SEEK_SET) == -1){
+#endif
 		system_error("can't lseek in output file: %s", output);
 		return;
 	    }
@@ -2606,7 +2611,12 @@ unsigned long size)
 	    printf(" writing (write_offset = %lu write_size = %lu)\n",
 		   write_offset, write_size);
 #endif /* DEBUG */
-	    lseek(fd, write_offset, L_SET);
+#ifndef __CYGWIN__
+ 	    lseek(fd, write_offset, L_SET);
+#else
+	    lseek(fd, write_offset, SEEK_SET);
+#endif
+	    
 	    if(write(fd, library + write_offset, write_size) !=
 	       (int)write_size)
 		system_fatal("can't write to output file");
@@ -2670,7 +2680,11 @@ int fd)
 		printf(" writing (write_offset = %lu write_size = %lu)\n",
 		       write_offset, write_size);
 #endif /* DEBUG */
-	    lseek(fd, write_offset, L_SET);
+#ifndef __CYGWIN__
+ 	    lseek(fd, write_offset, L_SET);
+#else
+	    lseek(fd, write_offset, SEEK_SET);
+#endif
 	    if(write(fd, library + write_offset, write_size) !=
 	       (int)write_size)
 		system_fatal("can't write to output file");

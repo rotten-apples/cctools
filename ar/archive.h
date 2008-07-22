@@ -121,6 +121,10 @@ typedef struct {
 
 #include <sys/cdefs.h>
 
+#if defined(__CYGWIN__)
+#define DEFFILEMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)/* 0666*/
+#endif
+
 struct stat;
 
 void	close_archive __P((int));

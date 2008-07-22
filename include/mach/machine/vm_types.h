@@ -23,7 +23,10 @@
 #ifndef _MACH_MACHINE_VM_TYPES_H_
 #define _MACH_MACHINE_VM_TYPES_H_
 
-#if defined (__ppc__) || defined(__ppc64__)
+#if defined(__CYGWIN__) || defined(__CYGWIN32__)
+#undef __uint32_t
+#include "mach/cygwin/vm_types.h"
+#elif defined (__ppc__) || defined(__ppc64__)
 #include "mach/ppc/vm_types.h"
 #elif defined (__i386__) || defined(__x86_64__)
 #include "mach/i386/vm_types.h"

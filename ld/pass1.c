@@ -517,7 +517,7 @@ enum bool force_weak)
 	    pass1_object(file_name, file_addr, file_size, base_name, FALSE,
 			 FALSE, bundle_loader, force_weak);
 	}
-#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE)
+#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE) && !defined(__CYGWIN__)
 	vm_msync(mach_task_self(), (vm_address_t)file_addr,
 		 (vm_size_t)file_size, VM_SYNC_DEACTIVATE);
 #endif /* VM_SYNC_DEACTIVATE */

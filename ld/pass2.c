@@ -270,7 +270,7 @@ pass2(void)
 		    }
 		}
 		output_local_symbols();
-#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE)
+#if defined(VM_SYNC_DEACTIVATE) && !defined(_POSIX_C_SOURCE) && !defined(__CYGWIN__)
 		vm_msync(mach_task_self(), (vm_address_t)cur_obj->obj_addr,
 			 (vm_size_t)cur_obj->obj_size, VM_SYNC_DEACTIVATE);
 #endif /* VM_SYNC_DEACTIVATE */

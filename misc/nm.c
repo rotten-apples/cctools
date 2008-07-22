@@ -81,7 +81,7 @@
  * problem as the BSD would treat the command "nm -Q" by saying "-Q" is an
  * invalid argument which was slightly inconsistant.
  */
-#include <mach/mach.h> /* first so to get rid of a precomp warning */
+//#include <mach/mach.h> /* first so to get rid of a precomp warning */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

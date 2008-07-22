@@ -30,21 +30,21 @@ MANPAGES5	= Mach-O.5 a.out.5 ranlib.5 stab.5
 default:
 
 install: 
-	mkdir -p $(DESTDIR)/$(mandir)
-	mkdir -p $(DESTDIR)/$(mandir)/man1
-	mkdir -p $(DESTDIR)/$(mandir)/man3
-	mkdir -p $(DESTDIR)/$(mandir)/man5
+	mkdir -p $(DESTDIR)$(mandir)
+	mkdir -p $(DESTDIR)$(mandir)/man1
+	mkdir -p $(DESTDIR)$(mandir)/man3
+	mkdir -p $(DESTDIR)$(mandir)/man5
 	for m in $(MANPAGES1); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man1/`echo "$$m" | sed -e '$(transform)'`;		\
+			$(DESTDIR)$(mandir)/man1/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 	for m in $(MANPAGES3); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man3/`echo "$$m" | sed -e '$(transform)'`;		\
+			$(DESTDIR)$(mandir)/man3/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 	for m in $(MANPAGES5); do				\
 		$(INSTALL_DATA) $(srcdir)/$$m			\
-			$(DESTDIR)/$(mandir)/man5/`echo "$$m" | sed -e '$(transform)'`;		\
+			$(DESTDIR)$(mandir)/man5/`echo "$$m" | sed -e '$(transform)'`;		\
 	done
 
 

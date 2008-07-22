@@ -150,10 +150,10 @@ ranlib: $(OBJS_ranlib)
 	$(CC) -o $@ $^ $(MYLINKFLAGS)
 
 install: $(PROGRAMS)
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	for p in $(PROGRAMS); do					\
 		$(INSTALL_PROGRAM) $$p 					\
-			$(DESTDIR)/$(bindir)/`echo $$p | sed '$(transform)'`;	\
+			$(DESTDIR)$(bindir)/`echo $$p | sed '$(transform)'`;	\
 	done
 clean:
 	rm -r -f *.o

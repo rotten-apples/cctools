@@ -79,11 +79,11 @@ print_objc.64o: print_objc.c
 	$(CC) $(OBJC) $(MYCOMPILEFLAGS) -DARCH64 -c -o $@ $<
 
 install: otool otool64
-	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) otool \
-		$(DESTDIR)/$(bindir)/`echo otool | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo otool | sed '$(transform)'`
 	$(INSTALL_PROGRAM) otool64 \
-		$(DESTDIR)/$(bindir)/`echo otool64 | sed '$(transform)'`
+		$(DESTDIR)$(bindir)/`echo otool64 | sed '$(transform)'`
 
 clean:
 	rm -r -f *.o *.64o

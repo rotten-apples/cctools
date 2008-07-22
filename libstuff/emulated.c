@@ -3,6 +3,9 @@
 #include <mach/mach_error.h>
 #include <mach-o/dyld.h>
 #include <stdlib.h>
+#if defined(__CYGWIN__)
+#undef __uint32_t
+#endif
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
