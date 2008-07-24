@@ -2,7 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/file.h>
-#include <libc.h>
+#include <sys/stat.h>
 #include <mach/mach.h>
 #include "arch64_32.h"
 #include "stuff/openstep_mach.h"

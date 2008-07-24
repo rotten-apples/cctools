@@ -199,8 +199,10 @@
 #include <ctype.h>
 #include <math.h>
 #include <limits.h>
+#include <sys/fcntl.h>
 #include <ar.h>
-#include <libc.h>
+#include <sys/stat.h>
+#include <stdio.h>
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach-o/reloc.h>

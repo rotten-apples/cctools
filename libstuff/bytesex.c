@@ -77,7 +77,7 @@
 #define __xer xer
 
 #define __darwin_i386_exception_state i386_exception_state
-#define __darwin_i386_float_state i386_float_state
+//#define __darwin_i386_float_state i386_float_state
 #define __darwin_i386_thread_state i386_thread_state
 #define __busy busy
 #define __c0 c0
