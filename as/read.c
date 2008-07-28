@@ -534,6 +534,8 @@ static const pseudo_typeS pseudo_table[] = {
   { "endr", s_endr, 0       },
   { "ifc", s_ifc,   0       },
   { "ifnc", s_ifnc,   0       },
+  { "ifdef", s_ifdef,  0    },
+  { "ifndef", s_ifdef, 1    },
   { NULL }	/* end sentinel */
 };
 
@@ -1111,6 +1113,14 @@ char *buffer)
 		 * one to a line.
 		 */
 		else{
+		    char *s2 = s;
+
+		    while (*s2)
+		    {
+				*s2 = tolower(*s2);
+				s2++;
+		    }
+		
 		    *input_line_pointer = after_name;
 		    while(is_end_of_line(*input_line_pointer) == 0)
 			input_line_pointer++;
@@ -4037,6 +4047,45 @@ void s_ifc(int value)
         the_cond_state.cond_met = (len1 == len2 && !strncmp(ptr1, ptr2, len1));
         the_cond_state.ignore = !the_cond_state.cond_met;
         demand_empty_rest_of_line();
+    }
+}
+
+/* iPhone binutils extension: .ifdef assembles if the given symbol is defined. */
+void s_ifdef(int value)
+{
+    /* Points to name of symbol.  */
+    char *name;
+    /* Points to symbol.  */
+    symbolS *symbolP;
+    char c;
+
+    if (if_depth >= MAX_IF_DEPTH)
+        as_fatal("Maximum if nesting level reached");
+    last_states[if_depth++] = the_cond_state;
+    the_cond_state.the_cond = if_cond;
+
+    if (the_cond_state.ignore)
+        totally_ignore_line();
+    else {
+        /* Leading whitespace is part of operand.  */
+        SKIP_WHITESPACE ();
+        name = input_line_pointer;
+	
+        if (!is_name_beginner (*name))
+        {
+            as_bad (_("invalid identifier for \".ifdef\""));
+            ignore_rest_of_line ();
+            return;
+        }
+
+        c = get_symbol_end ();
+        symbolP = symbol_find (name);
+        *input_line_pointer = c;
+
+        the_cond_state.cond_met = (value == 0) == (symbolP != NULL && S_IS_DEFINED (symbolP));
+        the_cond_state.ignore = !the_cond_state.cond_met;
+
+        demand_empty_rest_of_line ();	
     }
 }
 

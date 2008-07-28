@@ -115,6 +115,8 @@ extern void s_ifnc(
     int value);
 extern void s_ifc(
     int value);
+extern void s_ifdef(
+    int value);
 extern void big_cons(
     int nbytes);
 #endif /* _READ_H_ */
