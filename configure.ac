@@ -184,7 +184,9 @@ ORIGCFLAGS=$CFLAGS
 CFLAGS="$CFLAGS -Wno-long-double"
 AC_MSG_CHECKING([if -Wno-long-double is supported])
 AC_COMPILE_IFELSE(
-   [AC_LANG_SOURCE([[const char hw[] = "Hello, World\n";]])],
+   [AC_LANG_SOURCE([[const char hw[] = "Hello, World\n";
+		   void* should_warn = 5;
+		   ]])],
    [WARNINGS="$WARNINGS -Wno-long-double"
     AC_MSG_RESULT([yes])],
    [AC_MSG_RESULT([no])]
@@ -195,7 +197,9 @@ ORIGCFLAGS=$CFLAGS
 CFLAGS="$CFLAGS -Wno-import"
 AC_MSG_CHECKING([if -Wno-import is supported])
 AC_COMPILE_IFELSE(
-   [AC_LANG_SOURCE([[const char hw[] = "Hello, World\n";]])],
+   [AC_LANG_SOURCE([[const char hw[] = "Hello, World\n";
+		   void* should_warn = 5;
+		   ]])],
    [WARNINGS="$WARNINGS -Wno-import"
     AC_MSG_RESULT([yes])],
    [AC_MSG_RESULT([no])]

@@ -4815,6 +4815,8 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 const char hw[] = "Hello, World\n";
+		   void* should_warn = 5;
+
 _ACEOF
 rm -f conftest.$ac_objext
 if { (ac_try="$ac_compile"
@@ -4859,6 +4861,8 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 const char hw[] = "Hello, World\n";
+		   void* should_warn = 5;
+
 _ACEOF
 rm -f conftest.$ac_objext
 if { (ac_try="$ac_compile"
