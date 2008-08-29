@@ -1,1428 +1,2204 @@
-/*
- * Copyright (c) 2007 seto <griepl@gni.ch>
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/* Instruction printing code for the ARM
+   Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
+   Free Software Foundation, Inc.
+   Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
+   Modification by James G. Smith (jsmith@cygnus.co.uk)
 
-#include <stdio.h>
+   This file is part of libopcodes.
+
+   This program is free software; you can redistribute it and/or modify it under
+   the terms of the GNU General Public License as published by the Free
+   Software Foundation; either version 2 of the License, or (at your option)
+   any later version.
+
+   This program is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+   more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
+
 #include <string.h>
-#include <stdlib.h>
-#include "stuff/target_arch.h"
+#include "stuff/bool.h"
+#include <stdio.h>
 #include <mach-o/loader.h>
 #include <mach-o/nlist.h>
 #include <mach-o/reloc.h>
-#include <mach-o/ppc/reloc.h>
+#include <mach-o/arm/reloc.h>
 #include "stuff/bytesex.h"
 #include "stuff/symbol.h"
 #include "otool.h"
 #include "ofile_print.h"
 
-enum data_type {
-	TYPE_POINTER,
-	TYPE_SINGLE,
-	TYPE_DOUBLE,
-};
-
-struct objc_string_object {
-    struct objc_class *isa;
-    char *characters;
-    unsigned int _length;
-};
-typedef struct objc_string_object NXConstantString;
-
-#define CFSTRING_SECT "__cfstring"
-
-// in bytes
-static const unsigned int INSTRUCTION_SIZE = sizeof(unsigned long);
-static const unsigned int NUM_REGS = 16;
-static const char *BASE_REGS[] = { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc" };
-// [14] = al (always), usually not written
-static const char *COND_CODES[] = { "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc", "hi", "ls", "ge", "lt", "gt", "le", "", "nv" };
-static const char *FIELD_MASKS[] = { "", "c", "x", "cx", "s", "cs", "xs", "cxs", "f", "cf", "xf", "cxf", "sf", "csf", "xsf", "cxsf" };
-static const char *DATA_OPERATIONS[] = { "and", "eor", "sub", "rsb", "add", "adc", "sbc", "rsc", "tst", "teq", "cmp", "cmn", "orr", "mov", "bic", "mvn" };
-static const char *SHIFT_MODES[] = { "lsl", "lsr", "asr", "ror" };
-static const char *LDM_ADDR_MODES[] = { "da", "ia", "db", "ib" };
-static const char *LD_ST_TYPE[] = { "st", "ld" };
-static const char *MUL_MLA_TYPE[] = { "mul", "mla" };
-static const char *SIGNED_TYPE[] = { "u", "s" };
-static const char *SET_FLAGS[] = { "", "s" };
-static const char *LINK_FLAGS[] = { "", "l" };
-static const char *BYTE_FLAGS[] = { "", "b" };
-static const char *SIGN_CHARS[] = { "-", "" };
-static const char *UPDATE_CHARS[] = { "", "!" };
-static const char *USERMODE_CHARS[] = { "", "^" };
-static const char *SB_SH_TYPE[] = { "sb", "sh" };
-static const char *MCR_MRC_TYPE[] = { "mcr", "mrc" };
-static const char *MCRR_MRRC_TYPE[] = { "mcrr", "mrrc" };
-static const char *VFP_SDX_TYPE[] = { "s", "d", "x" };
-static const char *VFP_REG_TYPE[] = { "s", "d", "d" };
-static const char *VFP_DATA_OPERATIONS[] = { "fmac", "fnmac", "fmsc", "fnmsc", "fmul", "fnmul", "fadd", "fsub", "fdiv", "", "", "", "", "", "", "" };
-// fcvt (index 15) can be fcvtsd or fcvtds, depending on the source
-// must be printed correctly
-static const char *VFP_EXT_DATA_OPERATIONS[] = { "fcpy", "fabs", "fneg", "fsqrt", 0, 0, 0, 0, "fcmp", "fcmpe", "fcmpz", "fcmpez", 0, 0, 0, "fcvt", "fuito", "fsito", 0, 0, 0, 0, 0, 0, "ftoui", "ftouiz", "ftosi", "ftosiz", 0, 0, 0, 0 };
-// the index is a binary concatenation of opcode and bit 0 of cp_num
-static const char *VFP_MCR_OPERATIONS[] = { "fmsr", "fmdlr", 0, "fmdhr", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "fmxr", 0 };
-static const char *VFP_MRC_OPERATIONS[] = { "fmrs", "fmrdl", 0, "fmrdh", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "fmrx", 0 };
-static const char *VFP_STATUS_REGS[] = { "fpsid", "fpscr", 0, 0, 0, 0, 0, 0, "fpexc", 0, 0, 0, 0, 0, 0, 0 };
-
-static const char *arm_symbol_name(
-	unsigned long addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols,
-        struct nlist_64 *symbols64,
-        unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds,
-	enum bool verbose
-);
-static struct section *arm_find_addr(
-	unsigned long addr,
-	struct load_command *load_commands,
-	unsigned long nload_commands,
-	enum bool swapped
-);
-static char *arm_redirect_mem_string(
-	unsigned long addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds
-);
-static void print_verbose_mem(
-	int imm,
-	enum data_type type,
-	char *sect,
+static void print_remainder_bytes(
+	void *stream,
 	unsigned long left,
+	long extra_bytes);
+
+static void set_thumb_mode(
 	unsigned long addr,
-	unsigned long sect_addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols,
-        struct nlist_64 *symbols64,
-        unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds
-);
+	unsigned long nsorted_symbols,
+	struct symbol *sorted_symbols,
+	enum bool *in_thumb);
 
-unsigned long arm_disassemble(
-	char *sect,
-	unsigned long left,
-	unsigned long addr,
-	unsigned long sect_addr,
-	enum byte_sex object_byte_sex,
-	struct relocation_info *relocs, unsigned long nrelocs,
-	nlist_t *symbols,
-        struct nlist_64 *symbols64,
-        unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds,
-	enum bool verbose
-) {
-    enum byte_sex host_byte_sex;
-    enum bool swapped;
-    unsigned long opcode;
-    unsigned long sect_offset;
-    const char *symbol_name;
-	unsigned int cond, rd, rm, rn, rs, mask, dataop, s, mode, rot, sint, l, b, w, u, p, a, n, h, regs;
-	unsigned int cp, crd, crm, crn, dataop2;
-	unsigned int vfpsdx, d, m;
-	enum bool regok;
-	int imm;
-	unsigned int i;
+/* This file is derived from FSF binutils opcodes/arm-dis.c file */
 
-	host_byte_sex = get_host_byte_sex();
-	swapped = host_byte_sex != object_byte_sex;
-	sect_offset = addr - sect_addr;
+/* HACKS for bfd_stuff */
+typedef enum bool bfd_boolean;
+typedef unsigned int bfd_vma;
 
-	if (left < INSTRUCTION_SIZE) {
-		if (left != 0) {
-			memcpy(&opcode, sect, left);
-			if(swapped) {
-				opcode = SWAP_LONG(opcode);
-			}
-			printf(".long\t0x%08x\n", (unsigned int)opcode);
-		}
-		printf("(end of section)\n");
-		return(left);
-	}
+/* HACKS for other stuff */
+#define PARAMS(Args) Args
+# define _(String) (String) /* FROM gas/asintl.h */
+extern void abort(void);
 
-	memcpy(&opcode, sect, INSTRUCTION_SIZE);
-	if (swapped) {
-	    opcode = SWAP_LONG(opcode);
-	}
+/* HACKS to avoid pulling in all of FSF binutils include/dis-asm.h */
+typedef int (*fprintf_ftype) (void *, const char*, ...);
+struct disassemble_info { /* HACK'ed up for just what we need here */
+  fprintf_ftype fprintf_func;
+  void *stream;
+  enum bool verbose;
+  /* Function called to print ADDR.  */
+  void (*print_address_func)
+    (bfd_vma pc, bfd_vma addr, struct disassemble_info *info);
+  /* Relocation information.  */
+  struct relocation_info *relocs;
+  unsigned long nrelocs;
+  /* Symbol table.  */
+  struct nlist *symbols;
+  unsigned long nsymbols;
+  /* Symbols sorted by address.  */
+  struct symbol *sorted_symbols;
+  unsigned long nsorted_symbols;
+  /* String table.  */
+  char *strings;
+  unsigned long strings_size;
+  /* Other useful info.  */
+  uint32_t ncmds;
+  uint32_t sizeofcmds;
+  struct load_command *load_commands;
+  enum byte_sex object_byte_sex;
+  uint32_t *indirect_symbols;
+  unsigned long nindirect_symbols;
+  unsigned long cpu_insn_set_mask;
+} dis_info;
 
-	if (verbose) {
-		// This is non-default behavior for otool, but on the ARM, it makes a lot of sense (i.e. local constants)
-		printf("%08lx\t", opcode);
-	}
-	
-	cond = (opcode & 0xf0000000) >> 28;
-	// Handle cond=1111 (iNValid, or extended instruction) separately
-	switch (cond) {
-	case 0xf:
-		printf(".long 0x%08x\t;Extended instruction space\n", (unsigned int)opcode);
-		break;
-	default:
-		switch(opcode & 0x0e000000) {
-		case 0x00000000:
-			switch(opcode & 0x00000010) {
-			case 0x00000000:
-				switch(opcode & 0x01900000) {
-				case 0x01000000:
-					switch(opcode & 0x00000080) {
-					case 0x00000000:
-						switch(opcode & 0x00200000) {
-						case 0x00000000:
-							//printf("Move status regiser to register: 0x%08x\n", (unsigned int)opcode);
-							rd = (opcode & 0x0000f000) >> 12;
-							switch (opcode & 0x04000000) {
-							case 0x00000000:
-								printf("mrs%s %s, cpsr\n", COND_CODES[cond], BASE_REGS[rd]);
-								break;
-							case 0x04000000:
-								printf("mrs%s %s, spsr\n", COND_CODES[cond], BASE_REGS[rd]);
-								break;
-							}
-							break;
-						case 0x00200000:
-							//printf("Move register to status regiser: 0x%08x\n", (unsigned int)opcode);
-							rm = (opcode & 0x0000000f);
-							mask = (opcode & 0x000f0000) >> 16;
-							switch (opcode & 0x04000000) {
-							case 0x00000000:
-								printf("msr%s cpsr_%s, %s\n", COND_CODES[cond], FIELD_MASKS[mask], BASE_REGS[rm]);
-								break;
-							case 0x04000000:
-								printf("msr%s spsr_%s, %s\n", COND_CODES[cond], FIELD_MASKS[mask], BASE_REGS[rm]);
-								break;
-							}
-							break;
-						}
-						break;
-					case 0x00000080:
-						printf(".long 0x%08x\t;Enhanced DSP multiplies\n", (unsigned int)opcode);
-						break;
-					}
-					break;
-				default:
-					//printf("Data processing immediate shift: 0x%08x\n", (unsigned int)opcode);
-					dataop = (opcode & 0x01e00000) >> 21;
-					s = (opcode & 0x00100000) >> 20;
-					rn = (opcode & 0x000f0000) >> 16;
-					rd = (opcode & 0x0000f000) >> 12;
-					rm = (opcode & 0x0000000f);
-					mode = (opcode & 0x00000060) >> 5;
-					imm = (opcode & 0x00000f80) >> 7;
-					if (dataop == 0xd || dataop == 0xf) {
-						// mov/mvn
-						if (rn == 0x0) {
-							printf("%s%s%s %s, %s", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rm]);
-						} else {
-							printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-						}
-					} else if (dataop >= 0x8 && dataop <= 0xb) {
-						// tst/teq/cmp/cmn
-						if (rd == 0x0) {
-							if (s) {
-								printf("%s%s %s, %s", DATA_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rn], BASE_REGS[rm]);
-							} else {
-								printf(".long 0x%08x\t;Extended instruction\n", (unsigned int)opcode);
-							}
-						} else {
-							printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-						}
-					} else {
-						printf("%s%s%s %s, %s, %s", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], BASE_REGS[rm]);
-					}
-					if (imm == 0x00) {
-						if (mode == 0x3) {
-							printf(", rrx");
-						} else if (mode != 0x0) {
-							printf(", %s #32", SHIFT_MODES[mode]);
-						}
-					} else {
-						printf(", %s #%u", SHIFT_MODES[mode], imm);
-					}
-					printf("\n");
-					break;
-				}
-				break;
-			case 0x00000010:
-				switch(opcode & 0x00000080) {
-				case 0x00000000:
-					switch(opcode & 0x01900000) {
-					case 0x01000000:
-						//printf("Miscellaneous: 0x%08x\n", (unsigned int)opcode);
-						switch (opcode & 0x00000060) {
-						case 0x00000000:
-							switch (opcode & 0x00600000) {
-							case 0x00200000:
-								//printf("Branch/exchange instruction set: 0x%08x\n", (unsigned int)opcode);
-								rm = (opcode & 0x0000000f);
-								printf("bx%s %s\n", COND_CODES[cond], BASE_REGS[rm]);
-								break;
-							case 0x00600000:
-								//printf("Count leading zeroes: 0x%08x\n", (unsigned int)opcode);
-								rm = (opcode & 0x0000000f);
-								rd = (opcode & 0x0000f000) >> 12;
-								printf("clz%s %s, %s\n", COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rm]);
-								break;
-							default:
-								printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-							}
-							break;
-						case 0x00000020:
-							switch (opcode & 0x00600000) {
-							case 0x00200000:
-								//printf("Branch and link/exchange instruction set: 0x%08x\n", (unsigned int)opcode);
-								rm = (opcode & 0x0000000f);
-								printf("blx%s %s\n", COND_CODES[cond], BASE_REGS[rm]);
-								break;
-							default:
-								printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-							}
-							break;
-						case 0x00000040:
-							printf(".long 0x%08x\t;Enhanced DSP add/subtracts\n", (unsigned int)opcode);
-							break;
-						case 0x00000060:
-							//printf("Software breakpoint: 0x%08x\n", (unsigned int)opcode);
-							imm = ((opcode & 0x000fff00) >> 4) | (opcode & 0x0000000f);
-							printf("bkpt 0x%04x\n", imm);
-							break;
-						}
-						break;
-					default:
-						//printf("Data processing register shift: 0x%08x\n", (unsigned int)opcode);
-						rn = (opcode & 0x000f0000) >> 16;
-						rd = (opcode & 0x0000f000) >> 12;
-						rs = (opcode & 0x00000f00) >> 8;
-						rm = (opcode & 0x0000000f);
-						if (rd == 0xf || rs == 0xf || rm == 0xf) {
-							printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-						} else {
-							dataop = (opcode & 0x01e00000) >> 21;
-							s = (opcode & 0x00100000) >> 20;
-							mode = (opcode & 0x00000060) >> 5;
-							if (dataop == 0xd || dataop == 0xf) {
-								// mov/mvn don't have an rn operand
-								if (rn == 0x0) {
-									printf("%s%s%s %s, %s, %s %s\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rm], SHIFT_MODES[mode], BASE_REGS[rs]);
-								} else {
-									printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-								}
-							} else if (dataop >= 0x8 && dataop <= 0xb) {
-								// tst/teq/cmp/cmn
-								if (rd == 0x0) {
-									if (s) {
-										printf("%s%s %s, %s, %s %s\n", DATA_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rn], BASE_REGS[rm], SHIFT_MODES[mode], BASE_REGS[rs]);
-									} else {
-										printf(".long 0x%08x\t;Extended instruction\n", (unsigned int)opcode);
-									}
-								} else {
-									printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-								}
-							} else {
-								printf("%s%s%s %s, %s, %s, %s %s\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], BASE_REGS[rm], SHIFT_MODES[mode], BASE_REGS[rs]);
-							}
-						}
-						break;
-					}
-					break;
-				case 0x00000080:
-					//printf("Multiplies/extra load/stores: 0x%08x\n", (unsigned int)opcode);
-					switch (opcode & 0x00000040) {
-					case 0x00000000:
-						switch (opcode & 0x00000020) {
-						case 0x00000000:
-							switch (opcode & 0x01800000) {
-							case 0x00000000:
-								//printf("Multiply (accumulate): 0x%08x\n", (unsigned int)opcode);
-								a = (opcode & 0x00200000) >> 21;
-								s = (opcode & 0x00100000) >> 20;
-								rd = (opcode & 0x000f0000) >> 16;
-								rs = (opcode & 0x00000f00) >> 8;
-								rm = (opcode & 0x0000000f);
-								printf("%s%s%s %s, %s, %s\n", MUL_MLA_TYPE[a], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rm], BASE_REGS[rs]);
-								break;
-							case 0x00800000:
-								//printf("Multiply (accumulate) long: 0x%08x\n", (unsigned int)opcode);
-								u = (opcode & 0x00400000) >> 22;
-								a = (opcode & 0x00200000) >> 21;
-								s = (opcode & 0x00100000) >> 20;
-								rd = (opcode & 0x000f0000) >> 16;
-								rn = (opcode & 0x0000f000) >> 12;
-								rs = (opcode & 0x00000f00) >> 8;
-								rm = (opcode & 0x0000000f);
-								printf("%s%s%s%s %s, %s, %s, %s\n", SIGNED_TYPE[u], MUL_MLA_TYPE[a], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], BASE_REGS[rm], BASE_REGS[rs]);
-								break;
-							case 0x01000000:
-								switch (opcode & 0x00300000) {
-								case 0x00000000:
-									//printf("Swap/swap byte: 0x%08x\n", (unsigned int)opcode);
-									b = (opcode & 0x00400000) >> 22;
-									rn = (opcode & 0x000f0000) >> 16;
-									rd = (opcode & 0x0000f000) >> 12;
-									rm = (opcode & 0x0000000f);
-									printf("swp%s%s %s, %s, [%s]\n", COND_CODES[cond], BYTE_FLAGS[b], BASE_REGS[rd], BASE_REGS[rm], BASE_REGS[rn]);
-									break;
-								default:
-									printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-									break;
-								}
-								break;
-							default:
-								printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-								break;
-							}
-							break;
-						case 0x00000020:
-							p = (opcode & 0x01000000) >> 24;
-							u = (opcode & 0x00800000) >> 23;
-							w = (opcode & 0x00200000) >> 21;
-							l = (opcode & 0x00100000) >> 20;
-							rn = (opcode & 0x000f0000) >> 16;
-							rd = (opcode & 0x0000f000) >> 12;
-							switch (opcode & 0x00400000) {
-							case 0x00000000:
-								//printf("Load/store halfword register offset: 0x%08x\n", (unsigned int)opcode);
-								rm = (opcode & 0x0000000f);
-								printf("%sr%sh %s, [%s", LD_ST_TYPE[l], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn]);
-								if (p) {
-									if (w) {
-										//pre-indexed
-										printf(", %s%s]!\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									} else {
-										//offset
-										printf(", %s%s]\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									}
-								} else {
-									if (w) {
-										//invalid
-										printf("]\t;Unknown addressing mode\n");
-									} else {
-										//post-indexed
-										printf("], %s%s\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									}
-								}
-								break;
-							case 0x00400000:
-								//printf("Load/store halfword immediate offset: 0x%08x\n", (unsigned int)opcode);
-								imm = ((opcode & 0x0000000f) >> 4) | (opcode & 0x0000000f);
-								printf("%sr%sh %s, [%s", LD_ST_TYPE[l], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn]);
-								if (imm) {
-									if (p) {
-										if (w) {
-											//pre-indexed
-											printf(", #%s%d]!", SIGN_CHARS[u], imm);
-										} else {
-											//offset
-											printf(", #%s%d]", SIGN_CHARS[u], imm);
-										}
-										if (verbose && rn == 0xf) {
-											print_verbose_mem(
-												imm,
-												TYPE_POINTER,
-												sect, left, addr, sect_addr,
-												object_byte_sex,
-												symbols, symbols64, nsymbols,
-												sorted_symbols, nsorted_symbols,
-												strings, strings_size,
-												indirect_symbols, nindirect_symbols,
-												load_commands, ncmds, sizeofcmds
-											);
-										}
-										printf("\n");
-									} else {
-										if (w) {
-											//invalid
-											printf("]\t;Unknown addressing mode\n");
-										} else {
-											//post-indexed
-											printf("], #%s%d\n", SIGN_CHARS[u], imm);
-										}
-									}
-								} else {
-									printf("]\n");
-								}
-								break;
-							}
-							break;
-						}
-						break;
-					case 0x00000040:
-						p = (opcode & 0x01000000) >> 24;
-						u = (opcode & 0x00800000) >> 23;
-						w = (opcode & 0x00200000) >> 21;
-						// h is also s for the two-word modes
-						h = (opcode & 0x00000020) >> 5;
-						// invert bit 0 (Store -> Load)
-						l = h ^ 0x1;
-						rn = (opcode & 0x000f0000) >> 16;
-						rd = (opcode & 0x0000f000) >> 12;
-						switch(opcode & 0x00500000) {
-						case 0x00000000:
-							//printf(".long 0x%08x\t;Load/store two words register offset\n", (unsigned int)opcode);
-							if ((rd & 1) || rd > 15) {
-								printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-							} else {
-								rm = (opcode & 0x0000000f);
-								printf("%sr%sd {%s, %s}, [%s", LD_ST_TYPE[l], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rd + 1], BASE_REGS[rn]);
-								if (p) {
-									if (w) {
-										//pre-indexed
-										printf(", %s%s]!\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									} else {
-										//offset
-										printf(", %s%s]\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									}
-								} else {
-									if (w) {
-										//invalid
-										printf("]\t;Unknown addressing mode\n");
-									} else {
-										//post-indexed
-										printf("], %s%s\n", SIGN_CHARS[u], BASE_REGS[rm]);
-									}
-								}
-							}
-							break;
-						case 0x00100000:
-							//printf(".long 0x%08x\t;Load/store signed halfword/byte register offset\n", (unsigned int)opcode);
-							rm = (opcode & 0x0000000f);
-							printf("%sr%sd {%s, %s}, [%s", LD_ST_TYPE[l], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rd + 1], BASE_REGS[rn]);
-							if (p) {
-								if (w) {
-									//pre-indexed
-									printf(", %s%s]!\n", SIGN_CHARS[u], BASE_REGS[rm]);
-								} else {
-									//offset
-									printf(", %s%s]\n", SIGN_CHARS[u], BASE_REGS[rm]);
-								}
-							} else {
-								if (w) {
-									//invalid
-									printf("]\t;Unknown addressing mode\n");
-								} else {
-									//post-indexed
-									printf("], %s%s\n", SIGN_CHARS[u], BASE_REGS[rm]);
-								}
-							}
-							break;
-						case 0x00400000:
-							//printf(".long 0x%08x\t;Load/store two words immediate offset\n", (unsigned int)opcode);
-							if ((rd & 1) || rd > 15) {
-								printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-							} else {
-								imm = ((opcode & 0x0000000f) >> 4) | (opcode & 0x0000000f);
-								printf("%sr%sd %s, [%s", LD_ST_TYPE[l], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn]);
-								if (imm) {
-									if (p) {
-										if (w) {
-											//pre-indexed
-											printf(", #%s%d]!", SIGN_CHARS[u], imm);
-										} else {
-											//offset
-											printf(", #%s%d]", SIGN_CHARS[u], imm);
-										}
-										if (verbose && rn == 0xf) {
-											print_verbose_mem(
-												imm,
-												TYPE_POINTER,
-												sect, left, addr, sect_addr,
-												object_byte_sex,
-												symbols, symbols64, nsymbols,
-												sorted_symbols, nsorted_symbols,
-												strings, strings_size,
-												indirect_symbols, nindirect_symbols,
-												load_commands, ncmds, sizeofcmds
-											);
-										}
-										printf("\n");
-									} else {
-										if (w) {
-											//invalid
-											printf("]\t;Unknown addressing mode\n");
-										} else {
-											//post-indexed
-											printf("], #%s%d\n", SIGN_CHARS[u], imm);
-										}
-									}
-								} else {
-									printf("]\n");
-								}
-							}
-							break;
-						case 0x00500000:
-							//printf(".long 0x%08x\t;Load/store signed halfword/byte immediate offset\n", (unsigned int)opcode);
-							imm = ((opcode & 0x0000000f) >> 4) | (opcode & 0x0000000f);
-							printf("%sr%s%s %s, [%s", LD_ST_TYPE[l], SB_SH_TYPE[h], COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn]);
-							if (imm) {
-								if (p) {
-									if (w) {
-										//pre-indexed
-										printf(", #%s%d]!", SIGN_CHARS[u], imm);
-									} else {
-										//offset
-										printf(", #%s%d]", SIGN_CHARS[u], imm);
-									}
-									if (verbose && rn == 0xf) {
-										print_verbose_mem(
-											imm,
-											TYPE_POINTER,
-											sect, left, addr, sect_addr,
-											object_byte_sex,
-											symbols, symbols64, nsymbols,
-											sorted_symbols, nsorted_symbols,
-											strings, strings_size,
-											indirect_symbols, nindirect_symbols,
-											load_commands, ncmds, sizeofcmds
-										);
-									}
-									printf("\n");
-								} else {
-									if (w) {
-										//invalid
-										printf("]\t;Unknown addressing mode\n");
-									} else {
-										//post-indexed
-										printf("], #%s%d\n", SIGN_CHARS[u], imm);
-									}
-								}
-							} else {
-								printf("]\n");
-							}
-							break;
-						}
-						break;
-					}
-					break;
-				}
-				break;
-			}
-			break;
-		case 0x02000000:
-			//printf("Data processing immediate: 0x%08x\n", (unsigned int)opcode);
-			rn = (opcode & 0x000f0000) >> 16;
-			rd = (opcode & 0x0000f000) >> 12;
-			dataop = (opcode & 0x01e00000) >> 21;
-			s = (opcode & 0x00100000) >> 20;
-			// actually >> 8, but the value used in the cpu (and thus written in assembly) is rot << 1
-			rot = (opcode & 0x00000f00) >> 7;
-			imm = (opcode & 0x000000ff);
-			// mov/mvn don't have a second operand
-			if (dataop == 0xd || dataop == 0xf) {
-				if (rn) {
-					printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-				} else {
-					if (rot) {
-						printf("%s%s%s %s, #0x%x, %u\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], imm, rot);
-					} else {
-						printf("%s%s%s %s, #0x%x\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], imm);
-					}
-				}
-			} else if (dataop >= 0x8 && dataop <= 0xb) {
-				// tst/teq/cmp/cmn
-				if (rd) {
-					printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-				} else {
-					if (s) {
-						if (rot) {
-							printf("%s%s %s, #0x%x, %u\n", DATA_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rn], imm, rot);
-						} else {
-							printf("%s%s %s, #0x%x\n", DATA_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rn], imm);
-						}
-					} else {
-						printf(".long 0x%08x\t;Extended instruction\n", (unsigned int)opcode);
-					}
-				}
-			} else {
-				if (rot) {
-					printf("%s%s%s %s, %s, #0x%x, %u\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], imm, rot);
-				} else {
-					printf("%s%s%s %s, %s, #0x%x\n", DATA_OPERATIONS[dataop], COND_CODES[cond], SET_FLAGS[s], BASE_REGS[rd], BASE_REGS[rn], imm);
-				}
-			}
-			break;
-		case 0x04000000:
-			//printf("Load/store immediate offset: 0x%08x\n", (unsigned int)opcode);
-			rd = (opcode & 0x0000f000) >> 12;
-			rn = (opcode & 0x000f0000) >> 16;
-			l = (opcode & 0x00100000) >> 20;
-			w = (opcode & 0x00200000) >> 21;
-			b = (opcode & 0x00400000) >> 22;
-			u = (opcode & 0x00800000) >> 23;
-			p = (opcode & 0x01000000) >> 24;
-			imm = (opcode & 0x00000fff);
-			// apply sign bit
-			if (!u) {
-				imm = -imm;
-			}
-			printf("%sr%s%s", LD_ST_TYPE[l], COND_CODES[cond], BYTE_FLAGS[b]);
-			if (p) {
-				if (w) {
-					//pre-indexed
-					printf(" %s, [%s, #%d]!", BASE_REGS[rd], BASE_REGS[rn], imm);
-				} else {
-					//offset
-					printf(" %s, [%s, #%d]", BASE_REGS[rd], BASE_REGS[rn], imm);
-				}
-				if (verbose && rn == 0xf) {
-					print_verbose_mem(
-						imm,
-						TYPE_POINTER,
-						sect, left, addr, sect_addr,
-						object_byte_sex,
-						symbols, symbols64, nsymbols,
-						sorted_symbols, nsorted_symbols,
-						strings, strings_size,
-						indirect_symbols, nindirect_symbols,
-						load_commands, ncmds, sizeofcmds
-					);
-				}
-				printf("\n");
-			} else {
-				if (w) {
-					//post-indexed translation
-					printf("t %s, [%s], #%d\n", BASE_REGS[rd], BASE_REGS[rn], imm);
-				} else {
-					//post-indexed
-					printf(" %s, [%s], #%d\n", BASE_REGS[rd], BASE_REGS[rn], imm);
-				}
-			}
-			break;
-		case 0x06000000:
-			//printf("Load/store register offset: 0x%08x\n", (unsigned int)opcode);
-			rm = (opcode & 0x0000000f);
-			rd = (opcode & 0x0000f000) >> 12;
-			rn = (opcode & 0x000f0000) >> 16;
-			l = (opcode & 0x00100000) >> 20;
-			w = (opcode & 0x00200000) >> 21;
-			b = (opcode & 0x00400000) >> 22;
-			u = (opcode & 0x00800000) >> 23;
-			p = (opcode & 0x01000000) >> 24;
-			mode = (opcode & 0x00000060) >> 5;
-			imm = (opcode & 0x00000f80) >> 7;
-			printf("%sr%s%s", LD_ST_TYPE[l], COND_CODES[cond], BYTE_FLAGS[b]);
-			if (p) {
-				printf(" %s, [%s, ", BASE_REGS[rd], BASE_REGS[rn]);
-			} else {
-				if (w) {
-					printf("t ");
-				}
-				printf("%s, [%s], ", BASE_REGS[rd], BASE_REGS[rn]);
-			}
-			printf("%s%s", SIGN_CHARS[u], BASE_REGS[rm]);
-			if (imm == 0x00) {
-				if (mode != 0x0) {
-					printf(", %s #32", SHIFT_MODES[mode]);
-				}
-			} else {
-				printf(", %s #%u", SHIFT_MODES[mode], imm);
-			}
-			if (p) {
-				if (w) {
-					printf("]!");
-				} else {
-					printf("]");
-				}
-			}
-			printf("\n");
-			break;
-		case 0x08000000:
-			//printf("Load/store multiple: 0x%08x\n", (unsigned int)opcode);
-			rn = (opcode & 0x000f0000) >> 16;
-			l = (opcode & 0x00100000) >> 20;
-			w = (opcode & 0x00200000) >> 21;
-			s = (opcode & 0x00400000) >> 22;
-			regs = (opcode & 0x0000ffff);
-			mode = (opcode & 0x01800000) >> 23;
-			printf("%sm%s%s %s%s, {", LD_ST_TYPE[l], COND_CODES[cond], LDM_ADDR_MODES[mode], BASE_REGS[rn], UPDATE_CHARS[w]);
-			for (i = 0; i < NUM_REGS; i++) {
-				if (regs & (1 << i)) {
-					printf(BASE_REGS[i]);
-					// check for remaining bits
-					if (regs & (0xffff << (i + 1))) {
-						printf(", ");
-					}
-				}
-			}
-			printf("}%s\n", USERMODE_CHARS[s]);
-			break;
-		case 0x0a000000:
-			//printf("Branch: 0x%08x\n", (unsigned int)opcode);
-			l = (opcode & 0x01000000) > 24;
-			imm = (opcode & 0x00ffffff);
-			// negative 24bit?)
-			if (imm & 0x00800000) {
-				// 1-expand
-				imm |= 0xff000000;
-			}
-			imm <<= 2;
-			imm += addr + 8;
-			printf("b%s%s ", LINK_FLAGS[l], COND_CODES[cond]);
-			if (verbose) {
-				symbol_name = arm_symbol_name(
-					imm,
-					object_byte_sex,
-					symbols, symbols64, nsymbols,
-					sorted_symbols, nsorted_symbols,
-					strings, strings_size,
-					indirect_symbols, nindirect_symbols,
-					load_commands, ncmds, sizeofcmds,
-					verbose
-				);
-				if (symbol_name) {
-					printf("%s", symbol_name);
-				} else {
-					printf("0x%08x", imm);
-				}
-			} else {
-				printf("0x%08x", imm);
-			}
-			printf("\n");
-			break;
-		case 0x0c000000:
-			//printf(".long 0x%08x\t;Coprocessor load/store\n", (unsigned int)opcode);
-			imm = (opcode & 0x000000ff);
-			cp = (opcode & 0x00000f00) >> 8;
-			crd = (opcode & 0x0000f000) >> 12;
-			rn = (opcode & 0x000f0000) >> 16;
-			l = (opcode & 0x00100000) >> 20;
-			w = (opcode & 0x00200000) >> 21;
-			n = (opcode & 0x00400000) >> 22;
-			u = (opcode & 0x00800000) >> 23;
-			p = (opcode & 0x01000000) >> 24;
-			switch (cp) {
-			case 10:
-			case 11:
-				// handle VFP instructions
-				// S or D type
-				vfpsdx = cp & 0x1;
-				if (vfpsdx == 0) {
-					// single float, D bit = N flag
-					crd = (crd << 1) | n;
-				}
-				// the addressing modes for VFP are a bit different than for generic coprocessors
-				switch ((p << 2) | (u << 1) | w) {
-				case 0x0:
-				case 0x1:
-					// ARMv5TE coprocessor extensions: FMxRR/FMRRx
-					rd = (opcode & 0x0000f000) >> 12;
-					crm = (opcode & 0x0000000f);
-					if (vfpsdx == 0) {
-						// single float
-						m = (opcode & 0x00000020) >> 5;
-						crm = (crm << 1) | m;
-					}
-					if ((opcode & 0x000000d0) == 0x00000010) {
-						if (l) {
-							// FMRRx
-							switch (vfpsdx) {
-							case 0:
-								printf("fmrrs%s %s, %s, s%u, s%u\n", COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn], crd, crd + 1);
-								break;
-							case 1:
-								printf("fmrrd%s %s, %s, d%u\n", COND_CODES[cond], BASE_REGS[rd], BASE_REGS[rn], crd);
-								break;
-							}
-						} else {
-							// FMxRR
-							switch (vfpsdx) {
-							case 0:
-								printf("fmrrs%s s%u, s%u, %s, %s\n", COND_CODES[cond], crd, crd + 1, BASE_REGS[rd], BASE_REGS[rn]);
-								break;
-							case 1:
-								printf("fmrrd%s d%u, %s, %s\n", COND_CODES[cond], crd, BASE_REGS[rd], BASE_REGS[rn]);
-								break;
-							}
-						}
-					} else {
-						printf(".long 0x%08x\t;Invalid VFP load/store extension instruction\n", (unsigned int)opcode);
-					}
-					break;
-				case 0x7:
-					printf(".long 0x%08x\t;Invalid VFP load/store instruction\n", (unsigned int)opcode);
-					break;
-				case 0x2:
-					// unindexed multiple
-				case 0x3:
-					// increment multiple
-				case 0x5:
-					// decrement multiple
-					if (imm & 0x1) {
-						// eXtended mode
-						vfpsdx = 2;
-					}
-					// check for invalid ranges
-					regok = TRUE;
-					switch (vfpsdx) {
-					case 0:
-						if (imm == 0 || crd + imm > 32) {
-							regok = FALSE;
-						}
-						break;
-					case 1:
-					case 2:
-						if (imm == 0 || crd + (imm >> 1) > 16) {
-							regok = FALSE;
-						}
-						break;
-					}
-					if (regok) {
-						printf("f%sm%s%s%s %s%s, {", LD_ST_TYPE[l], LDM_ADDR_MODES[(p << 1) | u], VFP_SDX_TYPE[vfpsdx], COND_CODES[cond], BASE_REGS[rn], UPDATE_CHARS[w]);
-						for (i = 0; i < imm - 1; i++) {
-							printf("%s%u, ", VFP_REG_TYPE[vfpsdx], crd + i);
-						}
-						printf("%s%u}\n", VFP_REG_TYPE[vfpsdx], crd + i);
-					} else {
-						printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-					}
-					break;
-				case 0x4:
-				case 0x6:
-					// negative/positive offset single
-					printf("f%s%s%s %s%u, [%s", LD_ST_TYPE[l], VFP_SDX_TYPE[vfpsdx], COND_CODES[cond], VFP_REG_TYPE[vfpsdx], crd, BASE_REGS[rn]);
-					if (imm) {
-						printf(", #%s%u", SIGN_CHARS[u], imm << 2);
-					}
-					printf("]");
-					if (verbose && rn == 0xf) {
-						switch(vfpsdx) {
-						case 0:
-							print_verbose_mem(
-								u ? (imm << 2) : -(imm << 2),
-								TYPE_SINGLE,
-								sect, left, addr, sect_addr,
-								object_byte_sex,
-								symbols, symbols64, nsymbols,
-								sorted_symbols, nsorted_symbols,
-								strings, strings_size,
-								indirect_symbols, nindirect_symbols,
-								load_commands, ncmds, sizeofcmds
-							);
-							break;
-						case 1:
-							print_verbose_mem(
-								u ? (imm << 2) : -(imm << 2),
-								TYPE_DOUBLE,
-								sect, left, addr, sect_addr,
-								object_byte_sex,
-								symbols, symbols64, nsymbols,
-								sorted_symbols, nsorted_symbols,
-								strings, strings_size,
-								indirect_symbols, nindirect_symbols,
-								load_commands, ncmds, sizeofcmds
-							);
-							break;
-						}
-					}
-					printf("\n");
-					break;
-				}
-				break;
-			default:
-				// handle all other coprocessors
-				if ((opcode & 0x0fe00000) == 0x0c400000) {
-					// mcrr/mrrc
-					dataop = (opcode & 0x00000f0) >> 4;
-					crm = (opcode & 0x0000000f);
-					printf("%s%s p%u, %u, %s, %s, c%u", MCRR_MRRC_TYPE[l], COND_CODES[cond], cp, dataop, BASE_REGS[crd], BASE_REGS[rn], crm);
-				} else {
-					printf("%sc%s%s p%u, c%u, ", LD_ST_TYPE[l], COND_CODES[cond], LINK_FLAGS[n], cp, crd);
-					if (p) {
-						printf("[%s, #%s%u]", BASE_REGS[rn], SIGN_CHARS[u], imm << 2);
-						if (w) {
-							printf("!");
-						}
-					} else {
-						printf("[%s], ", BASE_REGS[rn]);
-						if (w) {
-							printf("#%s%u", SIGN_CHARS[u], imm << 2);
-						} else {
-							printf("0x%02x", imm);
-						}
-					}
-					printf("\n");
-				}
-				break;
-			}
-			break;
-		case 0x0e000000:
-			switch(opcode & 0x01000000) {
-			case 0x00000000:
-				switch (opcode & 0x00000010) {
-				case 0x00000000:
-					//printf(".long 0x%08x\t;Coprocessor data processing\n", (unsigned int)opcode);
-					cp = (opcode & 0x00000f00) >> 8;
-					switch (cp) {
-					case 10:
-					case 11:
-						// handle VFP instructions
-						crm = (opcode & 0x0000000f);
-						cp = (opcode & 0x00000f00) >> 8;
-						crd = (opcode & 0x0000f000) >> 12;
-						crn = (opcode & 0x000f0000) >> 16;
-						n = (opcode & 0x00000080) >> 7;
-						// p, q, r, s are quite scattered...
-						dataop = ((opcode & 0x00800000) >> 20) | ((opcode & 0x00300000) >> 19) | ((opcode & 0x00000040) >> 6);
-						vfpsdx = cp & 0x1;
-						if (vfpsdx == 0) {
-							// single float
-							d = (opcode & 0x00400000) >> 22;
-							crd = (crd << 1) | d;
-							m = (opcode & 0x00000020) >> 5;
-							crm = (crm << 1) | m;
-						}
-						if (dataop > 0x9) {
-							if (dataop == 0xf) {
-								// op without Fn
-								// Fn|N = operation #
-								dataop2 = (crn << 1) | n;
-								if (dataop2 == 15) {
-									// special case fcvt
-									switch (vfpsdx) {
-									case 0:
-										// single float
-										printf("fcvtds%s d%u, s%u\n", COND_CODES[cond], crd, crm);
-										break;
-									case 1:
-										// double float
-										printf("fcvtsd%s s%u, d%u\n", COND_CODES[cond], crd, crm);
-										break;
-									}
-								} else {
-									// invalid instructions are a null pointer in the list
-									if (VFP_EXT_DATA_OPERATIONS[dataop2]) {
-										printf("%s%s%s %s%u, %s%u\n", VFP_EXT_DATA_OPERATIONS[dataop2], VFP_SDX_TYPE[vfpsdx], COND_CODES[cond], VFP_REG_TYPE[vfpsdx], crd, VFP_REG_TYPE[vfpsdx], crm);
-									} else {
-										printf(".long 0x%08x\t;Invalid extended VFP processing instruction op=0x%x\n", (unsigned int)opcode, dataop);
-									}
-								}
-							} else {
-								printf(".long 0x%08x\t;Invalid VFP processing instruction op=0x%x\n", (unsigned int)opcode, dataop);
-							}
-						} else {
-							if (vfpsdx == 0) {
-								// single float
-								crn = (crn << 1) | n;
-							}
-							printf("%s%s%s %s%u, %s%u, %s%u\n", VFP_DATA_OPERATIONS[dataop], VFP_SDX_TYPE[vfpsdx], COND_CODES[cond], VFP_REG_TYPE[vfpsdx], crd, VFP_REG_TYPE[vfpsdx], crn, VFP_REG_TYPE[vfpsdx], crm);
-						}
-						break;
-					default:
-						// handle all other coprocessors
-						crm = (opcode & 0x0000000f);
-						cp = (opcode & 0x00000f00) >> 8;
-						crd = (opcode & 0x0000f000) >> 12;
-						crn = (opcode & 0x000f0000) >> 16;
-						dataop = (opcode & 0x00f00000) >> 20;
-						dataop2 = (opcode & 0x000000e0) >> 5;
-						printf("cdp%s p%u, %u, c%u, c%u, c%u, %u\n", COND_CODES[cond], cp, dataop, crd, crn, crm, dataop2);
-						break;
-					}
-					break;
-				case 0x00000010:
-					//printf(".long 0x%08x\t;Coprocessor register transfer\n", (unsigned int)opcode);
-					cp = (opcode & 0x00000f00) >> 8;
-					rd = (opcode & 0x0000f000) >> 12;
-					crn = (opcode & 0x000f0000) >> 16;
-					dataop = (opcode & 0x00e00000) >> 21;
-					l = (opcode & 0x00100000) >> 20;
-					switch (cp) {
-					case 10:
-					case 11:
-						// handle VFP instructions
-						if ((opcode & 0x0000007f) == 0x10) {
-							vfpsdx = cp & 0x1;
-							dataop = (dataop << 1) | vfpsdx;
-							if (VFP_MRC_OPERATIONS[dataop]) {
-								if (dataop == 14) {
-									// status register transfer
-									if (VFP_STATUS_REGS[crn]) {
-										if (l) {
-											if (rd == 15) {
-												printf("fmstat%s\n", COND_CODES[cond]);
-											} else {
-												printf("%s%s %s, %s\n", VFP_MRC_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rd], VFP_STATUS_REGS[crn]);
-											}
-										} else {
-											printf("%s%s %s, %s\n", VFP_MCR_OPERATIONS[dataop], COND_CODES[cond], VFP_STATUS_REGS[crn], BASE_REGS[rd]);
-										}
-									} else {
-										printf(".long 0x%08x\t;Invalid VFP status register %u\n", (unsigned int)opcode, crn);
-									}
-								} else {
-									if (vfpsdx == 0) {
-										// single float
-										n = (opcode & 0x00000080) >> 7;
-										crn = (crn << 1) | n;
-									}
-									if (l) {
-										printf("%s%s %s, %s%u\n", VFP_MRC_OPERATIONS[dataop], COND_CODES[cond], BASE_REGS[rd], VFP_REG_TYPE[vfpsdx], crn);
-									} else {
-										printf("%s%s %s%u, %s\n", VFP_MCR_OPERATIONS[dataop], COND_CODES[cond], VFP_REG_TYPE[vfpsdx], crn, BASE_REGS[rd]);
-									}
-								}
-							} else {
-								// invalid operation
-								printf(".long 0x%08x\t;Invalid VFP register transfer instruction op=0x%x\n", (unsigned int)opcode, dataop);
-							}
-						} else {
-							printf(".long 0x%08x\t;Invalid VFP register transfer instruction\n", (unsigned int)opcode);
-						}
-						break;
-					default:
-						// handle all other coprocessors
-						crm = (opcode & 0x0000000f);
-						dataop2 = (opcode & 0x000000e0) >> 5;
-						printf("%s%s cp%u, %u, %s, c%u, c%u", MCR_MRC_TYPE[l], COND_CODES[cond], cp, dataop, BASE_REGS[rd], crn, crm);
-						if (dataop2) {
-							printf(", %u", dataop2);
-						}
-						printf("\n");
-						break;
-					}
-					break;
-				}
-				break;
-			case 0x01000000:
-				sint = (opcode & 0x00ffffff);
-				printf("swi %u\n", sint);
-				break;
-			}
-			break;
-		default:
-			printf(".long 0x%08x\t;Invalid instruction\n", (unsigned int)opcode);
-			break;
-		}
-		break;
-	}
-	return(INSTRUCTION_SIZE);
-}
+/* STUFF FROM opcodes/arm-dis.c */
+/* From line 26 */
+#include "opcode/arm.h" /* this file was placed in cctools/include */
+#include "arm-opc.h"
 
-// Simple symbol resolver
-// If the given address can be found in the indirect symbol pool,
-// the name of the corresponding symbol is returned.
-// If not, a search through the direct symbols (labels) is performed.
-// If no symbol can be found there either, NULL is returned.
-// This function is reentrant, because the returned string resides
-// in the constant symbol pool of the decoded binary and is never modified.
-static const char *arm_symbol_name(
-	unsigned long addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols,
-        struct nlist_64 *symbols64,
-        unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds,
-	enum bool verbose
-) {
-	const char *symbol_name;
-	symbol_name = guess_indirect_symbol(
-		addr, ncmds, sizeofcmds,
-		load_commands,
-		object_byte_sex,
-		indirect_symbols, nindirect_symbols,
-		symbols, symbols64, nsymbols,
-		strings, strings_size
-	);
-	if (!symbol_name) {
-		symbol_name = guess_symbol(
-			addr,
-			sorted_symbols, nsorted_symbols,
-			verbose
-		);
-	}
-	return symbol_name;
-}
-
-// Return the information structure for the section containing the given address
-// or NULL if it's not in the file
-static struct section *arm_find_addr(
-	unsigned long addr,
-	struct load_command *load_commands,
-	unsigned long nload_commands,
-	enum bool swapped
-) {
-	int i, j;
-	struct segment_command *cmd;
-	struct section *sect_p;
-	struct section *sect;
-	struct load_command *current = load_commands;
-
-	for (i = 0; i < nload_commands; i++) {
-		if (current->cmd == LC_SEGMENT) {
-
-			cmd = (struct segment_command *) current;
-			sect_p = (struct section *)&cmd[1];
-
-			for (j = 0; j < cmd->nsects; j++) {
-				sect = &sect_p[j];
-
-				if (addr >= sect->addr && addr < sect->addr + sect->size) {
-					return sect;
-				}
-			}
-		}
-		if (swapped) {
-			current = ((void *) current) + SWAP_LONG(current->cmdsize);
-		} else {
-			current = ((void *) current) + current->cmdsize;
-		}
-	}
-	return NULL;
-}
-
-// ARM specific string dereferencing
-// The given address will be looked for in the list of sections.
-// If it can be found, the offset of the data will be calculated, and the data
-// retrieved by means of using the mach_header as pointer to offset 0 of the
-// object file.
-// The returned string is malloc'd and must be free'd after use.
-// The following formats will be used for the respective section data types:
-// Address out of range: <NULL> (a null pointer is returned) 
-// S_REGULAR: @ 0x%08lx (is this a good or bad idea?)
-// S_CSTRING_LITERALS: * "%s"
-// S_4BYTE_LITERALS: * 0x%08lx
-// S_8BYTE_LITERALS: * 0x%016Lx
-// S_LITERAL_POINTERS: *{n} %s (arm_redirect_mem_string will be called recursively until
-// something else than a LITERAL_POINTER is found; each round adds a "*")
-static char *arm_redirect_mem_string(
-	unsigned long addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols, unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds
-) {
-return NULL;
-#if 0
-	char *ret, *temp;
-	unsigned long off;
-	void *data;
-	struct section *sect;
-    enum byte_sex host_byte_sex;
-    enum bool swapped;
-	unsigned long redir;
-
-	host_byte_sex = get_host_byte_sex();
-	swapped = host_byte_sex != object_byte_sex;
-	
-	sect = arm_find_addr(addr, load_commands, ncmds, swapped);
-	if (sect) {
-		//printf("\n<%s::%s>\n", sect->segname, sect->sectname);
-		off = sect->offset + addr - sect->addr;
-		data = (void *) mh + off;
-		if (!strncmp(sect->sectname, CFSTRING_SECT, sizeof(CFSTRING_SECT))) {
-			if (swapped) {
-				redir = SWAP_LONG(((unsigned long *)data)[2]);
-			} else {
-				redir = ((unsigned long *)data)[2];
-			}
-			ret = arm_redirect_mem_string(
-				redir,
-				object_byte_sex,
-				symbols, nsymbols,
-				sorted_symbols, nsorted_symbols,
-				strings, strings_size,
-				indirect_symbols, nindirect_symbols,
-				load_commands, ncmds, sizeofcmds
-			);
-			if (ret) {
-				asprintf(&temp, "@%s", ret);
-				free(ret);
-				ret = temp;
-			} else {
-				asprintf(&ret, "@ 0x%08lx", redir);
-			}
-		} else {
-			switch(sect->flags & 0xf) {
-			case S_CSTRING_LITERALS:
-				asprintf(&ret, "* \"%s\"", (const char *)data);
-				break;
-			case S_REGULAR:
-			case S_4BYTE_LITERALS:
-				asprintf(&ret, "* 0x%08lx", *(unsigned long *)data);
-				break;
-			case S_8BYTE_LITERALS:
-				asprintf(&ret, "* 0x%016Lx", *(unsigned long long *)data);
-				break;
-			case S_LITERAL_POINTERS:
-				if (swapped) {
-					redir = SWAP_LONG(*(unsigned long *)data);
-				} else {
-					redir = *(unsigned long *)data;
-				}
-				ret = arm_redirect_mem_string(
-					redir,
-					object_byte_sex,
-					symbols, nsymbols,
-					sorted_symbols, nsorted_symbols,
-					strings, strings_size,
-					indirect_symbols, nindirect_symbols,
-					load_commands, ncmds, sizeofcmds
-				);
-				if (ret) {
-					asprintf(&temp, "*%s", ret);
-					free(ret);
-					ret = temp;
-				} else {
-					asprintf(&ret, "* 0x%08lx", redir);
-				}
-				break;
-			default:
-				sect = NULL;
-			}
-		}
-	}
-	if (!sect) {
-		ret = NULL;
-	}
-	return ret;
+/* FROM line 38 */
+#ifndef streq
+#define streq(a,b)	(strcmp ((a), (b)) == 0)
 #endif
+
+#ifndef strneq
+#define strneq(a,b,n)	(strncmp ((a), (b), (n)) == 0)
+#endif
+
+#ifndef NUM_ELEM
+#define NUM_ELEM(a)     (sizeof (a) / sizeof (a)[0])
+#endif
+
+#define WORD_ADDRESS(pc) ((pc) & ~0x3)
+
+/* Format of the disassembler control string :
+   
+   %%			%
+   %<bitfield>d		print the bitfield in decimal
+   %<bitfield>x		print the bitfield in hex
+   %<bitfield>X		print the bitfield as 1 hex digit without leading "0x"
+   %<bitfield>W         print the bitfield plus one in decimal 
+   %<bitfield>r		print as an ARM register
+   %<bitfield>f		print a floating point constant if >7 else a
+			floating point register
+   %<code>y		print a single precision VFP reg.
+			  Codes: 0=>Sm, 1=>Sd, 2=>Sn, 3=>multi-list, 4=>Sm pair
+   %<code>z		print a double precision VFP reg
+			  Codes: 0=>Dm, 1=>Dd, 2=>Dn, 3=>multi-list
+   %c			print condition code (always bits 28-31)
+   %P			print floating point precision in arithmetic insn
+   %Q			print floating point precision in ldf/stf insn
+   %R			print floating point rounding mode
+   %<bitnum>'c		print specified char iff bit is one
+   %<bitnum>`c		print specified char iff bit is zero
+   %<bitnum>?ab		print a if bit is one else print b
+   %p			print 'p' iff bits 12-15 are 15
+   %t			print 't' iff bit 21 set and bit 24 clear
+   %o			print operand2 (immediate or register + shift)
+   %a			print address for ldr/str instruction
+   %s                   print address for ldr/str halfword/signextend instruction
+   %b			print branch destination
+   %B			print arm BLX(1) destination
+   %A			print address for ldc/stc/ldf/stf instruction
+   %m			print register mask for ldm/stm instruction
+   %C			print the PSR sub type.
+   %F			print the COUNT field of a LFM/SFM instruction.
+IWMMXT specific format options:
+   %<bitfield>g         print as an iWMMXt 64-bit register
+   %<bitfield>G         print as an iWMMXt general purpose or control register
+   %<bitfield>w         print as an iWMMXt width field - [bhwd]ss/us
+   %Z			print the Immediate of a WSHUFH instruction.
+   %L			print as an iWMMXt N/M width field.
+   %l			like 'A' except use byte offsets for 'B' & 'H' versions
+Thumb specific format options:
+   %D                   print Thumb register (bits 0..2 as high number if bit 7 set)
+   %S                   print Thumb register (bits 3..5 as high number if bit 6 set)
+   %<bitfield>I         print bitfield as a signed decimal
+   				(top bit of range being the sign bit)
+   %M                   print Thumb register mask
+   %N                   print Thumb register mask (with LR)
+   %O                   print Thumb register mask (with PC)
+   %T                   print Thumb condition code (always bits 8-11)
+   %I                   print cirrus signed shift immediate: bits 0..3|4..6
+   %<bitfield>B         print Thumb branch destination (signed displacement)
+   %<bitfield>W         print (bitfield * 4) as a decimal
+   %<bitfield>H         print (bitfield * 2) as a decimal
+   %<bitfield>a         print (bitfield * 4) as a pc-rel offset + decoded symbol
+   %e                   print arm SMI operand (bits 0..7,8..19).  */
+
+/* Note: There is a partial ordering in this table - it must be searched from
+   the top to obtain a correct match.  */
+
+static const struct arm_opcode arm_opcodes[] =
+{
+  /* APPLE LOCAL */
+  {ARM_EXT_V1, 0xe7ffdefe, 0xffffffff, "trap"},
+
+  /* APPLE LOCAL begin see rdar://4686797 */
+  /* move all instructions in the 0xf....... range to the top, so we can
+     detect invalid condition codes.  */
+  /* ARM V6K instructions.  */
+  {ARM_EXT_V6K, 0xf57ff01f, 0xffffffff, "clrex"},
+
+  /* ARM V6 instructions. */
+  {ARM_EXT_V6, 0xfc500000, 0xfff00000, "mrrc2\t%8-11d, %4-7d, %12-15r, %16-19r, cr%0-3d"},
+  {ARM_EXT_V6, 0xfc400000, 0xfff00000, "mcrr2\t%8-11d, %4-7d, %12-15r, %16-19r, cr%0-3d"},
+  {ARM_EXT_V6, 0xf1080000, 0xfffdfe3f, "cpsie\t%8'a%7'i%6'f"},
+  {ARM_EXT_V6, 0xf1080000, 0xfffdfe20, "cpsie\t%8'a%7'i%6'f,#%0-4d"},
+  {ARM_EXT_V6, 0xf10C0000, 0xfffdfe3f, "cpsid\t%8'a%7'i%6'f"},
+  {ARM_EXT_V6, 0xf10C0000, 0xfffdfe20, "cpsid\t%8'a%7'i%6'f,#%0-4d"},
+  {ARM_EXT_V6, 0xf1000000, 0xfff1fe20, "cps\t#%0-4d"},
+  {ARM_EXT_V6, 0xf8100a00, 0xfe50ffff, "rfe%23?id%24?ba\t\%16-19r%21'!"},
+  {ARM_EXT_V6, 0xf1010000, 0xfffffc00, "setend\t%9?ble"},
+  {ARM_EXT_V6, 0xf84d0500, 0xfe5fffe0, "srs%23?id%24?ba\t#%0-4d%21'!"},
+
+  /* XScale instructions.  */
+  {ARM_CEXT_XSCALE, 0xfc100100, 0xfe500f00, "wldrw\t%12-15G, %A"},
+  {ARM_CEXT_XSCALE, 0xfc000100, 0xfe500f00, "wstrw\t%12-15G, %A"},
+
+  /* V5 Instructions.  */
+  {ARM_EXT_V5, 0xfa000000, 0xfe000000, "blx\t%B"},
+  {ARM_EXT_V5, 0xfc100000, 0xfe100000, "ldc2%22'l\t%8-11d, cr%12-15d, %A"},
+  {ARM_EXT_V5, 0xfc000000, 0xfe100000, "stc2%22'l\t%8-11d, cr%12-15d, %A"},
+  {ARM_EXT_V5, 0xfe000000, 0xff000010, "cdp2\t%8-11d, %20-23d, cr%12-15d, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V5, 0xfe000010, 0xff100010, "mcr2\t%8-11d, %21-23d, %12-15r, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V5, 0xfe100010, 0xff100010, "mrc2\t%8-11d, %21-23d, %12-15r, cr%16-19d, cr%0-3d, {%5-7d}"},
+
+  /* V5E "El Segundo" Instructions.  */    
+  {ARM_EXT_V5E, 0xf450f000, 0xfc70f000, "pld\t%a"},
+
+  /* CC == NV is undefined in v5 and above. */
+  {ARM_EXT_V5, 0xf0000000, 0xf0000000, "undefined instruction %0-31x"},
+  /* APPLE LOCAL end see rdar://4686797 */
+
+  /* ARM instructions.  */
+  {ARM_EXT_V1, 0xe1a00000, 0xffffffff, "nop\t\t\t(mov r0,r0)"},
+  {ARM_EXT_V4T | ARM_EXT_V5, 0x012FFF10, 0x0ffffff0, "bx%c\t%0-3r"},
+  {ARM_EXT_V2, 0x00000090, 0x0fe000f0, "mul%c%20's\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V2, 0x00200090, 0x0fe000f0, "mla%c%20's\t%16-19r, %0-3r, %8-11r, %12-15r"},
+#ifdef NOTYET
+  /* Must check cpsid first.  */
+  {ARM_EXT_V2S, 0x01000090, 0x0fb00ff0, "swp%c%22'b\t%12-15r, %0-3r, [%16-19r]"},
+#endif
+  {ARM_EXT_V3M, 0x00800090, 0x0fa000f0, "%22?sumull%c%20's\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V3M, 0x00a00090, 0x0fa000f0, "%22?sumlal%c%20's\t%12-15r, %16-19r, %0-3r, %8-11r"},
+
+  /* ARM V6Z instructions.  */
+  {ARM_EXT_V6Z, 0x01600070, 0x0ff000f0, "smi%c\t%e"},
+
+  /* ARM V6K instructions.  */
+  {ARM_EXT_V6K, 0x01d00f9f, 0x0ff00fff, "ldrexb%c\t%12-15r, [%16-19r]"},
+  {ARM_EXT_V6K, 0x01b00f9f, 0x0ff00fff, "ldrexd%c\t%12-15r, [%16-19r]"},
+  {ARM_EXT_V6K, 0x01f00f9f, 0x0ff00fff, "ldrexh%c\t%12-15r, [%16-19r]"},
+  {ARM_EXT_V6K, 0x01c00f90, 0x0ff00ff0, "strexb%c\t%12-15r, %0-3r, [%16-19r]"},
+  {ARM_EXT_V6K, 0x01a00f90, 0x0ff00ff0, "strexd%c\t%12-15r, %0-3r, [%16-19r]"},
+  {ARM_EXT_V6K, 0x01e00f90, 0x0ff00ff0, "strexh%c\t%12-15r, %0-3r, [%16-19r]"},
+
+  /* ARM V6K NOP hints.  */
+  {ARM_EXT_V6K, 0x0320f001, 0x0fffffff, "yield%c"},
+  {ARM_EXT_V6K, 0x0320f002, 0x0fffffff, "wfe%c"},
+  {ARM_EXT_V6K, 0x0320f003, 0x0fffffff, "wfi%c"},
+  {ARM_EXT_V6K, 0x0320f004, 0x0fffffff, "sev%c"},
+  {ARM_EXT_V6K, 0x0320f000, 0x0fffff00, "nop%c\t{%0-7d}"},
+
+  /* ARM V6 instructions. */
+  {ARM_EXT_V6, 0x06800010, 0x0ff00ff0, "pkhbt%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06800010, 0x0ff00070, "pkhbt%c\t%12-15r, %16-19r, %0-3r, LSL #%7-11d"},
+  {ARM_EXT_V6, 0x06800050, 0x0ff00ff0, "pkhtb%c\t%12-15r, %16-19r, %0-3r, ASR #32"},
+  {ARM_EXT_V6, 0x06800050, 0x0ff00070, "pkhtb%c\t%12-15r, %16-19r, %0-3r, ASR #%7-11d"},
+  {ARM_EXT_V6, 0x01900f9f, 0x0ff00fff, "ldrex%c\tr%12-15d, [%16-19r]"},
+  {ARM_EXT_V6, 0x06200f10, 0x0ff00ff0, "qadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06200f90, 0x0ff00ff0, "qadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06200f30, 0x0ff00ff0, "qaddsubx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06200f70, 0x0ff00ff0, "qsub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06200ff0, 0x0ff00ff0, "qsub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06200f50, 0x0ff00ff0, "qsubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100f10, 0x0ff00ff0, "sadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100f90, 0x0ff00ff0, "sadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100f30, 0x0ff00ff0, "saddaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300f10, 0x0ff00ff0, "shadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300f90, 0x0ff00ff0, "shadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300f30, 0x0ff00ff0, "shaddsubx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300f70, 0x0ff00ff0, "shsub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300ff0, 0x0ff00ff0, "shsub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06300f50, 0x0ff00ff0, "shsubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100f70, 0x0ff00ff0, "ssub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100ff0, 0x0ff00ff0, "ssub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06100f50, 0x0ff00ff0, "ssubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500f10, 0x0ff00ff0, "uadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500f90, 0x0ff00ff0, "uadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500f30, 0x0ff00ff0, "uaddsubx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700f10, 0x0ff00ff0, "uhadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700f90, 0x0ff00ff0, "uhadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700f30, 0x0ff00ff0, "uhaddsubx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700f70, 0x0ff00ff0, "uhsub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700ff0, 0x0ff00ff0, "uhsub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06700f50, 0x0ff00ff0, "uhsubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600f10, 0x0ff00ff0, "uqadd16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600f90, 0x0ff00ff0, "uqadd8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600f30, 0x0ff00ff0, "uqaddsubx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600f70, 0x0ff00ff0, "uqsub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600ff0, 0x0ff00ff0, "uqsub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06600f50, 0x0ff00ff0, "uqsubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500f70, 0x0ff00ff0, "usub16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500ff0, 0x0ff00ff0, "usub8%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06500f50, 0x0ff00ff0, "usubaddx%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06bf0f30, 0x0fff0ff0, "rev%c\t\%12-15r, %0-3r"},
+  {ARM_EXT_V6, 0x06bf0fb0, 0x0fff0ff0, "rev16%c\t\%12-15r, %0-3r"},
+  {ARM_EXT_V6, 0x06ff0fb0, 0x0fff0ff0, "revsh%c\t\%12-15r, %0-3r"},
+  {ARM_EXT_V6, 0x06bf0070, 0x0fff0ff0, "sxth%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x06bf0470, 0x0fff0ff0, "sxth%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06bf0870, 0x0fff0ff0, "sxth%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06bf0c70, 0x0fff0ff0, "sxth%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x068f0070, 0x0fff0ff0, "sxtb16%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x068f0470, 0x0fff0ff0, "sxtb16%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x068f0870, 0x0fff0ff0, "sxtb16%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x068f0c70, 0x0fff0ff0, "sxtb16%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06af0070, 0x0fff0ff0, "sxtb%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x06af0470, 0x0fff0ff0, "sxtb%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06af0870, 0x0fff0ff0, "sxtb%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06af0c70, 0x0fff0ff0, "sxtb%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06ff0070, 0x0fff0ff0, "uxth%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x06ff0470, 0x0fff0ff0, "uxth%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06ff0870, 0x0fff0ff0, "uxth%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06ff0c70, 0x0fff0ff0, "uxth%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06cf0070, 0x0fff0ff0, "uxtb16%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x06cf0470, 0x0fff0ff0, "uxtb16%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06cf0870, 0x0fff0ff0, "uxtb16%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06cf0c70, 0x0fff0ff0, "uxtb16%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06ef0070, 0x0fff0ff0, "uxtb%c %12-15r,%0-3r"},
+  {ARM_EXT_V6, 0x06ef0470, 0x0fff0ff0, "uxtb%c %12-15r,%0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06ef0870, 0x0fff0ff0, "uxtb%c %12-15r,%0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06ef0c70, 0x0fff0ff0, "uxtb%c %12-15r,%0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06b00070, 0x0ff00ff0, "sxtah%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06b00470, 0x0ff00ff0, "sxtah%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06b00870, 0x0ff00ff0, "sxtah%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06b00c70, 0x0ff00ff0, "sxtah%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06800070, 0x0ff00ff0, "sxtab16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06800470, 0x0ff00ff0, "sxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06800870, 0x0ff00ff0, "sxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06800c70, 0x0ff00ff0, "sxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06a00070, 0x0ff00ff0, "sxtab%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06a00470, 0x0ff00ff0, "sxtab%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06a00870, 0x0ff00ff0, "sxtab%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06a00c70, 0x0ff00ff0, "sxtab%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06f00070, 0x0ff00ff0, "uxtah%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06f00470, 0x0ff00ff0, "uxtah%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06f00870, 0x0ff00ff0, "uxtah%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06f00c70, 0x0ff00ff0, "uxtah%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06c00070, 0x0ff00ff0, "uxtab16%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06c00470, 0x0ff00ff0, "uxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06c00870, 0x0ff00ff0, "uxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06c00c70, 0x0ff00ff0, "uxtab16%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x06e00070, 0x0ff00ff0, "uxtab%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x06e00470, 0x0ff00ff0, "uxtab%c\t%12-15r, %16-19r, %0-3r, ROR #8"},
+  {ARM_EXT_V6, 0x06e00870, 0x0ff00ff0, "uxtab%c\t%12-15r, %16-19r, %0-3r, ROR #16"},
+  {ARM_EXT_V6, 0x06e00c70, 0x0ff00ff0, "uxtab%c\t%12-15r, %16-19r, %0-3r, ROR #24"},
+  {ARM_EXT_V6, 0x068000b0, 0x0ff00ff0, "sel%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_EXT_V6, 0x0700f010, 0x0ff0f0d0, "smuad%5'x%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x0700f050, 0x0ff0f0d0, "smusd%5'x%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x07000010, 0x0ff000d0, "smlad%5'x%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V6, 0x07400010, 0x0ff000d0, "smlald%5'x%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x07000050, 0x0ff000d0, "smlsd%5'x%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V6, 0x07400050, 0x0ff000d0, "smlsld%5'x%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x0750f010, 0x0ff0f0d0, "smmul%5'r%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x07500010, 0x0ff000d0, "smmla%5'r%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V6, 0x075000d0, 0x0ff000d0, "smmls%5'r%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V6, 0x06a00010, 0x0fe00ff0, "ssat%c\t%12-15r, #%16-20W, %0-3r"},
+  {ARM_EXT_V6, 0x06a00010, 0x0fe00070, "ssat%c\t%12-15r, #%16-20W, %0-3r, LSL #%7-11d"},
+  {ARM_EXT_V6, 0x06a00050, 0x0fe00070, "ssat%c\t%12-15r, #%16-20W, %0-3r, ASR #%7-11d"},
+  {ARM_EXT_V6, 0x06a00f30, 0x0ff00ff0, "ssat16%c\t%12-15r, #%16-19W, %0-3r"},
+  {ARM_EXT_V6, 0x01800f90, 0x0ff00ff0, "strex%c\t%12-15r, %0-3r, [%16-19r]"},
+  {ARM_EXT_V6, 0x00400090, 0x0ff000f0, "umaal%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x0780f010, 0x0ff0f0f0, "usad8%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V6, 0x07800010, 0x0ff000f0, "usada8%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V6, 0x06e00010, 0x0fe00ff0, "usat%c\t%12-15r, #%16-20d, %0-3r"},
+  {ARM_EXT_V6, 0x06e00010, 0x0fe00070, "usat%c\t%12-15r, #%16-20d, %0-3r, LSL #%7-11d"},
+  {ARM_EXT_V6, 0x06e00050, 0x0fe00070, "usat%c\t%12-15r, #%16-20d, %0-3r, ASR #%7-11d"},
+  {ARM_EXT_V6, 0x06e00f30, 0x0ff00ff0, "usat16%c\t%12-15r, #%16-19d, %0-3r"},
+
+  /* V5J instruction.  */
+  {ARM_EXT_V5J, 0x012fff20, 0x0ffffff0, "bxj%c\t%0-3r"},
+
+  /* XScale instructions.  */
+  {ARM_CEXT_XSCALE, 0x0e200010, 0x0fff0ff0, "mia%c\tacc0, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e280010, 0x0fff0ff0, "miaph%c\tacc0, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e2c0010, 0x0ffc0ff0, "mia%17'T%17`B%16'T%16`B%c\tacc0, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0c400000, 0x0ff00fff, "mar%c\tacc0, %12-15r, %16-19r"},
+  {ARM_CEXT_XSCALE, 0x0c500000, 0x0ff00fff, "mra%c\t%12-15r, %16-19r, acc0"},
+   
+#ifdef NOTYET
+  /* Intel Wireless MMX technology instructions.  */
+#define FIRST_IWMMXT_INSN 0x0e130130
+#define IWMMXT_INSN_COUNT 47
+  {ARM_CEXT_IWMMXT, 0x0e130130, 0x0f3f0fff, "tandc%22-23w%c\t%12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e400010, 0x0ff00f3f, "tbcst%6-7w%c\t%16-19g, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e130170, 0x0f3f0ff8, "textrc%22-23w%c\t%12-15r, #%0-2d"},
+  {ARM_CEXT_XSCALE, 0x0e100070, 0x0f300ff0, "textrm%3?su%22-23w%c\t%12-15r, %16-19g, #%0-2d"},
+  {ARM_CEXT_XSCALE, 0x0e600010, 0x0ff00f38, "tinsr%6-7w%c\t%16-19g, %12-15r, #%0-2d"},
+  {ARM_CEXT_XSCALE, 0x0e000110, 0x0ff00fff, "tmcr%c\t%16-19G, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0c400000, 0x0ff00ff0, "tmcrr%c\t%0-3g, %12-15r, %16-19r"},
+  {ARM_CEXT_XSCALE, 0x0e2c0010, 0x0ffc0e10, "tmia%17?tb%16?tb%c\t%5-8g, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e200010, 0x0fff0e10, "tmia%c\t%5-8g, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e280010, 0x0fff0e10, "tmiaph%c\t%5-8g, %0-3r, %12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e100030, 0x0f300fff, "tmovmsk%22-23w%c\t%12-15r, %16-19g"},
+  {ARM_CEXT_XSCALE, 0x0e100110, 0x0ff00ff0, "tmrc%c\t%12-15r, %16-19G"},
+  {ARM_CEXT_XSCALE, 0x0c500000, 0x0ff00ff0, "tmrrc%c\t%12-15r, %16-19r, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e130150, 0x0f3f0fff, "torc%22-23w%c\t%12-15r"},
+  {ARM_CEXT_XSCALE, 0x0e0001c0, 0x0f300fff, "wacc%22-23w%c\t%12-15g, %16-19g"},
+  {ARM_CEXT_XSCALE, 0x0e000180, 0x0f000ff0, "wadd%20-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000020, 0x0f800ff0, "waligni%c\t%12-15g, %16-19g, %0-3g, #%20-22d"},
+  {ARM_CEXT_XSCALE, 0x0e800020, 0x0fc00ff0, "walignr%20-21d%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e200000, 0x0fe00ff0, "wand%20'n%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e800000, 0x0fa00ff0, "wavg2%22?hb%20'r%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000060, 0x0f300ff0, "wcmpeq%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e100060, 0x0f100ff0, "wcmpgt%21?su%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0c100000, 0x0e100e00, "wldr%L%c\t%12-15g, %l"},
+  {ARM_CEXT_XSCALE, 0x0e400100, 0x0fc00ff0, "wmac%21?su%20'z%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e800100, 0x0fd00ff0, "wmadd%21?su%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000160, 0x0f100ff0, "wmax%21?su%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e100160, 0x0f100ff0, "wmin%21?su%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000100, 0x0fc00ff0, "wmul%21?su%20?ml%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000000, 0x0ff00ff0, "wor%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000080, 0x0f000ff0, "wpack%20-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e300040, 0x0f300ff0, "wror%22-23w%8'g%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e300148, 0x0f300ffc, "wror%22-23w%8'g%c\t%12-15g, %16-19g, %0-3G"},
+  {ARM_CEXT_XSCALE, 0x0e000120, 0x0fa00ff0, "wsad%22?hb%20'z%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e0001e0, 0x0f000ff0, "wshufh%c\t%12-15g, %16-19g, #%Z"},
+  {ARM_CEXT_XSCALE, 0x0e100040, 0x0f300ff0, "wsll%22-23w%8'g%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e100148, 0x0f300ffc, "wsll%22-23w%8'g%c\t%12-15g, %16-19g, %0-3G"},
+  {ARM_CEXT_XSCALE, 0x0e000040, 0x0f300ff0, "wsra%22-23w%8'g%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e000148, 0x0f300ffc, "wsra%22-23w%8'g%c\t%12-15g, %16-19g, %0-3G"},
+  {ARM_CEXT_XSCALE, 0x0e200040, 0x0f300ff0, "wsrl%22-23w%8'g%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e200148, 0x0f300ffc, "wsrl%22-23w%8'g%c\t%12-15g, %16-19g, %0-3G"},
+  {ARM_CEXT_XSCALE, 0x0c000000, 0x0e100e00, "wstr%L%c\t%12-15g, %l"},
+  {ARM_CEXT_XSCALE, 0x0e0001a0, 0x0f000ff0, "wsub%20-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e0000c0, 0x0f100fff, "wunpckeh%21?su%22-23w%c\t%12-15g, %16-19g"},
+  {ARM_CEXT_XSCALE, 0x0e0000e0, 0x0f100fff, "wunpckel%21?su%22-23w%c\t%12-15g, %16-19g"},
+  {ARM_CEXT_XSCALE, 0x0e1000c0, 0x0f300ff0, "wunpckih%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e1000e0, 0x0f300ff0, "wunpckil%22-23w%c\t%12-15g, %16-19g, %0-3g"},
+  {ARM_CEXT_XSCALE, 0x0e100000, 0x0ff00ff0, "wxor%c\t%12-15g, %16-19g, %0-3g"},
+#endif /* NOTYET */
+
+  /* V5 Instructions.  */
+  {ARM_EXT_V5, 0xe1200070, 0xfff000f0, "bkpt\t0x%16-19X%12-15X%8-11X%0-3X"},
+  {ARM_EXT_V5, 0x012fff30, 0x0ffffff0, "blx%c\t%0-3r"},
+  {ARM_EXT_V5, 0x016f0f10, 0x0fff0ff0, "clz%c\t%12-15r, %0-3r"},
+
+  /* V5E "El Segundo" Instructions.  */    
+  {ARM_EXT_V5E, 0x000000d0, 0x0e1000f0, "ldr%cd\t%12-15r, %s"},
+  {ARM_EXT_V5E, 0x000000f0, 0x0e1000f0, "str%cd\t%12-15r, %s"},
+  {ARM_EXT_V5ExP, 0x01000080, 0x0ff000f0, "smlabb%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V5ExP, 0x010000a0, 0x0ff000f0, "smlatb%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V5ExP, 0x010000c0, 0x0ff000f0, "smlabt%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V5ExP, 0x010000e0, 0x0ff000f0, "smlatt%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+
+  {ARM_EXT_V5ExP, 0x01200080, 0x0ff000f0, "smlawb%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+  {ARM_EXT_V5ExP, 0x012000c0, 0x0ff000f0, "smlawt%c\t%16-19r, %0-3r, %8-11r, %12-15r"},
+
+  {ARM_EXT_V5ExP, 0x01400080, 0x0ff000f0, "smlalbb%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x014000a0, 0x0ff000f0, "smlaltb%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x014000c0, 0x0ff000f0, "smlalbt%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x014000e0, 0x0ff000f0, "smlaltt%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
+
+  {ARM_EXT_V5ExP, 0x01600080, 0x0ff0f0f0, "smulbb%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x016000a0, 0x0ff0f0f0, "smultb%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x016000c0, 0x0ff0f0f0, "smulbt%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x016000e0, 0x0ff0f0f0, "smultt%c\t%16-19r, %0-3r, %8-11r"},
+
+  {ARM_EXT_V5ExP, 0x012000a0, 0x0ff0f0f0, "smulwb%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_V5ExP, 0x012000e0, 0x0ff0f0f0, "smulwt%c\t%16-19r, %0-3r, %8-11r"},
+
+  {ARM_EXT_V5ExP, 0x01000050, 0x0ff00ff0,  "qadd%c\t%12-15r, %0-3r, %16-19r"},
+  {ARM_EXT_V5ExP, 0x01400050, 0x0ff00ff0, "qdadd%c\t%12-15r, %0-3r, %16-19r"},
+  {ARM_EXT_V5ExP, 0x01200050, 0x0ff00ff0,  "qsub%c\t%12-15r, %0-3r, %16-19r"},
+  {ARM_EXT_V5ExP, 0x01600050, 0x0ff00ff0, "qdsub%c\t%12-15r, %0-3r, %16-19r"},
+
+  /* ARM Instructions.  */
+#ifndef NOTYET 
+  /* Must check cpsid first.  */
+  {ARM_EXT_V2S, 0x01000090, 0x0fb00ff0, "swp%c%22'b\t%12-15r, %0-3r, [%16-19r]"},
+#endif
+  {ARM_EXT_V1, 0x00000090, 0x0e100090, "str%c%6's%5?hb\t%12-15r, %s"},
+  {ARM_EXT_V1, 0x00100090, 0x0e100090, "ldr%c%6's%5?hb\t%12-15r, %s"},
+  {ARM_EXT_V1, 0x00000000, 0x0de00000, "and%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00200000, 0x0de00000, "eor%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00400000, 0x0de00000, "sub%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00600000, 0x0de00000, "rsb%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00800000, 0x0de00000, "add%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00a00000, 0x0de00000, "adc%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00c00000, 0x0de00000, "sbc%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x00e00000, 0x0de00000, "rsc%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V3, 0x0120f000, 0x0db0f000, "msr%c\t%22?SCPSR%C, %o"},
+  {ARM_EXT_V3, 0x010f0000, 0x0fbf0fff, "mrs%c\t%12-15r, %22?SCPSR"},
+  {ARM_EXT_V1, 0x01100000, 0x0df00000, "tst%c%p\t%16-19r, %o"},
+  {ARM_EXT_V1, 0x01300000, 0x0df00000, "teq%c%p\t%16-19r, %o"},
+  {ARM_EXT_V1, 0x01500000, 0x0df00000, "cmp%c%p\t%16-19r, %o"},
+  {ARM_EXT_V1, 0x01700000, 0x0df00000, "cmn%c%p\t%16-19r, %o"},
+  {ARM_EXT_V1, 0x01800000, 0x0de00000, "orr%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x01a00000, 0x0de00000, "mov%c%20's\t%12-15r, %o"},
+  {ARM_EXT_V1, 0x01c00000, 0x0de00000, "bic%c%20's\t%12-15r, %16-19r, %o"},
+  {ARM_EXT_V1, 0x01e00000, 0x0de00000, "mvn%c%20's\t%12-15r, %o"},
+  {ARM_EXT_V1, 0x04000000, 0x0e100000, "str%c%22'b%t\t%12-15r, %a"},
+  {ARM_EXT_V1, 0x06000000, 0x0e100ff0, "str%c%22'b%t\t%12-15r, %a"},
+  {ARM_EXT_V1, 0x04000000, 0x0c100010, "str%c%22'b%t\t%12-15r, %a"},
+  {ARM_EXT_V1, 0x06000010, 0x0e000010, "undefined"},
+  {ARM_EXT_V1, 0x04100000, 0x0c100000, "ldr%c%22'b%t\t%12-15r, %a"},
+  {ARM_EXT_V1, 0x08000000, 0x0e100000, "stm%c%23?id%24?ba\t%16-19r%21'!, %m%22'^"},
+  {ARM_EXT_V1, 0x08100000, 0x0e100000, "ldm%c%23?id%24?ba\t%16-19r%21'!, %m%22'^"},
+  {ARM_EXT_V1, 0x0a000000, 0x0e000000, "b%24'l%c\t%b"},
+  {ARM_EXT_V1, 0x0f000000, 0x0f000000, "swi%c\t%0-23x"},
+
+  /* Floating point coprocessor (FPA) instructions */
+  {FPU_FPA_EXT_V1, 0x0e000100, 0x0ff08f10, "adf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e100100, 0x0ff08f10, "muf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e200100, 0x0ff08f10, "suf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e300100, 0x0ff08f10, "rsf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e400100, 0x0ff08f10, "dvf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e500100, 0x0ff08f10, "rdf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e600100, 0x0ff08f10, "pow%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e700100, 0x0ff08f10, "rpw%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e800100, 0x0ff08f10, "rmf%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e900100, 0x0ff08f10, "fml%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ea00100, 0x0ff08f10, "fdv%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0eb00100, 0x0ff08f10, "frd%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ec00100, 0x0ff08f10, "pol%c%P%R\t%12-14f, %16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e008100, 0x0ff08f10, "mvf%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e108100, 0x0ff08f10, "mnf%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e208100, 0x0ff08f10, "abs%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e308100, 0x0ff08f10, "rnd%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e408100, 0x0ff08f10, "sqt%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e508100, 0x0ff08f10, "log%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e608100, 0x0ff08f10, "lgn%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e708100, 0x0ff08f10, "exp%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e808100, 0x0ff08f10, "sin%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e908100, 0x0ff08f10, "cos%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ea08100, 0x0ff08f10, "tan%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0eb08100, 0x0ff08f10, "asn%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ec08100, 0x0ff08f10, "acs%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ed08100, 0x0ff08f10, "atn%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ee08100, 0x0ff08f10, "urd%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ef08100, 0x0ff08f10, "nrm%c%P%R\t%12-14f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0e000110, 0x0ff00f1f, "flt%c%P%R\t%16-18f, %12-15r"},
+  {FPU_FPA_EXT_V1, 0x0e100110, 0x0fff0f98, "fix%c%R\t%12-15r, %0-2f"},
+  {FPU_FPA_EXT_V1, 0x0e200110, 0x0fff0fff, "wfs%c\t%12-15r"},
+  {FPU_FPA_EXT_V1, 0x0e300110, 0x0fff0fff, "rfs%c\t%12-15r"},
+  {FPU_FPA_EXT_V1, 0x0e400110, 0x0fff0fff, "wfc%c\t%12-15r"},
+  {FPU_FPA_EXT_V1, 0x0e500110, 0x0fff0fff, "rfc%c\t%12-15r"},
+  {FPU_FPA_EXT_V1, 0x0e90f110, 0x0ff8fff0, "cmf%c\t%16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0eb0f110, 0x0ff8fff0, "cnf%c\t%16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ed0f110, 0x0ff8fff0, "cmfe%c\t%16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0ef0f110, 0x0ff8fff0, "cnfe%c\t%16-18f, %0-3f"},
+  {FPU_FPA_EXT_V1, 0x0c000100, 0x0e100f00, "stf%c%Q\t%12-14f, %A"},
+  {FPU_FPA_EXT_V1, 0x0c100100, 0x0e100f00, "ldf%c%Q\t%12-14f, %A"},
+  {FPU_FPA_EXT_V2, 0x0c000200, 0x0e100f00, "sfm%c\t%12-14f, %F, %A"},
+  {FPU_FPA_EXT_V2, 0x0c100200, 0x0e100f00, "lfm%c\t%12-14f, %F, %A"},
+
+  /* Floating point coprocessor (VFP) instructions */
+  {FPU_VFP_EXT_V1, 0x0eb00bc0, 0x0fff0ff0, "fabsd%c\t%1z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb00ac0, 0x0fbf0fd0, "fabss%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0e300b00, 0x0ff00ff0, "faddd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e300a00, 0x0fb00f50, "fadds%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb40b40, 0x0fff0f70, "fcmp%7'ed%c\t%1z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb40a40, 0x0fbf0f50, "fcmp%7'es%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb50b40, 0x0fff0f70, "fcmp%7'ezd%c\t%1z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb50a40, 0x0fbf0f70, "fcmp%7'ezs%c\t%1y"},
+  {FPU_VFP_EXT_V1, 0x0eb00b40, 0x0fff0ff0, "fcpyd%c\t%1z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb00a40, 0x0fbf0fd0, "fcpys%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb70ac0, 0x0fff0fd0, "fcvtds%c\t%1z, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb70bc0, 0x0fbf0ff0, "fcvtsd%c\t%1y, %0z"},
+  {FPU_VFP_EXT_V1, 0x0e800b00, 0x0ff00ff0, "fdivd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e800a00, 0x0fb00f50, "fdivs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0d100b00, 0x0f700f00, "fldd%c\t%1z, %A"},
+  {FPU_VFP_EXT_V1xD, 0x0c900b00, 0x0fd00f00, "fldmia%0?xd%c\t%16-19r%21'!, %3z"},
+  {FPU_VFP_EXT_V1xD, 0x0d300b00, 0x0ff00f00, "fldmdb%0?xd%c\t%16-19r!, %3z"},
+  {FPU_VFP_EXT_V1xD, 0x0d100a00, 0x0f300f00, "flds%c\t%1y, %A"},
+  {FPU_VFP_EXT_V1xD, 0x0c900a00, 0x0f900f00, "fldmias%c\t%16-19r%21'!, %3y"},
+  {FPU_VFP_EXT_V1xD, 0x0d300a00, 0x0fb00f00, "fldmdbs%c\t%16-19r!, %3y"},
+  {FPU_VFP_EXT_V1, 0x0e000b00, 0x0ff00ff0, "fmacd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e000a00, 0x0fb00f50, "fmacs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0e200b10, 0x0ff00fff, "fmdhr%c\t%2z, %12-15r"},
+  {FPU_VFP_EXT_V1, 0x0e000b10, 0x0ff00fff, "fmdlr%c\t%2z, %12-15r"},
+  {FPU_VFP_EXT_V2, 0x0c400b10, 0x0ff00ff0, "fmdrr%c\t%0z, %12-15r, %16-19r"},
+  {FPU_VFP_EXT_V1, 0x0e300b10, 0x0ff00fff, "fmrdh%c\t%12-15r, %2z"},
+  {FPU_VFP_EXT_V1, 0x0e100b10, 0x0ff00fff, "fmrdl%c\t%12-15r, %2z"},
+  {FPU_VFP_EXT_V1, 0x0c500b10, 0x0ff00ff0, "fmrrd%c\t%12-15r, %16-19r, %0z"},
+  {FPU_VFP_EXT_V2, 0x0c500a10, 0x0ff00fd0, "fmrrs%c\t%12-15r, %16-19r, %4y"},
+  {FPU_VFP_EXT_V1xD, 0x0e100a10, 0x0ff00f7f, "fmrs%c\t%12-15r, %2y"},
+  {FPU_VFP_EXT_V1xD, 0x0ef1fa10, 0x0fffffff, "fmstat%c"},
+  {FPU_VFP_EXT_V1xD, 0x0ef00a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpsid"},
+  {FPU_VFP_EXT_V1xD, 0x0ef10a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpscr"},
+  {FPU_VFP_EXT_V1xD, 0x0ef80a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpexc"},
+  {FPU_VFP_EXT_V1xD, 0x0ef90a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpinst\t@ Impl def"},
+  {FPU_VFP_EXT_V1xD, 0x0efa0a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpinst2\t@ Impl def"},
+  {FPU_VFP_EXT_V1xD, 0x0ef00a10, 0x0ff00fff, "fmrx%c\t%12-15r, <impl def 0x%16-19x>"},
+  {FPU_VFP_EXT_V1, 0x0e100b00, 0x0ff00ff0, "fmscd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e100a00, 0x0fb00f50, "fmscs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1xD, 0x0e000a10, 0x0ff00f7f, "fmsr%c\t%2y, %12-15r"},
+  {FPU_VFP_EXT_V2, 0x0c400a10, 0x0ff00fd0, "fmsrr%c\t%12-15r, %16-19r, %4y"},
+  {FPU_VFP_EXT_V1, 0x0e200b00, 0x0ff00ff0, "fmuld%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e200a00, 0x0fb00f50, "fmuls%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1xD, 0x0ee00a10, 0x0fff0fff, "fmxr%c\tfpsid, %12-15r"},
+  {FPU_VFP_EXT_V1xD, 0x0ee10a10, 0x0fff0fff, "fmxr%c\tfpscr, %12-15r"},
+  {FPU_VFP_EXT_V1xD, 0x0ee80a10, 0x0fff0fff, "fmxr%c\tfpexc, %12-15r"},
+  {FPU_VFP_EXT_V1xD, 0x0ee90a10, 0x0fff0fff, "fmxr%c\tfpinst, %12-15r\t@ Impl def"},
+  {FPU_VFP_EXT_V1xD, 0x0eea0a10, 0x0fff0fff, "fmxr%c\tfpinst2, %12-15r\t@ Impl def"},
+  {FPU_VFP_EXT_V1xD, 0x0ee00a10, 0x0ff00fff, "fmxr%c\t<impl def 0x%16-19x>, %12-15r"},
+  {FPU_VFP_EXT_V1, 0x0eb10b40, 0x0fff0ff0, "fnegd%c\t%1z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb10a40, 0x0fbf0fd0, "fnegs%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0e000b40, 0x0ff00ff0, "fnmacd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e000a40, 0x0fb00f50, "fnmacs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0e100b40, 0x0ff00ff0, "fnmscd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e100a40, 0x0fb00f50, "fnmscs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0e200b40, 0x0ff00ff0, "fnmuld%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e200a40, 0x0fb00f50, "fnmuls%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb80bc0, 0x0fff0fd0, "fsitod%c\t%1z, %0y"},
+  {FPU_VFP_EXT_V1xD, 0x0eb80ac0, 0x0fbf0fd0, "fsitos%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb10bc0, 0x0fff0ff0, "fsqrtd%c\t%1z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0eb10ac0, 0x0fbf0fd0, "fsqrts%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0d000b00, 0x0f700f00, "fstd%c\t%1z, %A"},
+  {FPU_VFP_EXT_V1xD, 0x0c800b00, 0x0fd00f00, "fstmia%0?xd%c\t%16-19r%21'!, %3z"},
+  {FPU_VFP_EXT_V1xD, 0x0d200b00, 0x0ff00f00, "fstmdb%0?xd%c\t%16-19r!, %3z"},
+  {FPU_VFP_EXT_V1xD, 0x0d000a00, 0x0f300f00, "fsts%c\t%1y, %A"},
+  {FPU_VFP_EXT_V1xD, 0x0c800a00, 0x0f900f00, "fstmias%c\t%16-19r%21'!, %3y"},
+  {FPU_VFP_EXT_V1xD, 0x0d200a00, 0x0fb00f00, "fstmdbs%c\t%16-19r!, %3y"},
+  {FPU_VFP_EXT_V1, 0x0e300b40, 0x0ff00ff0, "fsubd%c\t%1z, %2z, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0e300a40, 0x0fb00f50, "fsubs%c\t%1y, %2y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0ebc0b40, 0x0fbe0f70, "fto%16?sui%7'zd%c\t%1y, %0z"},
+  {FPU_VFP_EXT_V1xD, 0x0ebc0a40, 0x0fbe0f50, "fto%16?sui%7'zs%c\t%1y, %0y"},
+  {FPU_VFP_EXT_V1, 0x0eb80b40, 0x0fff0fd0, "fuitod%c\t%1z, %0y"},
+  {FPU_VFP_EXT_V1xD, 0x0eb80a40, 0x0fbf0fd0, "fuitos%c\t%1y, %0y"},
+
+  /* Cirrus coprocessor instructions.  */
+  {ARM_CEXT_MAVERICK, 0x0d100400, 0x0f500f00, "cfldrs%c\tmvf%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c100400, 0x0f500f00, "cfldrs%c\tmvf%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d500400, 0x0f500f00, "cfldrd%c\tmvd%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c500400, 0x0f500f00, "cfldrd%c\tmvd%12-15d, %A"}, 
+  {ARM_CEXT_MAVERICK, 0x0d100500, 0x0f500f00, "cfldr32%c\tmvfx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c100500, 0x0f500f00, "cfldr32%c\tmvfx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d500500, 0x0f500f00, "cfldr64%c\tmvdx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c500500, 0x0f500f00, "cfldr64%c\tmvdx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d000400, 0x0f500f00, "cfstrs%c\tmvf%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c000400, 0x0f500f00, "cfstrs%c\tmvf%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d400400, 0x0f500f00, "cfstrd%c\tmvd%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c400400, 0x0f500f00, "cfstrd%c\tmvd%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d000500, 0x0f500f00, "cfstr32%c\tmvfx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c000500, 0x0f500f00, "cfstr32%c\tmvfx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0d400500, 0x0f500f00, "cfstr64%c\tmvdx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0c400500, 0x0f500f00, "cfstr64%c\tmvdx%12-15d, %A"},
+  {ARM_CEXT_MAVERICK, 0x0e000450, 0x0ff00ff0, "cfmvsr%c\tmvf%16-19d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e100450, 0x0ff00ff0, "cfmvrs%c\t%12-15r, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000410, 0x0ff00ff0, "cfmvdlr%c\tmvd%16-19d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e100410, 0x0ff00ff0, "cfmvrdl%c\t%12-15r, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000430, 0x0ff00ff0, "cfmvdhr%c\tmvd%16-19d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e100430, 0x0ff00fff, "cfmvrdh%c\t%12-15r, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000510, 0x0ff00fff, "cfmv64lr%c\tmvdx%16-19d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e100510, 0x0ff00fff, "cfmvr64l%c\t%12-15r, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000530, 0x0ff00fff, "cfmv64hr%c\tmvdx%16-19d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e100530, 0x0ff00fff, "cfmvr64h%c\t%12-15r, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e200440, 0x0ff00fff, "cfmval32%c\tmvax%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e100440, 0x0ff00fff, "cfmv32al%c\tmvfx%12-15d, mvax%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e200460, 0x0ff00fff, "cfmvam32%c\tmvax%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e100460, 0x0ff00fff, "cfmv32am%c\tmvfx%12-15d, mvax%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e200480, 0x0ff00fff, "cfmvah32%c\tmvax%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e100480, 0x0ff00fff, "cfmv32ah%c\tmvfx%12-15d, mvax%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e2004a0, 0x0ff00fff, "cfmva32%c\tmvax%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e1004a0, 0x0ff00fff, "cfmv32a%c\tmvfx%12-15d, mvax%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e2004c0, 0x0ff00fff, "cfmva64%c\tmvax%12-15d, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e1004c0, 0x0ff00fff, "cfmv64a%c\tmvdx%12-15d, mvax%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e2004e0, 0x0fff0fff, "cfmvsc32%c\tdspsc, mvdx%12-15d"},
+  {ARM_CEXT_MAVERICK, 0x0e1004e0, 0x0fff0fff, "cfmv32sc%c\tmvdx%12-15d, dspsc"},
+  {ARM_CEXT_MAVERICK, 0x0e000400, 0x0ff00fff, "cfcpys%c\tmvf%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000420, 0x0ff00fff, "cfcpyd%c\tmvd%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000460, 0x0ff00fff, "cfcvtsd%c\tmvd%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000440, 0x0ff00fff, "cfcvtds%c\tmvf%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000480, 0x0ff00fff, "cfcvt32s%c\tmvf%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e0004a0, 0x0ff00fff, "cfcvt32d%c\tmvd%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e0004c0, 0x0ff00fff, "cfcvt64s%c\tmvf%12-15d, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e0004e0, 0x0ff00fff, "cfcvt64d%c\tmvd%12-15d, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e100580, 0x0ff00fff, "cfcvts32%c\tmvfx%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e1005a0, 0x0ff00fff, "cfcvtd32%c\tmvfx%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e1005c0, 0x0ff00fff, "cftruncs32%c\tmvfx%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e1005e0, 0x0ff00fff, "cftruncd32%c\tmvfx%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e000550, 0x0ff00ff0, "cfrshl32%c\tmvfx%16-19d, mvfx%0-3d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e000570, 0x0ff00ff0, "cfrshl64%c\tmvdx%16-19d, mvdx%0-3d, %12-15r"},
+  {ARM_CEXT_MAVERICK, 0x0e000500, 0x0ff00f00, "cfsh32%c\tmvfx%12-15d, mvfx%16-19d, #%I"},
+  {ARM_CEXT_MAVERICK, 0x0e200500, 0x0ff00f00, "cfsh64%c\tmvdx%12-15d, mvdx%16-19d, #%I"},
+  {ARM_CEXT_MAVERICK, 0x0e100490, 0x0ff00ff0, "cfcmps%c\t%12-15r, mvf%16-19d, mvf%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e1004b0, 0x0ff00ff0, "cfcmpd%c\t%12-15r, mvd%16-19d, mvd%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100590, 0x0ff00ff0, "cfcmp32%c\t%12-15r, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e1005b0, 0x0ff00ff0, "cfcmp64%c\t%12-15r, mvdx%16-19d, mvdx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e300400, 0x0ff00fff, "cfabss%c\tmvf%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300420, 0x0ff00fff, "cfabsd%c\tmvd%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300440, 0x0ff00fff, "cfnegs%c\tmvf%12-15d, mvf%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300460, 0x0ff00fff, "cfnegd%c\tmvd%12-15d, mvd%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300480, 0x0ff00ff0, "cfadds%c\tmvf%12-15d, mvf%16-19d, mvf%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3004a0, 0x0ff00ff0, "cfaddd%c\tmvd%12-15d, mvd%16-19d, mvd%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3004c0, 0x0ff00ff0, "cfsubs%c\tmvf%12-15d, mvf%16-19d, mvf%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3004e0, 0x0ff00ff0, "cfsubd%c\tmvd%12-15d, mvd%16-19d, mvd%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100400, 0x0ff00ff0, "cfmuls%c\tmvf%12-15d, mvf%16-19d, mvf%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100420, 0x0ff00ff0, "cfmuld%c\tmvd%12-15d, mvd%16-19d, mvd%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e300500, 0x0ff00fff, "cfabs32%c\tmvfx%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300520, 0x0ff00fff, "cfabs64%c\tmvdx%12-15d, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300540, 0x0ff00fff, "cfneg32%c\tmvfx%12-15d, mvfx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300560, 0x0ff00fff, "cfneg64%c\tmvdx%12-15d, mvdx%16-19d"},
+  {ARM_CEXT_MAVERICK, 0x0e300580, 0x0ff00ff0, "cfadd32%c\tmvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3005a0, 0x0ff00ff0, "cfadd64%c\tmvdx%12-15d, mvdx%16-19d, mvdx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3005c0, 0x0ff00ff0, "cfsub32%c\tmvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e3005e0, 0x0ff00ff0, "cfsub64%c\tmvdx%12-15d, mvdx%16-19d, mvdx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100500, 0x0ff00ff0, "cfmul32%c\tmvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100520, 0x0ff00ff0, "cfmul64%c\tmvdx%12-15d, mvdx%16-19d, mvdx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100540, 0x0ff00ff0, "cfmac32%c\tmvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100560, 0x0ff00ff0, "cfmsc32%c\tmvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e000600, 0x0ff00f00, "cfmadd32%c\tmvax%5-7d, mvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e100600, 0x0ff00f00, "cfmsub32%c\tmvax%5-7d, mvfx%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e200600, 0x0ff00f00, "cfmadda32%c\tmvax%5-7d, mvax%12-15d, mvfx%16-19d, mvfx%0-3d"},
+  {ARM_CEXT_MAVERICK, 0x0e300600, 0x0ff00f00, "cfmsuba32%c\tmvax%5-7d, mvax%12-15d, mvfx%16-19d, mvfx%0-3d"},
+
+  /* Generic coprocessor instructions */
+  {ARM_EXT_V2, 0x0c400000, 0x0ff00000, "mcrr%c\t%8-11d, %4-7d, %12-15r, %16-19r, cr%0-3d"},
+  {ARM_EXT_V2, 0x0c500000, 0x0ff00000, "mrrc%c\t%8-11d, %4-7d, %12-15r, %16-19r, cr%0-3d"},
+  {ARM_EXT_V2, 0x0e000000, 0x0f000010, "cdp%c\t%8-11d, %20-23d, cr%12-15d, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V2, 0x0e100010, 0x0f100010, "mrc%c\t%8-11d, %21-23d, %12-15r, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V2, 0x0e000010, 0x0f100010, "mcr%c\t%8-11d, %21-23d, %12-15r, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V2, 0x0c000000, 0x0e100000, "stc%c%22'l\t%8-11d, cr%12-15d, %A"},
+  {ARM_EXT_V2, 0x0c100000, 0x0e100000, "ldc%c%22'l\t%8-11d, cr%12-15d, %A"},
+
+  /* The rest.  */
+  {ARM_EXT_V1, 0x00000000, 0x00000000, "undefined instruction %0-31x"},
+  {0, 0x00000000, 0x00000000, 0}
+};
+
+static const struct thumb_opcode thumb_opcodes[] =
+{
+  /* Thumb instructions.  */
+
+  /* APPLE LOCAL */
+  {ARM_EXT_V4T, 0xdefe, 0xffff, "trap"},
+
+  /* ARM V6.  */
+  {ARM_EXT_V6, 0xb660, 0xfff8, "cpsie\t%2'a%1'i%0'f"},
+  {ARM_EXT_V6, 0xb670, 0xfff8, "cpsid\t%2'a%1'i%0'f"},
+  {ARM_EXT_V6, 0x4600, 0xffc0, "cpy\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xba00, 0xffc0, "rev\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xba40, 0xffc0, "rev16\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xbac0, 0xffc0, "revsh\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xb650, 0xfff7, "setend\t%3?ble"},
+  {ARM_EXT_V6, 0xb200, 0xffc0, "sxth\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xb240, 0xffc0, "sxtb\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xb280, 0xffc0, "uxth\t%0-2r, %3-5r"},
+  {ARM_EXT_V6, 0xb2c0, 0xffc0, "uxtb\t%0-2r, %3-5r"},
+
+  /* ARM V5 ISA extends Thumb.  */
+  {ARM_EXT_V5T, 0xbe00, 0xff00, "bkpt\t%0-7x"},
+  /* Note: this is BLX(2).  BLX(1) is done in arm-dis.c/print_insn_thumb()
+     as an extension of the special processing there for Thumb BL.
+     BL and BLX(1) involve 2 successive 16-bit instructions, which must
+     always appear together in the correct order.  So, the empty
+     string is put in this table, and the string interpreter takes <empty>
+     to mean it has a pair of BL-ish instructions.  */
+  {ARM_EXT_V5T, 0x4780, 0xff87, "blx\t%3-6r"},	/* note: 4 bit register number.  */
+  /* ARM V4T ISA (Thumb v1).  */
+  {ARM_EXT_V4T, 0x46C0, 0xFFFF, "nop\t\t\t(mov r8, r8)"},
+  /* Format 5 instructions do not update the PSR.  */
+  {ARM_EXT_V4T, 0x1C00, 0xFFC0, "mov\t%0-2r, %3-5r\t\t(add %0-2r, %3-5r, #%6-8d)"},
+  /* Format 4.  */
+  {ARM_EXT_V4T, 0x4000, 0xFFC0, "and\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4040, 0xFFC0, "eor\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4080, 0xFFC0, "lsl\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x40C0, 0xFFC0, "lsr\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4100, 0xFFC0, "asr\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4140, 0xFFC0, "adc\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4180, 0xFFC0, "sbc\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x41C0, 0xFFC0, "ror\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4200, 0xFFC0, "tst\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4240, 0xFFC0, "neg\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4280, 0xFFC0, "cmp\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x42C0, 0xFFC0, "cmn\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4300, 0xFFC0, "orr\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4340, 0xFFC0, "mul\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x4380, 0xFFC0, "bic\t%0-2r, %3-5r"},
+  {ARM_EXT_V4T, 0x43C0, 0xFFC0, "mvn\t%0-2r, %3-5r"},
+  /* format 13 */
+  {ARM_EXT_V4T, 0xB000, 0xFF80, "add\tsp, #%0-6W"},
+  {ARM_EXT_V4T, 0xB080, 0xFF80, "sub\tsp, #%0-6W"},
+  /* format 5 */
+  {ARM_EXT_V4T, 0x4700, 0xFF80, "bx\t%S"},
+  {ARM_EXT_V4T, 0x4400, 0xFF00, "add\t%D, %S"},
+  {ARM_EXT_V4T, 0x4500, 0xFF00, "cmp\t%D, %S"},
+  {ARM_EXT_V4T, 0x4600, 0xFF00, "mov\t%D, %S"},
+  /* format 14 */
+  {ARM_EXT_V4T, 0xB400, 0xFE00, "push\t%N"},
+  {ARM_EXT_V4T, 0xBC00, 0xFE00, "pop\t%O"},
+  /* format 2 */
+  {ARM_EXT_V4T, 0x1800, 0xFE00, "add\t%0-2r, %3-5r, %6-8r"},
+  {ARM_EXT_V4T, 0x1A00, 0xFE00, "sub\t%0-2r, %3-5r, %6-8r"},
+  {ARM_EXT_V4T, 0x1C00, 0xFE00, "add\t%0-2r, %3-5r, #%6-8d"},
+  {ARM_EXT_V4T, 0x1E00, 0xFE00, "sub\t%0-2r, %3-5r, #%6-8d"},
+  /* format 8 */
+  {ARM_EXT_V4T, 0x5200, 0xFE00, "strh\t%0-2r, [%3-5r, %6-8r]"},
+  {ARM_EXT_V4T, 0x5A00, 0xFE00, "ldrh\t%0-2r, [%3-5r, %6-8r]"},
+  {ARM_EXT_V4T, 0x5600, 0xF600, "ldrs%11?hb\t%0-2r, [%3-5r, %6-8r]"},
+  /* format 7 */
+  {ARM_EXT_V4T, 0x5000, 0xFA00, "str%10'b\t%0-2r, [%3-5r, %6-8r]"},
+  {ARM_EXT_V4T, 0x5800, 0xFA00, "ldr%10'b\t%0-2r, [%3-5r, %6-8r]"},
+  /* format 1 */
+  {ARM_EXT_V4T, 0x0000, 0xF800, "lsl\t%0-2r, %3-5r, #%6-10d"},
+  {ARM_EXT_V4T, 0x0800, 0xF800, "lsr\t%0-2r, %3-5r, #%6-10d"},
+  {ARM_EXT_V4T, 0x1000, 0xF800, "asr\t%0-2r, %3-5r, #%6-10d"},
+  /* format 3 */
+  {ARM_EXT_V4T, 0x2000, 0xF800, "mov\t%8-10r, #%0-7d"},
+  {ARM_EXT_V4T, 0x2800, 0xF800, "cmp\t%8-10r, #%0-7d"},
+  {ARM_EXT_V4T, 0x3000, 0xF800, "add\t%8-10r, #%0-7d"},
+  {ARM_EXT_V4T, 0x3800, 0xF800, "sub\t%8-10r, #%0-7d"},
+  /* format 6 */
+  {ARM_EXT_V4T, 0x4800, 0xF800, "ldr\t%8-10r, [pc, #%0-7W]\t(%0-7a)"},  /* TODO: Disassemble PC relative "LDR rD,=<symbolic>" */
+  /* format 9 */
+  {ARM_EXT_V4T, 0x6000, 0xF800, "str\t%0-2r, [%3-5r, #%6-10W]"},
+  {ARM_EXT_V4T, 0x6800, 0xF800, "ldr\t%0-2r, [%3-5r, #%6-10W]"},
+  {ARM_EXT_V4T, 0x7000, 0xF800, "strb\t%0-2r, [%3-5r, #%6-10d]"},
+  {ARM_EXT_V4T, 0x7800, 0xF800, "ldrb\t%0-2r, [%3-5r, #%6-10d]"},
+  /* format 10 */
+  {ARM_EXT_V4T, 0x8000, 0xF800, "strh\t%0-2r, [%3-5r, #%6-10H]"},
+  {ARM_EXT_V4T, 0x8800, 0xF800, "ldrh\t%0-2r, [%3-5r, #%6-10H]"},
+  /* format 11 */
+  {ARM_EXT_V4T, 0x9000, 0xF800, "str\t%8-10r, [sp, #%0-7W]"},
+  {ARM_EXT_V4T, 0x9800, 0xF800, "ldr\t%8-10r, [sp, #%0-7W]"},
+  /* format 12 */
+  {ARM_EXT_V4T, 0xA000, 0xF800, "add\t%8-10r, pc, #%0-7W\t(adr %8-10r,%0-7a)"},
+  {ARM_EXT_V4T, 0xA800, 0xF800, "add\t%8-10r, sp, #%0-7W"},
+  /* format 15 */
+  {ARM_EXT_V4T, 0xC000, 0xF800, "stmia\t%8-10r!,%M"},
+  {ARM_EXT_V4T, 0xC800, 0xF800, "ldmia\t%8-10r!,%M"},
+  /* format 18 */
+  {ARM_EXT_V4T, 0xE000, 0xF800, "b\t%0-10B"},
+  {ARM_EXT_V4T, 0xE800, 0xF800, "undefined"},
+  /* format 19 */
+  {ARM_EXT_V4T, 0xF000, 0xF800, ""}, /* special processing required in disassembler */
+  {ARM_EXT_V4T, 0xF800, 0xF800, "second half of BL instruction %0-15x"},
+  /* format 16 */
+  {ARM_EXT_V4T, 0xD000, 0xFF00, "beq\t%0-7B"},
+  {ARM_EXT_V4T, 0xD100, 0xFF00, "bne\t%0-7B"},
+  {ARM_EXT_V4T, 0xD200, 0xFF00, "bcs\t%0-7B"},
+  {ARM_EXT_V4T, 0xD300, 0xFF00, "bcc\t%0-7B"},
+  {ARM_EXT_V4T, 0xD400, 0xFF00, "bmi\t%0-7B"},
+  {ARM_EXT_V4T, 0xD500, 0xFF00, "bpl\t%0-7B"},
+  {ARM_EXT_V4T, 0xD600, 0xFF00, "bvs\t%0-7B"},
+  {ARM_EXT_V4T, 0xD700, 0xFF00, "bvc\t%0-7B"},
+  {ARM_EXT_V4T, 0xD800, 0xFF00, "bhi\t%0-7B"},
+  {ARM_EXT_V4T, 0xD900, 0xFF00, "bls\t%0-7B"},
+  {ARM_EXT_V4T, 0xDA00, 0xFF00, "bge\t%0-7B"},
+  {ARM_EXT_V4T, 0xDB00, 0xFF00, "blt\t%0-7B"},
+  {ARM_EXT_V4T, 0xDC00, 0xFF00, "bgt\t%0-7B"},
+  {ARM_EXT_V4T, 0xDD00, 0xFF00, "ble\t%0-7B"},
+  /* format 17 */
+  {ARM_EXT_V4T, 0xDE00, 0xFF00, "bal\t%0-7B"},
+  {ARM_EXT_V4T, 0xDF00, 0xFF00, "swi\t%0-7d"},
+  /* format 9 */
+  {ARM_EXT_V4T, 0x6000, 0xF800, "str\t%0-2r, [%3-5r, #%6-10W]"},
+  {ARM_EXT_V4T, 0x6800, 0xF800, "ldr\t%0-2r, [%3-5r, #%6-10W]"},
+  {ARM_EXT_V4T, 0x7000, 0xF800, "strb\t%0-2r, [%3-5r, #%6-10d]"},
+  {ARM_EXT_V4T, 0x7800, 0xF800, "ldrb\t%0-2r, [%3-5r, #%6-10d]"},
+  /* the rest */
+  {ARM_EXT_V1, 0x0000, 0x0000, "undefined instruction %0-15x"},
+  {0, 0x0000, 0x0000, 0}
+};
+
+/* From line 753 */
+static char * arm_conditional[] =
+{"eq", "ne", "cs", "cc", "mi", "pl", "vs", "vc",
+ "hi", "ls", "ge", "lt", "gt", "le", "", "nv"};
+
+typedef struct
+{
+  const char * name;
+  const char * description;
+  const char * reg_names[16];
+}
+arm_regname;
+
+static arm_regname regnames[] =
+{
+  { "raw" , "Select raw register names",
+    { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"}},
+  { "gcc",  "Select register names used by GCC",
+    { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10",  "r11",  "ip",  "sp",  "lr",  "pc" }},
+  { "std",  "Select register names used in ARM's ISA documentation",
+    { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "sp",  "lr",  "pc" }},
+  { "apcs", "Select register names used in the APCS",
+    { "a1", "a2", "a3", "a4", "v1", "v2", "v3", "v4", "v5", "v6", "sl",  "fp",  "ip",  "sp",  "lr",  "pc" }},
+  { "atpcs", "Select register names used in the ATPCS",
+    { "a1", "a2", "a3", "a4", "v1", "v2", "v3", "v4", "v5", "v6", "v7",  "v8",  "IP",  "SP",  "LR",  "PC" }},
+  { "special-atpcs", "Select special register names used in the ATPCS",
+    { "a1", "a2", "a3", "a4", "v1", "v2", "v3", "WR", "v5", "SB", "SL",  "FP",  "IP",  "SP",  "LR",  "PC" }},
+  { "iwmmxt_regnames", "Select register names used on the Intel Wireless MMX technology coprocessor",
+    { "wr0", "wr1", "wr2", "wr3", "wr4", "wr5", "wr6", "wr7", "wr8", "wr9", "wr10", "wr11", "wr12", "wr13", "wr14", "wr15"}},
+  { "iwmmxt_Cregnames", "Select control register names used on the Intel Wireless MMX technology coprocessor",
+    {"wcid", "wcon", "wcssf", "wcasf", "reserved", "reserved", "reserved", "reserved", "wcgr0", "wcgr1", "wcgr2", "wcgr3", "reserved", "reserved", "reserved", "reserved"}}
+};
+
+static char * iwmmxt_wwnames[] =
+{"b", "h", "w", "d"};
+
+static char * iwmmxt_wwssnames[] =
+{"b", "bus", "b", "bss",
+ "h", "hus", "h", "hss",
+ "w", "wus", "w", "wss",
+ "d", "dus", "d", "dss"
+};
+
+/* Default to GCC register name set.  */
+static unsigned int regname_selected = 1;
+
+#define NUM_ARM_REGNAMES  NUM_ELEM (regnames)
+#define arm_regnames      regnames[regname_selected].reg_names
+
+static char * arm_fp_const[] =
+{"0.0", "1.0", "2.0", "3.0", "4.0", "5.0", "0.5", "10.0"};
+
+static char * arm_shift[] =
+{"lsl", "lsr", "asr", "ror"};
+
+/* Forward declarations.  */
+static void arm_decode_shift
+  PARAMS ((long, fprintf_ftype, void *));
+static int  print_insn_arm
+  PARAMS ((bfd_vma, struct disassemble_info *, long, unsigned long));
+static int print_insn_thumb
+  PARAMS ((bfd_vma, struct disassemble_info *, long, unsigned long));
+
+/* FROM line 820 */
+static int set_iwmmxt_regnames
+  PARAMS ((void));
+
+int get_arm_regname_num_options
+  PARAMS ((void));
+int set_arm_regname_option
+  PARAMS ((int));
+int get_arm_regnames
+  PARAMS ((int, const char **, const char **, const char ***));
+
+/* Functions.  */
+int
+get_arm_regname_num_options ()
+{
+  return NUM_ARM_REGNAMES;
 }
 
-static void print_verbose_mem(
-	int imm,
-	enum data_type type,
-	char *sect,
-	unsigned long left,
-	unsigned long addr,
-	unsigned long sect_addr,
-	enum byte_sex object_byte_sex,
-	nlist_t *symbols,
-        struct nlist_64 *symbols64,
-        unsigned long nsymbols,
-	struct symbol *sorted_symbols, unsigned long nsorted_symbols,
-	char *strings, unsigned long strings_size,
-	uint32_t *indirect_symbols, unsigned long nindirect_symbols,
-	struct load_command *load_commands,
-        uint32_t ncmds,
-        uint32_t sizeofcmds
-) {
-	unsigned int size, imm_addr, redir_imm;
-	unsigned long sect_offset;
-	int imm_offset;
-    const char *symbol_name;
-	char *mem_string;
+int
+set_arm_regname_option (option)
+     int option;
+{
+  int old = regname_selected;
+  regname_selected = option;
+  return old;
+}
+
+int
+get_arm_regnames (option, setname, setdescription, register_names)
+     int option;
+     const char **setname;
+     const char **setdescription;
+     const char ***register_names;
+{
+  *setname = regnames[option].name;
+  *setdescription = regnames[option].description;
+  *register_names = regnames[option].reg_names;
+  return 16;
+}
+
+static void
+arm_decode_shift (given, func, stream)
+     long given;
+     fprintf_ftype func;
+     void * stream;
+{
+  func (stream, "%s", arm_regnames[given & 0xf]);
+
+  if ((given & 0xff0) != 0)
+    {
+      if ((given & 0x10) == 0)
+	{
+	  int amount = (given & 0xf80) >> 7;
+	  int shift = (given & 0x60) >> 5;
+
+	  if (amount == 0)
+	    {
+	      if (shift == 3)
+		{
+		  func (stream, ", rrx");
+		  return;
+		}
+
+	      amount = 32;
+	    }
+
+	  func (stream, ", %s #%d", arm_shift[shift], amount);
+	}
+      else
+	func (stream, ", %s %s", arm_shift[(given & 0x60) >> 5],
+	      arm_regnames[(given & 0xf00) >> 8]);
+    }
+}
+
+static int
+set_iwmmxt_regnames ()
+{
+  const char * setname;
+  const char * setdesc;
+  const char ** regnames;
+  int iwmmxt_regnames = 0;
+  int num_regnames = get_arm_regname_num_options ();
+
+  get_arm_regnames (iwmmxt_regnames, &setname,
+		    &setdesc, &regnames);
+  while ((strcmp ("iwmmxt_regnames", setname))
+	 && (iwmmxt_regnames < num_regnames))
+    get_arm_regnames (++iwmmxt_regnames, &setname, &setdesc, &regnames);
+
+  return iwmmxt_regnames;
+}
+			  
+/* Print one instruction from PC on INFO->STREAM.
+   Return the size of the instruction (always 4 on ARM). */
+
+static int
+print_insn_arm (pc, info, given, left)
+     bfd_vma pc;
+     struct disassemble_info *info;
+     long given;
+     unsigned long left;
+{
+  const struct arm_opcode *insn;
+  void *stream = info->stream;
+  fprintf_ftype func   = info->fprintf_func;
+  static int iwmmxt_regnames = 0;
+
+  if (left < 4)
+    {
+      if (left != 0)
+	print_remainder_bytes (stream, left, given);
+
+      return(left);
+    }
+
+  /* Print the raw data, too. */
+  func (stream, "%08x\t", (unsigned int) given);
+
+  for (insn = arm_opcodes; insn->assembler; insn++)
+    {
+      if ((insn->arch & info->cpu_insn_set_mask)
+	  && ((given & insn->mask) == insn->value))
+	{
+	  char * c;
+
+	  for (c = insn->assembler; *c; c++)
+	    {
+	      if (*c == '%')
+		{
+		  switch (*++c)
+		    {
+		    case '%':
+		      func (stream, "%%");
+		      break;
+
+		    case 'a':
+		      if (((given & 0x000f0000) == 0x000f0000)
+			  && ((given & 0x02000000) == 0))
+			{
+			  int offset = given & 0xfff;
+
+			  func (stream, "[pc");
+
+			  if (given & 0x01000000)
+			    {
+			      if ((given & 0x00800000) == 0)
+				offset = - offset;
+
+			      /* Pre-indexed.  */
+			      func (stream, ", #%d]", offset);
+
+			      offset += pc + 8;
+
+			      /* Cope with the possibility of write-back
+				 being used.  Probably a very dangerous thing
+				 for the programmer to do, but who are we to
+				 argue ?  */
+			      if (given & 0x00200000)
+				func (stream, "!");
+			    }
+			  else
+			    {
+			      /* Post indexed.  */
+			      func (stream, "], #%d", offset);
+
+			      /* ie ignore the offset.  */
+			      offset = pc + 8;
+			    }
+
+			  func (stream, "\t; ");
+			  info->print_address_func (pc, offset, info);
+			}
+		      else
+			{
+			  func (stream, "[%s",
+				arm_regnames[(given >> 16) & 0xf]);
+			  if ((given & 0x01000000) != 0)
+			    {
+			      if ((given & 0x02000000) == 0)
+				{
+				  int offset = given & 0xfff;
+				  if (offset)
+				    func (stream, ", #%s%d",
+					  (((given & 0x00800000) == 0)
+					   ? "-" : ""), offset);
+				}
+			      else
+				{
+				  func (stream, ", %s",
+					(((given & 0x00800000) == 0)
+					 ? "-" : ""));
+				  arm_decode_shift (given, func, stream);
+				}
+
+			      func (stream, "]%s",
+				    ((given & 0x00200000) != 0) ? "!" : "");
+			    }
+			  else
+			    {
+			      if ((given & 0x02000000) == 0)
+				{
+				  int offset = given & 0xfff;
+				  if (offset)
+				    func (stream, "], #%s%d",
+					  (((given & 0x00800000) == 0)
+					   ? "-" : ""), offset);
+				  else
+				    func (stream, "]");
+				}
+			      else
+				{
+				  func (stream, "], %s",
+					(((given & 0x00800000) == 0)
+					 ? "-" : ""));
+				  arm_decode_shift (given, func, stream);
+				}
+			    }
+			}
+		      break;
+
+		    case 's':
+                      if ((given & 0x004f0000) == 0x004f0000)
+			{
+                          /* PC relative with immediate offset.  */
+			  int offset = ((given & 0xf00) >> 4) | (given & 0xf);
+
+			  if ((given & 0x00800000) == 0)
+			    offset = -offset;
+
+			  func (stream, "[pc, #%d]\t; ", offset);
+
+			  (*info->print_address_func)
+			    (pc, offset + pc + 8, info);
+			}
+		      else
+			{
+			  func (stream, "[%s",
+				arm_regnames[(given >> 16) & 0xf]);
+			  if ((given & 0x01000000) != 0)
+			    {
+                              /* Pre-indexed.  */
+			      if ((given & 0x00400000) == 0x00400000)
+				{
+                                  /* Immediate.  */
+                                  int offset = ((given & 0xf00) >> 4) | (given & 0xf);
+				  if (offset)
+				    func (stream, ", #%s%d",
+					  (((given & 0x00800000) == 0)
+					   ? "-" : ""), offset);
+				}
+			      else
+				{
+                                  /* Register.  */
+				  func (stream, ", %s%s",
+					(((given & 0x00800000) == 0)
+					 ? "-" : ""),
+                                        arm_regnames[given & 0xf]);
+				}
+
+			      func (stream, "]%s",
+				    ((given & 0x00200000) != 0) ? "!" : "");
+			    }
+			  else
+			    {
+                              /* Post-indexed.  */
+			      if ((given & 0x00400000) == 0x00400000)
+				{
+                                  /* Immediate.  */
+                                  int offset = ((given & 0xf00) >> 4) | (given & 0xf);
+				  if (offset)
+				    func (stream, "], #%s%d",
+					  (((given & 0x00800000) == 0)
+					   ? "-" : ""), offset);
+				  else
+				    func (stream, "]");
+				}
+			      else
+				{
+                                  /* Register.  */
+				  func (stream, "], %s%s",
+					(((given & 0x00800000) == 0)
+					 ? "-" : ""),
+                                        arm_regnames[given & 0xf]);
+				}
+			    }
+			}
+		      break;
+
+		    case 'b':
+		      (*info->print_address_func)
+			(pc, BDISP (given) * 4 + pc + 8, info);
+		      break;
+
+		    case 'c':
+		      func (stream, "%s",
+			    arm_conditional [(given >> 28) & 0xf]);
+		      break;
+
+		    case 'm':
+		      {
+			int started = 0;
+			int reg;
+
+			func (stream, "{");
+			for (reg = 0; reg < 16; reg++)
+			  if ((given & (1 << reg)) != 0)
+			    {
+			      if (started)
+				func (stream, ", ");
+			      started = 1;
+			      func (stream, "%s", arm_regnames[reg]);
+			    }
+			func (stream, "}");
+		      }
+		      break;
+
+		    case 'o':
+		      if ((given & 0x02000000) != 0)
+			{
+			  int rotate = (given & 0xf00) >> 7;
+			  int immed = (given & 0xff);
+			  immed = (((immed << (32 - rotate))
+				    | (immed >> rotate)) & 0xffffffff);
+			  func (stream, "#%d\t; 0x%x", immed, immed);
+			}
+		      else
+			arm_decode_shift (given, func, stream);
+		      break;
+
+		    case 'p':
+		      if ((given & 0x0000f000) == 0x0000f000)
+			func (stream, "p");
+		      break;
+
+		    case 't':
+		      if ((given & 0x01200000) == 0x00200000)
+			func (stream, "t");
+		      break;
+
+		    case 'A':
+		      func (stream, "[%s", arm_regnames [(given >> 16) & 0xf]);
+
+		      if ((given & (1 << 24)) != 0)
+			{
+			  int offset = given & 0xff;
+
+			  if (offset)
+			    func (stream, ", #%s%d]%s",
+				  ((given & 0x00800000) == 0 ? "-" : ""),
+				  offset * 4,
+				  ((given & 0x00200000) != 0 ? "!" : ""));
+			  else
+			    func (stream, "]");
+			}
+		      else
+			{
+			  int offset = given & 0xff;
+
+			  func (stream, "]");
+
+			  if (given & (1 << 21))
+			    {
+			      if (offset)
+				func (stream, ", #%s%d",
+				      ((given & 0x00800000) == 0 ? "-" : ""),
+				      offset * 4);
+			    }
+			  else
+			    func (stream, ", {%d}", offset);
+			}
+		      break;
+
+		    case 'B':
+		      /* Print ARM V5 BLX(1) address: pc+25 bits.  */
+		      {
+			bfd_vma address;
+			bfd_vma offset = 0;
+
+			if (given & 0x00800000)
+			  /* Is signed, hi bits should be ones.  */
+			  offset = (-1) ^ 0x00ffffff;
+
+			/* Offset is (SignExtend(offset field)<<2).  */
+			offset += given & 0x00ffffff;
+			offset <<= 2;
+			address = offset + pc + 8;
+
+			if (given & 0x01000000)
+			  /* H bit allows addressing to 2-byte boundaries.  */
+			  address += 2;
+
+		        info->print_address_func (pc, address, info);
+		      }
+		      break;
+
+		    case 'I':
+		      /* Print a Cirrus/DSP shift immediate.  */
+		      /* Immediates are 7bit signed ints with bits 0..3 in
+			 bits 0..3 of opcode and bits 4..6 in bits 5..7
+			 of opcode.  */
+		      {
+			int imm;
+
+			imm = (given & 0xf) | ((given & 0xe0) >> 1);
+
+			/* Is ``imm'' a negative number?  */
+			if (imm & 0x40)
+			  imm |= (-1 << 7);
+
+			func (stream, "%d", imm);
+		      }
+
+		      break;
+
+		    case 'C':
+		      func (stream, "_");
+		      if (given & 0x80000)
+			func (stream, "f");
+		      if (given & 0x40000)
+			func (stream, "s");
+		      if (given & 0x20000)
+			func (stream, "x");
+		      if (given & 0x10000)
+			func (stream, "c");
+		      break;
+
+		    case 'F':
+		      switch (given & 0x00408000)
+			{
+			case 0:
+			  func (stream, "4");
+			  break;
+			case 0x8000:
+			  func (stream, "1");
+			  break;
+			case 0x00400000:
+			  func (stream, "2");
+			  break;
+			default:
+			  func (stream, "3");
+			}
+		      break;
+
+		    case 'P':
+		      switch (given & 0x00080080)
+			{
+			case 0:
+			  func (stream, "s");
+			  break;
+			case 0x80:
+			  func (stream, "d");
+			  break;
+			case 0x00080000:
+			  func (stream, "e");
+			  break;
+			default:
+			  func (stream, _("<illegal precision>"));
+			  break;
+			}
+		      break;
+		    case 'Q':
+		      switch (given & 0x00408000)
+			{
+			case 0:
+			  func (stream, "s");
+			  break;
+			case 0x8000:
+			  func (stream, "d");
+			  break;
+			case 0x00400000:
+			  func (stream, "e");
+			  break;
+			default:
+			  func (stream, "p");
+			  break;
+			}
+		      break;
+		    case 'R':
+		      switch (given & 0x60)
+			{
+			case 0:
+			  break;
+			case 0x20:
+			  func (stream, "p");
+			  break;
+			case 0x40:
+			  func (stream, "m");
+			  break;
+			default:
+			  func (stream, "z");
+			  break;
+			}
+		      break;
+
+		    case '0': case '1': case '2': case '3': case '4':
+		    case '5': case '6': case '7': case '8': case '9':
+		      {
+			int bitstart = *c++ - '0';
+			int bitend = 0;
+			while (*c >= '0' && *c <= '9')
+			  bitstart = (bitstart * 10) + *c++ - '0';
+
+			switch (*c)
+			  {
+			  case '-':
+			    c++;
+
+			    while (*c >= '0' && *c <= '9')
+			      bitend = (bitend * 10) + *c++ - '0';
+
+			    if (!bitend)
+			      abort ();
+
+			    switch (*c)
+			      {
+			      case 'r':
+				{
+				  long reg;
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+
+				  func (stream, "%s", arm_regnames[reg]);
+				}
+				break;
+			      case 'd':
+				{
+				  long reg;
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+
+				  func (stream, "%d", reg);
+				}
+				break;
+			      case 'W':
+				{
+				  long reg;
+				  
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+				  
+				  func (stream, "%d", reg + 1);
+				}
+				break;
+			      case 'x':
+				{
+				  long reg;
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+
+				  func (stream, "0x%08x", reg);
+
+				  /* Some SWI instructions have special
+				     meanings.  */
+				  if ((given & 0x0fffffff) == 0x0FF00000)
+				    func (stream, "\t; IMB");
+				  else if ((given & 0x0fffffff) == 0x0FF00001)
+				    func (stream, "\t; IMBRange");
+				}
+				break;
+			      case 'X':
+				{
+				  long reg;
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+
+				  func (stream, "%01x", reg & 0xf);
+				}
+				break;
+			      case 'f':
+				{
+				  long reg;
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+
+				  if (reg > 7)
+				    func (stream, "#%s",
+					  arm_fp_const[reg & 7]);
+				  else
+				    func (stream, "f%d", reg);
+				}
+				break;
+
+			      case 'w':
+				{
+				  long reg;
+
+				  if (bitstart != bitend)
+				    {
+				      reg = given >> bitstart;
+				      reg &= (2 << (bitend - bitstart)) - 1;
+				      if (bitend - bitstart == 1)
+					func (stream, "%s", iwmmxt_wwnames[reg]);
+				      else
+					func (stream, "%s", iwmmxt_wwssnames[reg]);
+				    }
+				  else
+				    {
+				      reg = (((given >> 8)  & 0x1) |
+					     ((given >> 22) & 0x1));
+				      func (stream, "%s", iwmmxt_wwnames[reg]);
+				    }
+				}
+				break;
+
+			      case 'g':
+				{
+				  long reg;
+				  int current_regnames;
+
+				  if (! iwmmxt_regnames)
+				    iwmmxt_regnames = set_iwmmxt_regnames ();
+				  current_regnames = set_arm_regname_option
+				    (iwmmxt_regnames);
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+				  func (stream, "%s", arm_regnames[reg]);
+				  set_arm_regname_option (current_regnames);
+				}
+				break;
+
+			      case 'G':
+				{
+				  long reg;
+				  int current_regnames;
+
+				  if (! iwmmxt_regnames)
+				    iwmmxt_regnames = set_iwmmxt_regnames ();
+				  current_regnames = set_arm_regname_option
+				    (iwmmxt_regnames + 1);
+
+				  reg = given >> bitstart;
+				  reg &= (2 << (bitend - bitstart)) - 1;
+				  func (stream, "%s", arm_regnames[reg]);
+				  set_arm_regname_option (current_regnames);
+				}
+				break;
+
+			      default:
+				abort ();
+			      }
+			    break;
+
+			  case 'y':
+			  case 'z':
+			    {
+			      int single = *c == 'y';
+			      int regno;
+
+			      switch (bitstart)
+				{
+				case 4: /* Sm pair */
+				  func (stream, "{");
+				  /* Fall through.  */
+				case 0: /* Sm, Dm */
+				  regno = given & 0x0000000f;
+				  if (single)
+				    {
+				      regno <<= 1;
+				      regno += (given >> 5) & 1;
+				    }
+				  break;
+
+				case 1: /* Sd, Dd */
+				  regno = (given >> 12) & 0x0000000f;
+				  if (single)
+				    {
+				      regno <<= 1;
+				      regno += (given >> 22) & 1;
+				    }
+				  break;
+
+				case 2: /* Sn, Dn */
+				  regno = (given >> 16) & 0x0000000f;
+				  if (single)
+				    {
+				      regno <<= 1;
+				      regno += (given >> 7) & 1;
+				    }
+				  break;
+
+				case 3: /* List */
+				  func (stream, "{");
+				  regno = (given >> 12) & 0x0000000f;
+				  if (single)
+				    {
+				      regno <<= 1;
+				      regno += (given >> 22) & 1;
+				    }
+				  break;
+
+
+				default:
+				  abort ();
+				}
+
+			      func (stream, "%c%d", single ? 's' : 'd', regno);
+
+			      if (bitstart == 3)
+				{
+				  int count = given & 0xff;
+
+				  if (single == 0)
+				    count >>= 1;
+
+				  if (--count)
+				    {
+				      func (stream, "-%c%d",
+					    single ? 's' : 'd',
+					    regno + count);
+				    }
+
+				  func (stream, "}");
+				}
+			      else if (bitstart == 4)
+				func (stream, ", %c%d}", single ? 's' : 'd',
+				      regno + 1);
+
+			      break;
+			    }
+
+			  case '`':
+			    c++;
+			    if ((given & (1 << bitstart)) == 0)
+			      func (stream, "%c", *c);
+			    break;
+			  case '\'':
+			    c++;
+			    if ((given & (1 << bitstart)) != 0)
+			      func (stream, "%c", *c);
+			    break;
+			  case '?':
+			    ++c;
+			    if ((given & (1 << bitstart)) != 0)
+			      func (stream, "%c", *c++);
+			    else
+			      func (stream, "%c", *++c);
+			    break;
+			  default:
+			    abort ();
+			  }
+			break;
+
+		      case 'L':
+			switch (given & 0x00400100)
+			  {
+			  case 0x00000000: func (stream, "b"); break;
+			  case 0x00400000: func (stream, "h"); break;
+			  case 0x00000100: func (stream, "w"); break;
+			  case 0x00400100: func (stream, "d"); break;
+			  default:
+			    break;
+			  }
+			break;
+
+		      case 'Z':
+			{
+			  int value;
+			  /* given (20, 23) | given (0, 3) */
+			  value = ((given >> 16) & 0xf0) | (given & 0xf);
+			  func (stream, "%d", value);
+			}
+			break;
+
+		      case 'l':
+			/* This is like the 'A' operator, except that if
+			   the width field "M" is zero, then the offset is
+			   *not* multiplied by four.  */
+			{
+			  int offset = given & 0xff;
+			  int multiplier = (given & 0x00000100) ? 4 : 1;
+
+			  func (stream, "[%s", arm_regnames [(given >> 16) & 0xf]);
+
+			  if (offset)
+			    {
+			      if ((given & 0x01000000) != 0)
+				func (stream, ", #%s%d]%s",
+				      ((given & 0x00800000) == 0 ? "-" : ""),
+				      offset * multiplier,
+				      ((given & 0x00200000) != 0 ? "!" : ""));
+			      else
+				func (stream, "], #%s%d",
+				      ((given & 0x00800000) == 0 ? "-" : ""),
+				      offset * multiplier);
+			    }
+			  else
+			    func (stream, "]");
+			}
+			break;
+
+		      case 'e':
+			{
+			  int imm;
+
+			  imm = (given & 0xf) | ((given & 0xfff00) >> 4);
+			  func (stream, "%d", imm);
+			}
+			break;
+
+		      default:
+			abort ();
+		      }
+		    }
+		}
+	      else
+		func (stream, "%c", *c);
+	    }
+	  return 4;
+	}
+    }
+  abort ();
+}
+
+/* Print one instruction from PC on INFO->STREAM.
+   Return the size of the instruction. */
+
+static int
+print_insn_thumb (pc, info, given, left)
+     bfd_vma pc;
+     struct disassemble_info *info;
+     long given;
+     unsigned long left;
+{
+  const struct thumb_opcode *insn;
+  void *stream = info->stream;
+  fprintf_ftype func = info->fprintf_func;
+
+  if (left < 2)
+    {
+      if (left != 0)
+	print_remainder_bytes (stream, left, given);
+
+      return(left);
+    }
+
+  for (insn = thumb_opcodes; insn->assembler; insn++)
+    {
+      if ((given & insn->mask) == insn->value)
+        {
+          char * c = insn->assembler;
+
+          /* Special processing for Thumb 2 instruction BL sequence:  */
+          if (!*c) /* Check for empty (not NULL) assembler string.  */
+            {
+	      long offset;
+
+	      if (left < 4)
+		{
+		  print_remainder_bytes (stream, left, given);
+		  return(left);
+		}
+
+	      /* Print the raw data */
+	      func (stream, "%08x\t", (unsigned int) given);
+
+#ifdef NOTYET
+	      info->bytes_per_chunk = 4;
+	      info->bytes_per_line  = 4;
+#endif
+
+	      offset = BDISP23 (given);
+	      offset = offset * 2 + pc + 4;
+
+	      if ((given & 0x10000000) == 0)
+		{
+		  func (stream, "blx\t");
+		  offset &= 0xfffffffc;
+		}
+	      else
+		func (stream, "bl\t");
+
+	      info->print_address_func (pc, offset, info);
+              return 4;
+            }
+          else
+            {
+#ifdef NOTYET
+	      info->bytes_per_chunk = 2;
+	      info->bytes_per_line  = 4;
+#endif
+
+              given &= 0xffff;
+
+	      /* Print the raw data */
+	      func (stream, "    %04x\t", (unsigned int) given);
+
+              for (; *c; c++)
+                {
+                  if (*c == '%')
+                    {
+                      int domaskpc = 0;
+                      int domasklr = 0;
+
+                      switch (*++c)
+                        {
+                        case '%':
+                          func (stream, "%%");
+                          break;
+
+                        case 'S':
+                          {
+                            long reg;
+
+                            reg = (given >> 3) & 0x7;
+                            if (given & (1 << 6))
+                              reg += 8;
+
+                            func (stream, "%s", arm_regnames[reg]);
+                          }
+                          break;
+
+                        case 'D':
+                          {
+                            long reg;
+
+                            reg = given & 0x7;
+                            if (given & (1 << 7))
+                             reg += 8;
+
+                            func (stream, "%s", arm_regnames[reg]);
+                          }
+                          break;
+
+                        case 'T':
+                          func (stream, "%s",
+                                arm_conditional [(given >> 8) & 0xf]);
+                          break;
+
+                        case 'N':
+                          if (given & (1 << 8))
+                            domasklr = 1;
+                          /* Fall through.  */
+                        case 'O':
+                          if (*c == 'O' && (given & (1 << 8)))
+                            domaskpc = 1;
+                          /* Fall through.  */
+                        case 'M':
+                          {
+                            int started = 0;
+                            int reg;
+
+                            func (stream, "{");
+
+                            /* It would be nice if we could spot
+                               ranges, and generate the rS-rE format: */
+                            for (reg = 0; (reg < 8); reg++)
+                              if ((given & (1 << reg)) != 0)
+                                {
+                                  if (started)
+                                    func (stream, ", ");
+                                  started = 1;
+                                  func (stream, "%s", arm_regnames[reg]);
+                                }
+
+                            if (domasklr)
+                              {
+                                if (started)
+                                  func (stream, ", ");
+                                started = 1;
+                                func (stream, arm_regnames[14] /* "lr" */);
+                              }
+
+                            if (domaskpc)
+                              {
+                                if (started)
+                                  func (stream, ", ");
+                                func (stream, arm_regnames[15] /* "pc" */);
+                              }
+
+                            func (stream, "}");
+                          }
+                          break;
+
+
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                          {
+                            int bitstart = *c++ - '0';
+                            int bitend = 0;
+
+                            while (*c >= '0' && *c <= '9')
+                              bitstart = (bitstart * 10) + *c++ - '0';
+
+                            switch (*c)
+                              {
+                              case '-':
+                                {
+                                  long reg;
+
+                                  c++;
+                                  while (*c >= '0' && *c <= '9')
+                                    bitend = (bitend * 10) + *c++ - '0';
+                                  if (!bitend)
+                                    abort ();
+                                  reg = given >> bitstart;
+                                  reg &= (2 << (bitend - bitstart)) - 1;
+                                  switch (*c)
+                                    {
+                                    case 'r':
+                                      func (stream, "%s", arm_regnames[reg]);
+                                      break;
+
+                                    case 'd':
+                                      func (stream, "%d", reg);
+                                      break;
+
+                                    case 'H':
+                                      func (stream, "%d", reg << 1);
+                                      break;
+
+                                    case 'W':
+                                      func (stream, "%d", reg << 2);
+                                      break;
+
+                                    case 'a':
+				      /* PC-relative address -- the bottom two
+					 bits of the address are dropped
+					 before the calculation.  */
+                                      info->print_address_func
+					(pc, ((pc + 4) & ~3) + (reg << 2), info);
+                                      break;
+
+                                    case 'x':
+                                      func (stream, "0x%04x", reg);
+                                      break;
+
+                                    case 'I':
+                                      reg = ((reg ^ (1 << bitend)) - (1 << bitend));
+                                      func (stream, "%d", reg);
+                                      break;
+
+                                    case 'B':
+                                      reg = ((reg ^ (1 << bitend)) - (1 << bitend));
+                                      (*info->print_address_func)
+                                        (pc, reg * 2 + pc + 4, info);
+                                      break;
+
+                                    default:
+                                      abort ();
+                                    }
+                                }
+                                break;
+
+                              case '\'':
+                                c++;
+                                if ((given & (1 << bitstart)) != 0)
+                                  func (stream, "%c", *c);
+                                break;
+
+                              case '?':
+                                ++c;
+                                if ((given & (1 << bitstart)) != 0)
+                                  func (stream, "%c", *c++);
+                                else
+                                  func (stream, "%c", *++c);
+                                break;
+
+                              default:
+                                 abort ();
+                              }
+                          }
+                          break;
+
+                        default:
+                          abort ();
+                        }
+                    }
+                  else
+                    func (stream, "%c", *c);
+                }
+             }
+          return 2;
+       }
+    }
+
+  /* No match.  */
+  abort ();
+}
+
+static
+void
+print_address_func(
+bfd_vma pc,
+bfd_vma addr,
+struct disassemble_info *info)
+{
+    long i;
+    const char *name;
+    void *stream = info->stream;
+    struct relocation_info *relocs = info->relocs;
+    unsigned long nrelocs = info->nrelocs;
+    struct nlist *symbols = info->symbols;
+    unsigned long nsymbols = info->nsymbols;
+    char *strings = info->strings;
+    unsigned long strings_size = info->strings_size;
+
+    if(info->verbose){
+	/* If there's a relocation at this address, include the referenced
+	   symbol.  */
+	for(i = 0; i < nrelocs; i++){
+	    if(relocs[i].r_address == pc && relocs[i].r_extern){
+ 		unsigned int r_symbolnum = relocs[i].r_symbolnum;
+		if(r_symbolnum < nsymbols){
+		    unsigned long n_strx = symbols[r_symbolnum].n_un.n_strx;
+		    if(n_strx < strings_size){
+			fputs(strings + n_strx, stream);
+			if((long) addr > 0) {
+			    fprintf(stream, "+%#x", addr);
+			} else if((long) addr < 0) {
+			    fprintf(stream, "-%#x", -addr);
+			}
+			return;
+		    }
+		}
+	    }
+	}
+	/* No relocation entries found.  */
+	name = guess_symbol(addr, info->sorted_symbols, info->nsorted_symbols, TRUE);
+	if(name && *name){
+	    fputs(name, stream);
+	    return;
+	}
+    }
+    fprintf(stream, "0x%x", addr);
+    if(info->verbose){
+	const char *indirect_symbol_name;
+	indirect_symbol_name = guess_indirect_symbol (addr,
+		info->ncmds, info->sizeofcmds, info->load_commands,
+		info->object_byte_sex, info->indirect_symbols,
+		info->nindirect_symbols, info->symbols, NULL,
+		info->nsymbols, info->strings, info->strings_size);
+	if(indirect_symbol_name != NULL)
+	    printf("\t; symbol stub for: %s", indirect_symbol_name);
+    }
+}
+
+unsigned long
+arm_disassemble(
+char *sect,
+unsigned long left,
+unsigned long addr,
+unsigned long sect_addr,
+enum byte_sex object_byte_sex,
+struct relocation_info *relocs,
+unsigned long nrelocs,
+struct nlist *symbols,
+unsigned long nsymbols,
+struct symbol *sorted_symbols,
+unsigned long nsorted_symbols,
+char *strings,
+unsigned long strings_size,
+uint32_t *indirect_symbols,
+unsigned long nindirect_symbols,
+struct load_command *load_commands,
+uint32_t ncmds,
+uint32_t sizeofcmds,
+cpu_subtype_t cpusubtype,
+enum bool verbose)
+{
     enum byte_sex host_byte_sex;
     enum bool swapped;
-	float f;
-	double d;
+    unsigned long opcode = 0;
+    unsigned long sect_offset;
+    static enum bool in_thumb = FALSE;
+    int bytes_consumed;
+
+	if (! Bflag){
+	    set_thumb_mode(addr, nsorted_symbols, sorted_symbols, &in_thumb);
+	}
 
 	host_byte_sex = get_host_byte_sex();
 	swapped = host_byte_sex != object_byte_sex;
 	sect_offset = addr - sect_addr;
 
-	imm_addr = imm + addr + 8;
-	printf("\t;[0x%08x]", imm_addr);
-	
-	// Is the address inside the current section?
-	// TODO: Let's hope we can access the section contents before addr like this...
-	imm_offset = imm_addr - sect_addr;
-	switch (type) {
-	case TYPE_SINGLE:
-		size = sizeof(float);
+	memcpy(&opcode, sect, left < 4 ? left : 4);
+	if(swapped)
+	    opcode = SWAP_LONG(opcode);
+
+	dis_info.fprintf_func = (fprintf_ftype)fprintf;
+	dis_info.print_address_func = print_address_func;
+	dis_info.verbose = verbose;
+  	dis_info.stream = stdout;
+	dis_info.relocs = relocs;
+	dis_info.nrelocs = nrelocs;
+	dis_info.symbols = symbols;
+	dis_info.nsymbols = nsymbols;
+	dis_info.sorted_symbols = sorted_symbols;
+	dis_info.nsorted_symbols = nsorted_symbols;
+	dis_info.strings = strings;
+	dis_info.strings_size = strings_size;
+	dis_info.load_commands = load_commands;
+	dis_info.object_byte_sex = object_byte_sex;
+	dis_info.indirect_symbols = indirect_symbols;
+	dis_info.nindirect_symbols = nindirect_symbols;
+	dis_info.ncmds = ncmds;
+	dis_info.sizeofcmds = sizeofcmds;
+
+	switch (cpusubtype){
+	    case CPU_SUBTYPE_ARM_V6:
+		dis_info.cpu_insn_set_mask = ARM_ARCH_V6ZK | FPU_ARCH_VFP_V2;
 		break;
-	case TYPE_DOUBLE:
-		size = sizeof(double);
+	    case CPU_SUBTYPE_ARM_V5TEJ:
+		dis_info.cpu_insn_set_mask = ARM_ARCH_V5TEJ;
 		break;
-	case TYPE_POINTER:
-	default:
-		size = INSTRUCTION_SIZE;
+	    case CPU_SUBTYPE_ARM_XSCALE:
+		dis_info.cpu_insn_set_mask = ARM_ARCH_XSCALE;
+		break;
+	    case CPU_SUBTYPE_ARM_ALL:
+		dis_info.cpu_insn_set_mask = ARM_ARCH_V6ZK | ARM_CEXT_XSCALE | FPU_ARCH_VFP_V2;
+		break;
+	    default:
+		dis_info.cpu_insn_set_mask = ARM_ARCH_V4T;
 		break;
 	}
-	if (imm_offset >= 0 && imm_offset + size < sect_offset + left) {
-		switch (type) {
-		case TYPE_POINTER:
-			memcpy(&redir_imm, sect + imm + 8, size);
-			if (swapped) {
-				redir_imm = SWAP_LONG(redir_imm);
-			}
-			symbol_name = arm_symbol_name(
-				redir_imm,
-				object_byte_sex,
-				symbols, symbols64, nsymbols,
-				sorted_symbols, nsorted_symbols,
-				strings, strings_size,
-				indirect_symbols, nindirect_symbols,
-				load_commands, ncmds, sizeofcmds,
-				TRUE
-			);
-			if (symbol_name) {
-				printf(" = %s", symbol_name);
-			} else {
-				printf(" = 0x%08x", redir_imm);
-			}
-			mem_string = arm_redirect_mem_string(
-				redir_imm,
-				object_byte_sex,
-				symbols, nsymbols,
-				sorted_symbols, nsorted_symbols,
-				strings, strings_size,
-				indirect_symbols, nindirect_symbols,
-				load_commands, ncmds, sizeofcmds
-			);
-			if (mem_string) {
-				printf(" (%s)", mem_string);
-				free(mem_string);
-			}
-			break;
-		case TYPE_SINGLE:
-			memcpy((char *) &f, sect + imm + 8, sizeof(float));
-			if (swapped) {
-				f = SWAP_FLOAT(f);
-			}
-			printf(" = %f", f);
-			break;
-		case TYPE_DOUBLE:
-			memcpy((char *) &d, sect + imm + 8, sizeof(double));
-			if (swapped) {
-				d = SWAP_DOUBLE(d);
-			}
-			printf(" = %lf", d);
-			break;
+
+	if (Bflag || in_thumb){
+	    bytes_consumed = print_insn_thumb(addr, &dis_info, opcode, left);
+	} else {
+	    bytes_consumed = print_insn_arm(addr, &dis_info, opcode, left);
+	}
+	printf("\n");
+
+	return(bytes_consumed);
+}
+
+/* Print extra bytes in the format e.g.:
+ * .byte	0x12, 0x34, 0x56
+ */
+static void
+print_remainder_bytes(
+void *stream,
+unsigned long left,
+long extra_bytes)
+{ 
+  char fmt_str[10];
+  int i;
+
+  for (i = 4 - left; i; i--)
+    printf ("  ");
+
+  sprintf (fmt_str, "%%0%dx\t", (int) left * 2);
+  fprintf (stream, fmt_str, (unsigned int) extra_bytes);
+  fprintf (stream, ".byte\t");
+
+  for(i = 3; i > 4 - left; i--)
+    fprintf (stream, "0x%02x, ", ((unsigned char *) &extra_bytes)[i]);
+
+  fprintf (stream, "0x%02x\n", ((unsigned char *) &extra_bytes)[4 - left]); 
+}
+
+/* Set in_thumb accordingly:
+ * If no symbols are at addr, don't change it.
+ * If there are symbols at addr, and any of them are THUMB_DEFs, set it.
+ * If there are symbols at addr, but none of them are THUMB_DEFs, clear it.
+ */
+static void
+set_thumb_mode(
+unsigned long addr,
+unsigned long nsorted_symbols,
+struct symbol *sorted_symbols,
+enum bool *in_thumb)
+{
+    long high, low, mid;
+ 
+        low = 0;
+        high = nsorted_symbols - 1; 
+        mid = (high - low) / 2;
+        while(high >= low){
+            if(sorted_symbols[mid].n_value == addr){
+		/* Find the first symbol at this address */
+		while(mid && sorted_symbols[mid-1].n_value == addr){
+		    mid--;
 		}
-	}
+		do{
+		    if(sorted_symbols[mid].is_thumb){
+			*in_thumb = TRUE;
+			return;
+		    }
+		    mid++;
+		    if(mid > nsorted_symbols || sorted_symbols[mid].n_value != addr){
+			*in_thumb = FALSE;
+			return;
+		    }
+		} while(1);
+            }
+            if(sorted_symbols[mid].n_value > addr){
+                high = mid - 1;
+                mid = (high + low) / 2;
+            }
+            else{
+                low = mid + 1;
+                mid = (high + low) / 2;
+            }
+        }
 }

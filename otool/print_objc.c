@@ -25,7 +25,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
+#define __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ 1050
 
 #include "stdio.h"
 #include "string.h"
@@ -51,7 +51,7 @@ struct objc_string_object {
     char *characters;
     unsigned int _length;
 };
-typedef struct objc_string_object NXConstantString;
+//typedef struct objc_string_object NXConstantString;
 
 #define SIZEHASHTABLE 821
 struct _hashEntry {
@@ -2208,5 +2208,3 @@ enum bool swapped)
 	}
 	return(FALSE);
 }
-
-#endif

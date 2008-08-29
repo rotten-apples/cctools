@@ -2,8 +2,6 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
-
 #include "stdio.h"
 #include "stddef.h"
 #include "string.h"
@@ -349,7 +347,8 @@ static void print_class_t(
 
 static void print_class_ro_t(
     uint64_t p,
-    struct info *info);
+    struct info *info,
+    enum bool *is_meta_class);
 
 static void print_layout_map(
     uint64_t p,
@@ -430,7 +429,7 @@ static const char *get_symbol_64(
  * Print the objc2 meta data in 64-bit Mach-O files.
  */
 void
-print_objc2(
+print_objc2_64bit(
 cpu_type_t cputype,
 struct load_command *load_commands,
 uint32_t ncmds,
@@ -576,6 +575,7 @@ struct info *info)
     unsigned long offset, left;
     struct section_info_64 *s;
     const char *name;
+    enum bool is_meta_class;
 
 	r = get_pointer_64(p, &offset, &left, &s,
 			   info->sections, info->nsections);
@@ -623,14 +623,21 @@ struct info *info)
 	else
 	    printf("\n");
 	printf("          data 0x%llx (struct class_ro_t *)\n", c.data);
-	print_class_ro_t(c.data, info);
+	print_class_ro_t(c.data, info, &is_meta_class);
+
+	if(! is_meta_class)
+	    {
+		printf("Meta Class\n");
+		print_class_t(c.isa, info);
+	    }
 }
 
 static
 void
 print_class_ro_t(
 uint64_t p,
-struct info *info)
+struct info *info,
+enum bool *is_meta_class)
 {
     struct class_ro_t cro;
     void *r;
@@ -686,6 +693,8 @@ struct info *info)
 	printf("           baseProperties 0x%llx\n", cro.baseProperties);
 	if(cro.baseProperties != 0)
 	    print_objc_property_list(cro.baseProperties, info);
+	if (is_meta_class)
+	    *is_meta_class = (cro.flags & RO_META) ? TRUE : FALSE;
 }
 
 static
@@ -1607,5 +1616,3 @@ struct info *info)
 	return(guess_symbol(value, info->sorted_symbols, info->nsorted_symbols,
 			    info->verbose));
 }
-
-#endif

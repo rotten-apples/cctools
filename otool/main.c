@@ -79,6 +79,7 @@ enum bool iflag = FALSE; /* print the shared library initialization table */
 enum bool Wflag = FALSE; /* print the mod time of an archive as a number */
 enum bool Xflag = FALSE; /* don't print leading address in disassembly */
 enum bool Zflag = FALSE; /* don't use simplified ppc mnemonics in disassembly */
+enum bool Bflag = FALSE; /* force Thumb disassembly (ARM objects only) */
 char *pflag = NULL; 	 /* procedure name to start disassembling from */
 char *segname = NULL;	 /* name of the section to print the contents of */
 char *sectname = NULL;
@@ -232,7 +233,8 @@ static void print_text(
     uint32_t ncmds,
     uint32_t sizeofcmds,
     enum bool disassemble,
-    enum bool verbose);
+    enum bool verbose,
+    cpu_subtype_t cpusubtype);
 
 static void print_argstrings(
     uint32_t magic,
@@ -424,6 +426,9 @@ char **envp)
 		case 'm':
 		    use_member_syntax = FALSE;
 		    break;
+		case 'B':
+		    Bflag = TRUE;
+		    break;
 		default:
 		    error("unknown char `%c' in flag %s\n", argv[i][j],argv[i]);
 		    usage();
@@ -512,6 +517,7 @@ void)
 	fprintf(stderr, "\t-c print argument strings of a core file\n");
 	fprintf(stderr, "\t-X print no leading addresses or headers\n");
 	fprintf(stderr, "\t-m don't use archive(member) syntax\n");
+	fprintf(stderr, "\t-B force Thumb disassembly (ARM objects only)\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -537,6 +543,7 @@ void *cookie) /* cookie is not used */
     char *strings, *p;
     uint32_t n_strx;
     uint8_t n_type;
+    uint16_t n_desc;
     uint64_t n_value;
     char *sect;
     unsigned long sect_nrelocs, sect_flags, nrelocs, next_relocs, nloc_relocs;
@@ -562,8 +569,6 @@ void *cookie) /* cookie is not used */
 	symbols64 = NULL;
 	nsymbols = 0;
 	strings = NULL;
-        mods = NULL;
-        nmods = 0;
 	/*
 	 * These may or may not be allocated.  If allocated they will not be
 	 * NULL and then free'ed before returning.
@@ -902,11 +907,13 @@ void *cookie) /* cookie is not used */
 		    if(symbols != NULL){
 			n_strx = symbols[i].n_un.n_strx;
 			n_type = symbols[i].n_type;
+			n_desc = symbols[i].n_desc;
 			n_value = symbols[i].n_value;
 		    }
 		    else{
 			n_strx = symbols64[i].n_un.n_strx;
 			n_type = symbols64[i].n_type;
+			n_desc = symbols64[i].n_desc;
 			n_value = symbols64[i].n_value;
 		    }
 		    if(n_strx > 0 && n_strx < strings_size)
@@ -927,6 +934,8 @@ void *cookie) /* cookie is not used */
 			    continue;
 			sorted_symbols[nsorted_symbols].n_value = n_value;
 			sorted_symbols[nsorted_symbols].name = p;
+			sorted_symbols[nsorted_symbols].is_thumb =
+			    n_desc & N_ARM_THUMB_DEF;
 			nsorted_symbols++;
 		    }
 		}
@@ -1097,7 +1106,7 @@ void *cookie) /* cookie is not used */
 		       nsorted_symbols, symbols, symbols64, nsymbols, strings,
 		       strings_size, relocs, nrelocs, indirect_symbols,
 		       nindirect_symbols, ofile->load_commands, mh_ncmds,
-		       mh_sizeofcmds, vflag, Vflag);
+		       mh_sizeofcmds, vflag, Vflag, mh_cpusubtype);
 
 	    if(relocs != NULL && relocs != sect_relocs)
 		free(relocs);
@@ -1150,19 +1159,14 @@ void *cookie) /* cookie is not used */
 		S_ATTR_SOME_INSTRUCTIONS){
 	    if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__protocol") == 0 && vflag == TRUE){
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_protocol_section(ofile->load_commands, mh_ncmds,
 		   mh_sizeofcmds, ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
-#else
-		printf("Objective-C not supported\n");
-#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	            (strcmp(sectname, "__string_object") == 0 ||
 	             strcmp(sectname, "__cstring_object") == 0) &&
 		    vflag == TRUE){
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		if(mh_cputype & CPU_ARCH_ABI64)
 		    print_objc_string_object_section_64(sectname,
 			ofile->load_commands, mh_ncmds, mh_sizeofcmds,
@@ -1175,19 +1179,12 @@ void *cookie) /* cookie is not used */
 			ofile->load_commands, mh_ncmds, mh_sizeofcmds,
 			ofile->object_byte_sex, ofile->object_addr,
 			ofile->object_size, vflag);
-#else
-		printf("Objective-C not supported\n");
-#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__runtime_setup") == 0 && vflag == TRUE){
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_runtime_setup_section(ofile->load_commands, mh_ncmds,
 		   mh_sizeofcmds, ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
-#else
-		printf("Objective-C not supported\n");
-#endif
 	    }
 	    else if(get_sect_info(segname, sectname, ofile->load_commands,
 		mh_ncmds, mh_sizeofcmds, mh_filetype, ofile->object_byte_sex,
@@ -1281,7 +1278,6 @@ void *cookie) /* cookie is not used */
 			     ofile->object_size);
 
 	if(oflag){
-#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 	    if(mh_cputype & CPU_ARCH_ABI64){
 		get_linked_reloc_info(ofile->load_commands, mh_ncmds,
 			mh_sizeofcmds, ofile->object_byte_sex,
@@ -1312,21 +1308,56 @@ void *cookie) /* cookie is not used */
 		    swap_relocation_info(loc_relocs, nloc_relocs,
 					 get_host_byte_sex());
 		}
-		print_objc2(mh_cputype, ofile->load_commands, mh_ncmds,
+		print_objc2_64bit(mh_cputype, ofile->load_commands, mh_ncmds,
 			    mh_sizeofcmds, ofile->object_byte_sex,
 			    ofile->object_addr, ofile->object_size, symbols64,
 			    nsymbols, strings, strings_size, sorted_symbols,
 			    nsorted_symbols, ext_relocs, next_relocs,
 			    loc_relocs, nloc_relocs, vflag);
 	    }
-	    else
-		print_objc_segment(ofile->load_commands, mh_ncmds,mh_sizeofcmds,
-			           ofile->object_byte_sex, ofile->object_addr,
-			           ofile->object_size, sorted_symbols,
-			           nsorted_symbols, vflag);
-#else
-		printf("Objective-C not supported\n");
-#endif
+	    else if(mh_cputype == CPU_TYPE_ARM){
+		get_linked_reloc_info(ofile->load_commands, mh_ncmds,
+			mh_sizeofcmds, ofile->object_byte_sex,
+			ofile->object_addr, ofile->object_size, &ext_relocs,
+			&next_relocs, &loc_relocs, &nloc_relocs);
+		/* create aligned relocations entries as needed */
+		relocs = NULL;
+		nrelocs = 0;
+		if((long)ext_relocs % sizeof(long) != 0 ||
+		   ofile->object_byte_sex != get_host_byte_sex()){
+		    relocs = allocate(next_relocs *
+				      sizeof(struct relocation_info));
+		    memcpy(relocs, ext_relocs, next_relocs *
+			   sizeof(struct relocation_info));
+		    ext_relocs = relocs;
+		}
+		if((long)loc_relocs % sizeof(long) != 0 ||
+		   ofile->object_byte_sex != get_host_byte_sex()){
+		    relocs = allocate(nloc_relocs *
+				      sizeof(struct relocation_info));
+		    memcpy(relocs, loc_relocs, nloc_relocs *
+			   sizeof(struct relocation_info));
+		    loc_relocs = relocs;
+		}
+		if(ofile->object_byte_sex != get_host_byte_sex()){
+		    swap_relocation_info(ext_relocs, next_relocs,
+					 get_host_byte_sex());
+		    swap_relocation_info(loc_relocs, nloc_relocs,
+					 get_host_byte_sex());
+		}
+		print_objc2_32bit(mh_cputype, ofile->load_commands, mh_ncmds,
+			    mh_sizeofcmds, ofile->object_byte_sex,
+			    ofile->object_addr, ofile->object_size, symbols,
+			    nsymbols, strings, strings_size, sorted_symbols,
+			    nsorted_symbols, ext_relocs, next_relocs,
+			    loc_relocs, nloc_relocs, vflag);
+	    }
+	    else{
+		 print_objc_segment(ofile->load_commands,mh_ncmds,mh_sizeofcmds,
+				    ofile->object_byte_sex, ofile->object_addr,
+				    ofile->object_size, sorted_symbols,
+				    nsorted_symbols, vflag);
+	    }
 	}
 
 	if(load_commands != NULL)
@@ -2255,7 +2286,8 @@ struct load_command *load_commands,
 uint32_t ncmds,
 uint32_t sizeofcmds,
 enum bool disassemble,
-enum bool verbose)
+enum bool verbose,
+cpu_subtype_t cpusubtype)
 {
     enum byte_sex host_byte_sex;
     enum bool swapped;
@@ -2360,11 +2392,11 @@ enum bool verbose)
 				sizeofcmds, verbose);
 		else if(cputype == CPU_TYPE_ARM)
 		    j = arm_disassemble(sect, size - i, cur_addr, addr,
-				object_byte_sex, relocs, nrelocs, symbols, NULL,
+				object_byte_sex, relocs, nrelocs, symbols,
 				nsymbols, sorted_symbols, nsorted_symbols,
 				strings, strings_size, indirect_symbols,
 				nindirect_symbols, load_commands, ncmds,
-                                sizeofcmds, verbose);
+				sizeofcmds, cpusubtype, verbose);
 		else{
 		    printf("Can't disassemble unknown cputype %d\n", cputype);
 		    return;

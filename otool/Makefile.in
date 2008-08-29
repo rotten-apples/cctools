@@ -46,11 +46,14 @@ MYLINKFLAGS	= $(LDFLAGS) $(MYLDFLAGS) $(MYLIBS)
 
 CFILES = main.c ofile_print.c m68k_disasm.c i860_disasm.c \
          m88k_disasm.c i386_disasm.c ppc_disasm.c hppa_disasm.c \
-         sparc_disasm.c arm_disasm.c \
-         print_objc.c print_objc2.c
+         sparc_disasm.c arm_disasm.c
+MFILES = print_objc.c print_objc2_32bit.c print_objc2_64bit.c
 
-OBJS = $(CFILES:.c=.o) 
-OBJS64 = $(CFILES:.c=.64o) 
+OBJS = $(CFILES:.c=.o)
+OBJS64 = $(CFILES:.c=.64o)
+
+MOBJS = $(MFILES:.c=.o)
+MOBJS64 = $(MFILES:.c=.64o)
 
 .PHONY: default clean distclean install
 
@@ -62,10 +65,10 @@ $(OBJS): %.o: %.c
 $(OBJS64): %.64o: %.c
 	$(CC) $(MYCOMPILEFLAGS) -DARCH64 -c -o $@ $<
 
-otool: $(OBJS) print_objc.o ofile.o
+otool: $(OBJS) ofile.o $(MOBJS)
 	$(CC) -o $@ $^ $(MYLINKFLAGS) -lstuff
 
-otool64: $(OBJS64) print_objc.64o ofile.64o
+otool64: $(OBJS64) ofile.64o $(MOBJS64)
 	$(CC) -o $@ $^ $(MYLINKFLAGS) -lstuff64
 
 ofile.o: $(top_srcdir)/libstuff/ofile.c
@@ -73,9 +76,9 @@ ofile.o: $(top_srcdir)/libstuff/ofile.c
 ofile.64o: $(top_srcdir)/libstuff/ofile.c
 	$(CC) -DOTOOL $(MYCOMPILEFLAGS) -DARCH64 -c -o $@ $<
 
-print_objc.o: print_objc.c
+$(MOBJS): %.o: %.c
 	$(CC) $(OBJC) $(MYCOMPILEFLAGS) -c -o $@ $<
-print_objc.64o: print_objc.c
+$(MOBJS64): %.64o: %.c
 	$(CC) $(OBJC) $(MYCOMPILEFLAGS) -DARCH64 -c -o $@ $<
 
 install: otool otool64
