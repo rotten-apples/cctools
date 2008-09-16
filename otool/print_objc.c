@@ -51,7 +51,9 @@ struct objc_string_object {
     char *characters;
     unsigned int _length;
 };
-//typedef struct objc_string_object NXConstantString;
+#ifdef __APPLE__
+typedef struct objc_string_object NXConstantString;
+#endif
 
 #define SIZEHASHTABLE 821
 struct _hashEntry {
