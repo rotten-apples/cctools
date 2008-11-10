@@ -419,7 +419,15 @@ static struct hash_control *ppcasm_po_hash = NULL;
  * The routines that implement the pseudo-ops.
  */
 #if !defined(I860) /* i860 has it's own align and org */
+static void s_balign(int value);
 static void s_align(int value);
+
+static
+void
+s_align_(
+int fill_size,
+int power_of_2_alignment);
+
 static void s_org(int value);
 #endif
 static void s_private_extern(int value);
@@ -470,6 +478,9 @@ static const pseudo_typeS pseudo_table[] = {
 #if !defined(I860) /* i860 has it's own align and org */
   { "align",	s_align,	1	},
   { "align32",	s_align,	4	},
+  { "balign",	s_balign,	1	},
+  { "balignw",	s_balign,	2	},
+  { "balignl",	s_balign,	4	},
   { "p2align",	s_align,	1	},
   { "p2alignw",	s_align,	2	},
   { "p2alignl",	s_align,	4	},
@@ -1611,14 +1622,41 @@ int value)
  * The parameter fill_size can only be 1, 2 or 4 which is the size of the
  * fill_expression.
  */
+static inline int32_t ilog2(uint32_t value) {
+    return value == 0 ? -1 : 1 + ilog2(value >> 1);
+}
+
+static
+void
+s_balign(
+int fill_size)
+{
+    int power_of_2_alignment;
+
+	if(fill_size != 1 && fill_size != 2 && fill_size != 4)
+	    as_bad("Internal error, s_align() called with bad fill_size %d",
+		    fill_size);
+
+	power_of_2_alignment = get_absolute_expression();
+        power_of_2_alignment = ilog2(power_of_2_alignment);
+#define MAX_ALIGNMENT (15)
+	if(power_of_2_alignment > MAX_ALIGNMENT)
+	    as_warn("Alignment too large: %d. assumed.",
+		    power_of_2_alignment = MAX_ALIGNMENT);
+	else if(power_of_2_alignment < 0){
+	    as_warn("Alignment negative. 0 assumed.");
+	    power_of_2_alignment = 0;
+	}
+
+        s_align_(fill_size, power_of_2_alignment);
+}
+
 static
 void
 s_align(
 int fill_size)
 {
     int power_of_2_alignment;
-    long temp_fill, fill_specified, max_bytes_to_fill;
-    char fill[4];
 
 	if(fill_size != 1 && fill_size != 2 && fill_size != 4)
 	    as_bad("Internal error, s_align() called with bad fill_size %d",
@@ -1633,6 +1671,19 @@ int fill_size)
 	    as_warn("Alignment negative. 0 assumed.");
 	    power_of_2_alignment = 0;
 	}
+
+        s_align_(fill_size, power_of_2_alignment);
+}
+
+static
+void
+s_align_(
+int fill_size,
+int power_of_2_alignment)
+{
+    long temp_fill, fill_specified, max_bytes_to_fill;
+    char fill[4];
+
 	temp_fill = 0;
 	fill_specified = 0;
 	max_bytes_to_fill = 0;
