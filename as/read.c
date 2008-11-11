@@ -530,7 +530,7 @@ static const pseudo_typeS pseudo_table[] = {
   { "include",	s_include,	0	},
   { "macro",	s_macro,	0	},
   { "endmacro",	s_endmacro,	0	},
-  { "endm",	s_endmacro,	0	},  /* GAS 2.17 compatibility */
+  { "endm",	s_endmacro,	0	},
   { "macros_on",s_macros_on,	0	},
   { "macros_off",s_macros_off,	0	},
   { "if",	s_if,		0	},
@@ -1769,7 +1769,7 @@ int power_of_2_alignment)
 
 /*
  * s_comm() implements the pseudo op:
- *	.comm name , expression [ , align_expression ]
+ *	.comm name , expression
  */
 static
 void
@@ -1781,7 +1781,7 @@ int value)
     char *p;
     signed_target_addr_t temp;
     symbolS *symbolP;
-    int align;
+    int power_of_2_alignment;
 
 	if(*input_line_pointer == '"')
 	    name = input_line_pointer + 1;
@@ -1803,13 +1803,19 @@ int value)
 	    ignore_rest_of_line();
 	    return;
 	}
-        align = 0;
-        if(*input_line_pointer == ','){
-            input_line_pointer++;
-            align = get_absolute_expression();
-            as_warn("Alignment of %u specified on .comm, and we didn't care.", align);
-        }
-
+	power_of_2_alignment = 0;
+#define MAX_ALIGNMENT (15)
+	if(*input_line_pointer == ','){
+	    input_line_pointer++;
+	    power_of_2_alignment = get_absolute_expression();
+	    if(power_of_2_alignment > MAX_ALIGNMENT)
+		as_warn("Alignment too large: %d. assumed.",
+			power_of_2_alignment = MAX_ALIGNMENT);
+	    else if(power_of_2_alignment < 0){
+		as_warn("Alignment negative. 0 assumed.");
+		power_of_2_alignment = 0;
+	    }
+	}
 	*p = 0;
 	symbolP = symbol_find_or_make(name);
 	*p = c;
@@ -1829,6 +1835,7 @@ int value)
 	else{
 	    symbolP -> sy_value = temp;
 	    symbolP -> sy_type |= N_EXT;
+	    SET_COMM_ALIGN(symbolP->sy_desc, power_of_2_alignment);
 	}
 	know(symbolP->sy_frag == &zero_address_frag);
 	demand_empty_rest_of_line();
