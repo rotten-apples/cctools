@@ -2349,6 +2349,22 @@ void Options::buildSearchPaths(int argc, const char* argv[])
 	std::vector<const char*> frameworkPaths;
 	libraryPaths.reserve(10);
 	frameworkPaths.reserve(10);
+
+	/*
+	 * See if LD_LIBRARY_PATH is set.  And if so parse out the colon
+	 * separated set of paths.
+	 */
+	char *ld_library_path = getenv("LD_LIBRARY_PATH");
+	if(ld_library_path != NULL){
+            libraryPaths.push_back(ld_library_path);
+	    for(int i = 0; ld_library_path[i] != '\0'; i++){
+		if(ld_library_path[i] == ':'){
+		    ld_library_path[i] = '\0';
+		    libraryPaths.push_back(ld_library_path + i + 1);
+		}
+	    }
+	}
+
 	// scan through argv looking for -L, -F, -Z, and -syslibroot options
 	for(int i=0; i < argc; ++i) {
 		if ( (argv[i][0] == '-') && (argv[i][1] == 'L') )
