@@ -2962,7 +2962,7 @@ char *output)
 	if(narchs > 1){
 	    tellProjectBuilder("Combining into %s", "", cmd_flags.output);
 	    reset_execute_list();
-	    add_execute_list("lipo");
+	    add_execute_list(LIPO);
 	    add_execute_list("-create");
 	    add_execute_list("-output");
 	    add_execute_list(cmd_flags.output);

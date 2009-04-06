@@ -32,12 +32,13 @@ INSTALL_PROGRAM	= @INSTALL_PROGRAM@
 transform       = @program_transform_name@
 LDPROG		= $(shell echo ld | sed '$(transform)')
 LD64PROG	= $(shell echo ld64 | sed '$(transform)')
+LIPO            = $(shell echo lipo | sed '$(transform)')
 
 MYINCLUDES      = -I$(builddir) -I$(srcdir) -I$(top_builddir)/include \
 			-I$(top_srcdir)/include $(INCPRIVEXT) $(FORHDRS)
 MYWARNINGS      = 
 MYDEFS          = -DBINDIR="\"$(bindir)\"" -DLDPROG="\"$(LDPROG)\"" \
-			-DLD64PROG="\"$(LD64PROG)\""
+			-DLD64PROG="\"$(LD64PROG)\"" -DLIPO="\"$(LIPO)\""
 MYLDFLAGS	= -L$(top_builddir)/libstuff
 MYLIBS		= -lstuff
 
