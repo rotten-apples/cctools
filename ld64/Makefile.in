@@ -37,14 +37,14 @@ MYINCLUDES      = -I$(builddir) -I$(srcdir) -I$(srcdir)/src -I$(top_builddir)/in
 MYWARNINGS      = 
 MYDEFS          = -DDEBUG
 MYLDFLAGS	= -L$(top_builddir)/libstuff
-MYLIBS		= -lstuff -luuid
+MYLIBS		= -lstuff -luuid -lcrypto -ldl
 
 MYCOMPILEFLAGS	= $(WARNINGS) $(MYWARNINGS) $(DEFS) $(MYDEFS) \
 	$(CPPFLAGS) $(MYINCLUDES) $(CFLAGS) $(MDYNAMICNOPIC) 
 
 MYLINKFLAGS	= $(LDFLAGS) $(MYLDFLAGS) $(MYLIBS)
 
-CXXFILES = ld.cpp Options.cpp SectCreate.cpp
+CXXFILES = ld.cpp Options.cpp
 CFILES = debugline.c strlcpy.c
 
 OBJS = $(CXXFILES:.cpp=.o) $(CFILES:.c=.o)
