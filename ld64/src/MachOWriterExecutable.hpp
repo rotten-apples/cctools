@@ -5029,6 +5029,29 @@ StubAtom<x86>::StubAtom(Writer<x86>& writer, ObjectFile::Atom& target)
 }
 
 template <>
+StubHelperAtom<x86_64>::StubHelperAtom(Writer<x86_64>& writer, ObjectFile::Atom& target, ObjectFile::Atom& lazyPointer)
+ : WriterAtom<x86_64>(writer, Segment::fgTextSegment), fName(stubName(target.getName())), fTarget(target)
+{
+	writer.fAllSynthesizedStubHelpers.push_back(this);
+
+	fReferences.push_back(new WriterReference<x86_64>(3, x86_64::kPCRel32, &lazyPointer));
+	fReferences.push_back(new WriterReference<x86_64>(8, x86_64::kPCRel32, writer.fDyldHelper));
+	if ( writer.fDyldHelper == NULL )
+		throw "symbol dyld_stub_binding_helper not defined (usually in crt1.o/dylib1.o/bundle1.o)";
+}
+
+// specialize lazy pointer for x86_64 to initially pointer to stub helper
+template <>
+LazyPointerAtom<x86_64>::LazyPointerAtom(Writer<x86_64>& writer, ObjectFile::Atom& target)
+ : WriterAtom<x86_64>(writer, Segment::fgDataSegment), fName(lazyPointerName(target.getName())), fTarget(target)
+{
+	writer.fAllSynthesizedLazyPointers.push_back(this);
+
+	StubHelperAtom<x86_64>* helper = new StubHelperAtom<x86_64>(writer, target, *this);
+	fReferences.push_back(new WriterReference<x86_64>(0, x86_64::kPointer, helper));
+}
+
+template <>
 StubAtom<x86_64>::StubAtom(Writer<x86_64>& writer, ObjectFile::Atom& target)
  : WriterAtom<x86_64>(writer, Segment::fgTextSegment), fName(stubName(target.getName())), fTarget(target)
 {
@@ -5167,17 +5190,6 @@ const char*	StubAtom<x86>::getSectionName() const
 
 
 
-template <>
-StubHelperAtom<x86_64>::StubHelperAtom(Writer<x86_64>& writer, ObjectFile::Atom& target, ObjectFile::Atom& lazyPointer)
- : WriterAtom<x86_64>(writer, Segment::fgTextSegment), fName(stubName(target.getName())), fTarget(target)
-{
-	writer.fAllSynthesizedStubHelpers.push_back(this);
-
-	fReferences.push_back(new WriterReference<x86_64>(3, x86_64::kPCRel32, &lazyPointer));
-	fReferences.push_back(new WriterReference<x86_64>(8, x86_64::kPCRel32, writer.fDyldHelper));
-	if ( writer.fDyldHelper == NULL )
-		throw "symbol dyld_stub_binding_helper not defined (usually in crt1.o/dylib1.o/bundle1.o)";
-}
 
 template <>
 uint64_t StubHelperAtom<x86_64>::getSize() const
@@ -5210,17 +5222,6 @@ const char* StubHelperAtom<A>::stubName(const char* name)
 	return buf;
 }
 
-
-// specialize lazy pointer for x86_64 to initially pointer to stub helper
-template <>
-LazyPointerAtom<x86_64>::LazyPointerAtom(Writer<x86_64>& writer, ObjectFile::Atom& target)
- : WriterAtom<x86_64>(writer, Segment::fgDataSegment), fName(lazyPointerName(target.getName())), fTarget(target)
-{
-	writer.fAllSynthesizedLazyPointers.push_back(this);
-
-	StubHelperAtom<x86_64>* helper = new StubHelperAtom<x86_64>(writer, target, *this);
-	fReferences.push_back(new WriterReference<x86_64>(0, x86_64::kPointer, helper));
-}
 
 
 template <typename A>
