@@ -35,7 +35,7 @@ transform       = @program_transform_name@
 MYINCLUDES      = -I$(builddir) -I$(srcdir) -I$(srcdir)/src -I$(top_builddir)/include \
 			-I$(top_srcdir)/include $(INCPRIVEXT) $(FORHDRS)
 MYWARNINGS      = 
-MYDEFS          = -DDEBUG
+MYDEFS          = -DDEBUG -DLD_CLASSIC="\"$(shell echo ld_classic | sed '$(transform)')\""
 MYLDFLAGS	= -L$(top_builddir)/libstuff
 MYLIBS		= -lstuff -luuid -lcrypto -ldl
 
