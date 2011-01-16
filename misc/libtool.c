@@ -2496,11 +2496,8 @@ char *output)
 	 * using the modification time returned by stat.  Then write this into
 	 * all the ar_date's in the file.
 	 */
-	sprintf((char *)(&toc_ar_hdr), "%-*s%-*ld",
-	   (int)sizeof(toc_ar_hdr.ar_name),
-	       SYMDEF,
-	   (int)sizeof(toc_ar_hdr.ar_date),
-	       (long int)stat_buf.st_mtime + 5);
+	snprintf(toc_ar_hdr.ar_name, sizeof(toc_ar_hdr.ar_name), "%-*s", (int)sizeof(toc_ar_hdr.ar_name), SYMDEF);
+	snprintf(toc_ar_hdr.ar_date, sizeof(toc_ar_hdr.ar_date), "%-*ld", (int)sizeof(toc_ar_hdr.ar_date), (long int)stat_buf.st_mtime + 5);
 	for(i = 0; i < narchs; i++){
 	    if(lseek(fd, time_offsets[i], L_SET) == -1){
 		system_error("can't lseek in output file: %s", output);
@@ -3451,19 +3448,12 @@ char *output)
 		arch->members[arch->tocs[i].index1 - 1].offset;
 	}
 
-	sprintf((char *)(&arch->toc_ar_hdr), "%-*s%-*ld%-*u%-*u%-*o%-*ld",
-	   (int)sizeof(arch->toc_ar_hdr.ar_name),
-	       ar_name,
-	   (int)sizeof(arch->toc_ar_hdr.ar_date),
-	       toc_time,
-	   (int)sizeof(arch->toc_ar_hdr.ar_uid),
-	       (unsigned short)getuid(),
-	   (int)sizeof(arch->toc_ar_hdr.ar_gid),
-	       (unsigned short)getgid(),
-	   (int)sizeof(arch->toc_ar_hdr.ar_mode),
-	       (unsigned int)toc_mode,
-	   (int)sizeof(arch->toc_ar_hdr.ar_size),
-	       (long)(arch->toc_size - sizeof(struct ar_hdr)));
+	snprintf(arch->toc_ar_hdr.ar_name, sizeof(arch->toc_ar_hdr.ar_name), "%-*s", (int)sizeof(arch->toc_ar_hdr.ar_name), ar_name);
+	snprintf(arch->toc_ar_hdr.ar_date, sizeof(arch->toc_ar_hdr.ar_date), "%-*ld", (int)sizeof(arch->toc_ar_hdr.ar_date), toc_time);
+	snprintf(arch->toc_ar_hdr.ar_uid, sizeof(arch->toc_ar_hdr.ar_uid), "%-*u", (int)sizeof(arch->toc_ar_hdr.ar_uid), (unsigned short)getuid());
+	snprintf(arch->toc_ar_hdr.ar_gid, sizeof(arch->toc_ar_hdr.ar_gid), "%-*u", (int)sizeof(arch->toc_ar_hdr.ar_gid), (unsigned short)getgid());
+	snprintf(arch->toc_ar_hdr.ar_mode, sizeof(arch->toc_ar_hdr.ar_mode), "%-*o", (int)sizeof(arch->toc_ar_hdr.ar_mode), (unsigned int)toc_mode);
+	snprintf(arch->toc_ar_hdr.ar_size, sizeof(arch->toc_ar_hdr.ar_size), "%-*ld", (int)sizeof(arch->toc_ar_hdr.ar_size), (long)(arch->toc_size - sizeof(struct ar_hdr)));
 	/*
 	 * This has to be done by hand because sprintf puts a null
 	 * at the end of the buffer.
