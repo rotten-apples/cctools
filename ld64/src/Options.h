@@ -34,7 +34,7 @@
 
 #include <vector>
 #include <ext/hash_set>
-
+#include <stdarg.h>
 #include "ObjectFile.h"
 
 extern void throwf (const char* format, ...) __attribute__ ((noreturn));
