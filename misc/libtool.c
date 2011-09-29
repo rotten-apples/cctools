@@ -3011,7 +3011,7 @@ char *output)
 	 */
 	if(narchs > 1){
 	    reset_execute_list();
-	    add_execute_list_with_prefix("lipo");
+	    add_execute_list(makestr(BINDIR, "/", LIPOPROG, NULL));
 	    add_execute_list("-create");
 	    add_execute_list("-output");
 	    add_execute_list(cmd_flags.output);
