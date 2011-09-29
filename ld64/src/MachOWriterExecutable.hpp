@@ -46,6 +46,12 @@
 
 #include "MachOFileAbstraction.hpp"
 
+#ifndef x86_THREAD_STATE64_COUNT 
+#define x86_THREAD_STATE64_COUNT 42
+#endif
+#ifndef x86_THREAD_STATE64
+#define x86_THREAD_STATE64 4
+#endif
 
 //
 //
