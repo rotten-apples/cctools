@@ -68,6 +68,7 @@ static char rcsid[] = "$OpenBSD: contents.c,v 1.2 1996/06/26 05:31:19 deraadt Ex
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <sys/time.h>
 
 #include <ar.h>
