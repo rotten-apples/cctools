@@ -17,6 +17,18 @@
 #include "opcode/arm.h"
 
 #define ISALNUM(xXx) (isalnum(xXx))
+#ifndef CPU_SUBTYPE_ARM_V5TEJ
+	#define CPU_SUBTYPE_ARM_V5TEJ		((cpu_subtype_t) 7)
+#endif
+#ifndef CPU_SUBTYPE_ARM_XSCALE
+	#define CPU_SUBTYPE_ARM_XSCALE		((cpu_subtype_t) 8)
+#endif
+#ifndef CPU_SUBTYPE_ARM_V7
+	#define CPU_SUBTYPE_ARM_V7			((cpu_subtype_t) 9)
+#endif
+#ifndef N_ARM_THUMB_DEF
+	#define N_ARM_THUMB_DEF	0x0008 
+#endif
 
 /*
  * These are the default cputype and cpusubtype for the arm architecture.
