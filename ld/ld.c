@@ -58,8 +58,6 @@
 #include <mach/mach_init.h>
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
-#else
-#include <servers/bootstrap.h>
 #endif
 #else /* defined(KLD) && defined(__STATIC__) */
 #include <mach/mach.h>

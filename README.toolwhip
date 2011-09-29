@@ -1,0 +1,17 @@
+Home: http://www.opensource.apple.com/darwinsource/
+URL: http://www.opensource.apple.com/darwinsource/tarballs/apsl/cctools-698.1.tar.gz
+Version: cctools 698.1 (Xcode Tools 3.1.2)
+License: APSL (most portions), GPL (as)
+License File: APPLE_LICENSE, as/COPYING
+Local Vendor Branch: http://toolwhip.googlecode.com/svn/vendor/cctools
+Local Trunk: http://toolwhip.googlecode.com/svn/trunk/cctools
+
+Description:
+cctools contains much of the development toolchain for Mac OS X, much like
+GNU binutils.  Among other tools, it includes Apple's versions of ar, as, nm,
+strings, strip, and an older version of ld.  Apple's version of as is based on
+GNU as 1.38.
+
+Local Modifications:
+Only this file, README.toolwhip, has been added to the local vendor branch.
+All other local modifications are made on the local trunk.

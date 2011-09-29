@@ -105,7 +105,7 @@ tmp()
 	sigfillset(&set);
 	(void)sigprocmask(SIG_BLOCK, &set, &oset);
 	if ((fd = mkstemp(path)) == -1)
-		error(tname);
+		ar_error(tname);
         (void)unlink(path);
 	(void)sigprocmask(SIG_SETMASK, &oset, NULL);
 	return (fd);
@@ -164,12 +164,12 @@ void
 badfmt()
 {
 
-	errno = EFTYPE;
+	errno = EINVAL;
 	err(1, "%s", archive);
 }
 
 void
-error(name)
+ar_error(name)
 	char *name;
 {
 

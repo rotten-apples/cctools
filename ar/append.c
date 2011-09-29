@@ -95,7 +95,7 @@ append(argv)
 
 	afd = open_archive(O_CREAT|O_RDWR);
 	if (lseek(afd, (off_t)0, SEEK_END) == (off_t)-1)
-		error(archive);
+		ar_error(archive);
 
 	/* Read from disk, write to an archive; pad on write. */
 	SETCF(0, 0, afd, archive, WPAD);

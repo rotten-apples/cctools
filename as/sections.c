@@ -24,6 +24,7 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
  * Mach-O sections are chains of fragments.
  */
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include "sections.h"
 #include "obstack.h"

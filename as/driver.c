@@ -49,7 +49,6 @@ char **envp)
     char *p, c, *arch_name, *as, *as_local;
     char **llvm_mc_argv;
     char *prefix, buf[MAXPATHLEN], resolved_name[PATH_MAX];
-    unsigned long bufsize;
     struct arch_flag arch_flag;
     const struct arch_flag *arch_flags, *family_arch_flag;
     enum bool oflag_specified;
@@ -62,13 +61,8 @@ char **envp)
 	/*
 	 * Construct the prefix to the assembler driver.
 	 */
-	bufsize = MAXPATHLEN;
 	p = buf;
-	i = _NSGetExecutablePath(p, &bufsize);
-	if(i == -1){
-	    p = allocate(bufsize);
-	    _NSGetExecutablePath(p, &bufsize);
-	}
+	readlink("/proc/self/exe", buf, sizeof(buf));
 	prefix = realpath(p, resolved_name);
 	if(realpath == NULL)
 	    system_fatal("realpath(3) for %s failed", p);

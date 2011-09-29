@@ -1,0 +1,2 @@
+all clean: libstuff ar as ld misc otool
+	@for i in $^ ; do $(MAKE) -C $${i} -f Makefile.linux $@ ; done

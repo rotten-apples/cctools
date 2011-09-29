@@ -29,7 +29,7 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 #ifndef __DYNAMIC__
-#include <notify.h>
+#include "notify.h"
 
 uint32_t notify_post(const char *name)
 {
