@@ -129,6 +129,7 @@ char *str)
  * This routine is passed a string to be added to the list of strings for 
  * command line arguments and is then prefixed with the path of the executable.
  */
+#if 0
 __private_extern__
 void
 add_execute_list_with_prefix(
@@ -168,7 +169,7 @@ char *str)
 
 	return(makestr(prefix, str, NULL));
 }
-
+#endif
 /*
  * This routine reset the list of strings of command line arguments so that
  * an new command line argument list can be built.
