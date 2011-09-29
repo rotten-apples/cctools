@@ -28,10 +28,12 @@ extern void as_where(
 extern void as_file_and_line(
     char **file_ret,
     unsigned int *line_ret);
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 extern void as_where_ProjectBuilder(
     char **fileName,
     char **directory,
     int *line);
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 extern void as_perror(
     char *gripe,
     char *filename);

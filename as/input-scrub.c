@@ -336,6 +336,7 @@ unsigned int *line_ret)
     }
 }
 
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 /*
  * as_where_ProjectBuilder() returns the fileName, directory, and line number
  * to be used to tell ProjectBuilder where the error is.  Note that the '/'
@@ -370,6 +371,7 @@ int *line)
 	    strncat(directory_buf, p, q - p);
 	}
 }
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 
 /*
  *			a s _ p e r r o r
@@ -384,15 +386,7 @@ char *filename)
   fprintf (stderr,"as:file(%s) %s! ",
 	   filename, gripe
 	   );
-  if (errno > sys_nerr)
-    {
-      fprintf (stderr, "Unknown error #%d.", errno);
-    }
-  else
-    {
-      fprintf (stderr, "%s.", sys_errlist [errno]);
-    }
-  (void)putc('\n', stderr);
+  fprintf(stderr, "%s.\n", strerror(errno));
   errno = 0;			/* After reporting, clear it. */
   if (input_file_is_open())	/* RMS says don't mention line # if not needed. */
     {

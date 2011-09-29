@@ -1,0 +1,29 @@
+NULL =
+
+CFILES = \
+	append.c \
+	ar.c \
+	archive.c \
+	contents.c \
+	delete.c \
+	extract.c \
+	misc.c \
+	move.c \
+	print.c \
+	replace.c \
+	strmode-fbsd.c \
+	$(NULL)
+COBJS = $(CFILES:.c=.o)
+
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+
+all: ar
+
+ar: $(COBJS)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+.c.o:
+	$(CC) $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+clean:
+	-rm -rf ar $(COBJS)

@@ -154,13 +154,8 @@ char *str)
 	/*
 	 * Construct the prefix to the program running.
 	 */
-	bufsize = MAXPATHLEN;
 	p = buf;
-	i = _NSGetExecutablePath(p, &bufsize);
-	if(i == -1){
-	    p = allocate(bufsize);
-	    _NSGetExecutablePath(p, &bufsize);
-	}
+	readlink("/proc/self/exe", buf, sizeof(buf));
 	prefix = realpath(p, resolved_name);
 	p = rindex(prefix, '/');
 	if(p != NULL)

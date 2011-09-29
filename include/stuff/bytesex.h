@@ -234,7 +234,7 @@ __private_extern__ void swap_i386_thread_state(
 /* current i386 thread states */
 #if i386_THREAD_STATE == 1
 __private_extern__ void swap_i386_float_state(
-    struct __darwin_i386_float_state *fpu,
+    i386_float_state_t *fpu,
     enum byte_sex target_byte_sex);
 
 __private_extern__ void swap_i386_exception_state(

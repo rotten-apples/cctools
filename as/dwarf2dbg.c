@@ -56,7 +56,7 @@
 #endif
 
 #include "dwarf2dbg.h"
-#include <filenames.h>
+#include "filenames.h"
 
 #ifdef HAVE_DOS_BASED_FILE_SYSTEM
 /* We need to decide which character to use as a directory separator.

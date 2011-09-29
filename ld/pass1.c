@@ -58,6 +58,7 @@
 #include <mach-o/ranlib.h>
 #include "stuff/arch.h"
 #include "stuff/best_arch.h"
+#include "stuff/emulated.h"
 #include "stuff/guess_short_name.h"
 #include "stuff/macosx_deployment_target.h"
 

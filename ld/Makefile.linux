@@ -1,0 +1,47 @@
+NULL =
+
+CFILES = \
+	4byte_literals.c \
+	8byte_literals.c \
+	arm_reloc.c \
+	coalesced_sections.c \
+	cstring_literals.c \
+	debugcompunit.c \
+	debugline.c \
+	dylibs.c \
+	fvmlibs.c \
+	generic_reloc.c \
+	hppa_reloc.c \
+	i860_reloc.c \
+	indirect_sections.c \
+	layout.c \
+	ld.c \
+	literal_pointers.c \
+	m88k_reloc.c \
+	mod_sections.c \
+	objects.c \
+	pass1.c \
+	pass2.c \
+	ppc_reloc.c \
+	rld.c \
+	sections.c \
+	sets.c \
+	sparc_reloc.c \
+	specs.c \
+	symbols.c \
+	uuid.c \
+	$(NULL)
+COBJS = $(CFILES:.c=.o)
+
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+
+all: ld_classic
+
+ld_classic: $(COBJS)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+.c.o:
+	$(CC) $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+clean:
+	-rm -rf ld_classic $(COBJS)

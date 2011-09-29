@@ -1,0 +1,39 @@
+NULL =
+
+CFILES = \
+	arm_disasm.c \
+	coff_print.c \
+	hppa_disasm.c \
+	i386_disasm.c \
+	i860_disasm.c \
+	m68k_disasm.c \
+	m88k_disasm.c \
+	main.c \
+	notify.c \
+	ofile_print.c \
+	ppc_disasm.c \
+	print_objc2_32bit.c \
+	print_objc2_64bit.c \
+	sparc_disasm.c \
+	$(NULL)
+COBJS = $(CFILES:.c=.o)
+
+OBJCFILES = print_objc.c
+OBJCOBJS = $(OBJCFILES:.c=.o)
+
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+
+all: otool
+
+# Don't build print_objc.c into otool, it's wants the Apple Obj-C runtime.
+otool: $(COBJS)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+$(COBJS): %.o: %.c
+	$(CC) $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+$(OBJCOBJS): %.o: %.c
+	$(CC) -x objective-c $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+clean:
+	-rm -rf otool $(COBJS) $(OBJCOBJS)
