@@ -67,6 +67,8 @@ struct toc {
     int32_t index1;	/* library member at this index plus 1 */
 };
 
+#include <config.h>
+
 /* used by error routines as the name of the program */
 char *progname = NULL;
 
@@ -1051,6 +1053,11 @@ char **envp)
 	}
 	else{
 	    next_root = getenv("NEXT_ROOT");
+	}
+	if(next_root == NULL) {
+#ifdef CROSS_SYSROOT
+          next_root = CROSS_SYSROOT;
+#endif
 	}
 	if(next_root != NULL){
 	    for(i = 0; standard_dirs[i] != NULL; i++){

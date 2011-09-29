@@ -82,6 +82,8 @@ static char *mkstr(
 #include "layout.h"
 #include "pass2.h"
 
+#include <config.h>
+
 /* name of this program as executed (argv[0]) */
 __private_extern__ char *progname = NULL;
 /* indication of an error set in error(), for processing a number of errors
@@ -1909,6 +1911,11 @@ unknown_flag:
 	else{
 	    next_root = p;
 	}
+       if(next_root == NULL) {
+#ifdef CROSS_SYSROOT
+         next_root = CROSS_SYSROOT;
+#endif
+       }
 	if(next_root != NULL){
 	    for(i = 0; standard_dirs[i] != NULL; i++){
 		p = allocate(strlen(next_root) +
