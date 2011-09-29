@@ -166,7 +166,7 @@ opened:
 		/* Locking seems to not be working */
 		case ENOTSUP:
 		case EHOSTUNREACH:
-		case EBADRPC:
+		  /*		case EBADRPC: */
 		default:
 			/* Filesystem does not support locking */
 			break;
