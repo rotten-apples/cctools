@@ -26,7 +26,6 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
 #else
-#include <servers/bootstrap.h>
 #endif
 #include "as.h"
 #include "input-scrub.h"
