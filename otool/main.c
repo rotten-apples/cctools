@@ -2664,7 +2664,7 @@ uint32_t object_size)
 	}
 }
 
-#ifndef __DYNAMIC__
+#if 0
 /*
  * To avoid linking in libm.  These variables are defined as they are used in
  * pthread_init() to put in place a fast sqrt().
