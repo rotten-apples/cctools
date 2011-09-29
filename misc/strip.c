@@ -3796,7 +3796,7 @@ struct object *object)
 	 * Create the ld -r command line and execute it.
 	 */
 	reset_execute_list();
-	add_execute_list_with_prefix("ld");
+	add_execute_list(BINDIR "/" LDPROG);
 	add_execute_list("-keep_private_externs");
 	add_execute_list("-r");
 	if(Sflag)

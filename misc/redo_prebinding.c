@@ -937,7 +937,7 @@ char *envp[])
 	    /*
 	     * Run objcunique on the output.
 	     */
-	    objcunique = cmd_with_prefix("objcunique");
+	    objcunique = "/usr/bin/objcunique";
 	    if(stat(objcunique, &stat_buf) != -1){
 		reset_execute_list();
 		add_execute_list(objcunique);

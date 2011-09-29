@@ -3036,7 +3036,7 @@ char *output)
 	if(cmd_flags.prebinding == TRUE){
 	    if(stat("/usr/bin/objcunique", &stat_buf) != -1){
 		reset_execute_list();
-		add_execute_list_with_prefix("objcunique");
+		add_execute_list("/usr/bin/objcunique");
 		add_execute_list(cmd_flags.output);
 		add_execute_list("-prebind");
 		for(j = 0; j < cmd_flags.nLdirs; j++)
