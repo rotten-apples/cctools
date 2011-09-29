@@ -2389,6 +2389,13 @@ void Options::buildSearchPaths(int argc, const char* argv[])
 			sEmitWarnings = false;
 		}
 	}
+
+	if(fSDKPaths.size() == 0) {
+#ifdef CROSS_SYSROOT
+		fSDKPaths.push_back(CROSS_SYSROOT);
+#endif
+	}
+
 	if ( addStandardLibraryDirectories ) {
 		libraryPaths.push_back("/usr/lib");
 		libraryPaths.push_back("/usr/local/lib");
