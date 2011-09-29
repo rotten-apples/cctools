@@ -341,14 +341,9 @@ char **envp)
 	toc_mode = S_IFREG | (0666 & ~oumask);
 	(void)umask(oumask);
 
-	/* see if this is being run as ranlib */
-	p = strrchr(argv[0], '/');
-	if(p != NULL)
-	    p++;
-	else
-	    p = argv[0];
-	if(strncmp(p, "ranlib", sizeof("ranlib") - 1) == 0)
-	    cmd_flags.ranlib = TRUE;
+#ifdef RANLIB
+	cmd_flags.ranlib = TRUE;
+#endif
 
 	/* The default is to used long names */
 	cmd_flags.use_long_names = TRUE;
