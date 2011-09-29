@@ -84,7 +84,7 @@ static char rcsid[] = "$OpenBSD: ar.c,v 1.3 1997/01/15 23:42:11 millert Exp $";
 #include "extern.h"
 #include "stuff/execute.h"
 #include "stuff/unix_standard_mode.h"
-
+#include "stuff/allocate.h"
 CHDR chdr;
 u_int options;
 char *archive, *envtmp, *posarg, *posname;
@@ -276,7 +276,7 @@ main(argc, argv)
 	if(run_ranlib){
 	    /* run ranlib -f or -q on the archive */
 	    reset_execute_list();
-	    add_execute_list_with_prefix("ranlib");
+	    add_execute_list(makestr(BINDIR, "/", RANLIBPROG, NULL));
 	    if(options & AR_S)
 		add_execute_list("-f");
 	    else
