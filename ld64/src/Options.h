@@ -28,6 +28,9 @@
 
 #include <stdint.h>
 #include <mach/machine.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
 
 #include <vector>
 #include <ext/hash_set>
