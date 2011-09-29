@@ -29,7 +29,7 @@
 #include <string.h>
 #include <libkern/OSByteOrder.h>
 
-#ifdef __OPTIMIZE__
+#if defined(__OPTIMIZE__) && (__GNUC__ >= 4)
 #define INLINE	__attribute__((always_inline))
 #else
 #define INLINE
