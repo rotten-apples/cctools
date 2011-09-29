@@ -88,7 +88,6 @@
 #include <string.h>
 #include <limits.h>
 #include <libc.h>
-#include <malloc/malloc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach-o/stab.h>
