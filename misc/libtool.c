@@ -2920,7 +2920,7 @@ char *output)
 	 */
 	for(i = 0; i < narchs || (i == 0 && narchs == 0); i++){
 	    reset_execute_list();
-	    add_execute_list_with_prefix("ld");
+	    add_execute_list(makestr(BINDIR, "/", LDPROG, NULL));
 	    if(narchs != 0 && cmd_flags.arch_only_flag.name == NULL)
 		add_execute_list("-arch_multiple");
 	    if(archs != NULL){
