@@ -36,6 +36,7 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 #include <dlfcn.h>
+#include <cstdio>
 
 #include <string>
 #include <map>

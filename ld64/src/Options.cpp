@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <vector>
+#include <cstdio>
 
 #include "config.h"
 #include "Options.h"
