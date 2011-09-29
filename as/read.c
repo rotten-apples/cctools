@@ -37,6 +37,7 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <inttypes.h>
 #include "stuff/round.h"
 #include "stuff/arch.h"
 #include "stuff/best_arch.h"
@@ -2529,7 +2530,7 @@ uintptr_t value)
 
 	*p = 0;
 	if(strlen(segname) > sizeof(s.segname)){
-	    as_bad("segment-name: %s too long (maximum %ld characters)",
+	    as_bad("segment-name: %s too long (maximum %" PRIdPTR " characters)",
 		    segname, sizeof(s.segname));
 	    ignore_rest_of_line();
 	    *p = c;
@@ -2538,7 +2539,7 @@ uintptr_t value)
 
 	*q = 0;
 	if(strlen(sectname) > sizeof(s.sectname)){
-	    as_bad("section-name: %s too long (maximum %ld characters)",
+	    as_bad("section-name: %s too long (maximum %" PRIdPTR " characters)",
 		    sectname, sizeof(s.sectname));
 	    ignore_rest_of_line();
 	    return;
@@ -2691,7 +2692,7 @@ uintptr_t value)
 
 	*p = 0;
 	if(strlen(segname) > sizeof(s.segname)){
-	    as_bad("segment-name: %s too long (maximum %ld characters)",
+	    as_bad("segment-name: %s too long (maximum %" PRIdPTR " characters)",
 		    segname, sizeof(s.segname));
 	    ignore_rest_of_line();
 	    *p = c;
@@ -2700,7 +2701,7 @@ uintptr_t value)
 
 	*q = 0;
 	if(strlen(sectname) > sizeof(s.sectname)){
-	    as_bad("section-name: %s too long (maximum %ld characters)",
+	    as_bad("section-name: %s too long (maximum %" PRIdPTR " characters)",
 		    sectname, sizeof(s.sectname));
 	    ignore_rest_of_line();
 	    *p = c;
