@@ -29,6 +29,10 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "app.h"
 #include "messages.h"
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 FILE *scrub_file = NULL;
 char *scrub_string = NULL;
 char *scrub_last_string = NULL;

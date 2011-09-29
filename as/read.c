@@ -60,6 +60,10 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "i386.h"
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 /*
  * Parsing of input is done off of this pointer which points to the next char
  * of source file to parse.
