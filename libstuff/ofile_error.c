@@ -24,6 +24,7 @@
 #define __darwin_i386_float_state i386_float_state
 #define __darwin_i386_thread_state i386_thread_state
 
+#include <sys/types.h>
 #include <stdarg.h>
 #include "stuff/ofile.h"
 #include "stuff/print.h"

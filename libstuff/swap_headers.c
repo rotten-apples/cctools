@@ -24,6 +24,8 @@
 #define __darwin_i386_float_state i386_float_state
 #define __darwin_i386_thread_state i386_thread_state
 
+#include <sys/types.h>
+
 #include <mach-o/loader.h>
 #include <mach/m68k/thread_status.h>
 #undef MACHINE_THREAD_STATE	/* need to undef these to avoid warnings */
