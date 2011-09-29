@@ -29,7 +29,7 @@
 #include <fcntl.h>
 #include <vector>
 
-#include "configure.h"
+#include "config.h"
 #include "Options.h"
 #include "Architectures.hpp"
 #include "MachOFileAbstraction.hpp"
