@@ -207,6 +207,40 @@ struct arch_flag *specific_arch_flag)
                 return(1);
 	    }
 	    break;
+	case CPU_TYPE_POWERPC64:
+	    switch(host_basic_info.cpu_subtype){
+	    case CPU_SUBTYPE_POWERPC_ALL:
+		if(family_arch_flag != NULL){
+		    family_arch_flag->name = "ppc64";
+		    family_arch_flag->cpusubtype = CPU_SUBTYPE_POWERPC_ALL;
+		}
+		if(specific_arch_flag != NULL)
+		    specific_arch_flag->name = "ppc64";
+		return(1);
+	    case CPU_SUBTYPE_POWERPC_970:
+		if(family_arch_flag != NULL){
+		    family_arch_flag->name = "ppc64";
+		    family_arch_flag->cpusubtype = CPU_SUBTYPE_POWERPC_ALL;
+		}
+		if(specific_arch_flag != NULL)
+		    specific_arch_flag->name = "ppc970-64";
+		return(1);
+	    default:
+		if(family_arch_flag != NULL){
+                    family_arch_flag->name = "ppc64";
+                    family_arch_flag->cpusubtype = CPU_SUBTYPE_POWERPC_ALL;
+                }
+                if(specific_arch_flag != NULL){
+                    specific_arch_flag->name = 
+			savestr("PowerPC cpusubtype 1234567890");
+                    if(specific_arch_flag->name != NULL)
+			sprintf(specific_arch_flag->name,
+				"PowerPC cpusubtype %u", 
+				host_basic_info.cpu_subtype);
+		}
+                return(1);
+	    }
+	    break;
 	case CPU_TYPE_VEO:
 	    switch(host_basic_info.cpu_subtype){
 	    case CPU_SUBTYPE_VEO_1:
@@ -340,6 +374,33 @@ struct arch_flag *specific_arch_flag)
 		if(family_arch_flag != NULL){
 		    family_arch_flag->name = "i386";
 		    family_arch_flag->cpusubtype = CPU_SUBTYPE_I386_ALL;
+                }
+                if(specific_arch_flag != NULL){
+                    specific_arch_flag->name =
+			savestr("Intel family 12 model 12345678");
+		    if(specific_arch_flag->name != NULL)
+			sprintf(specific_arch_flag->name,
+			    "Intel family %u model %u", 
+			CPU_SUBTYPE_INTEL_FAMILY(host_basic_info.cpu_subtype),
+			CPU_SUBTYPE_INTEL_MODEL(host_basic_info.cpu_subtype));
+		}
+                return(1);
+	    }
+	    break;
+	case CPU_TYPE_X86_64:
+	    switch(host_basic_info.cpu_subtype){
+	    case CPU_SUBTYPE_X86_64_ALL:
+		if(family_arch_flag != NULL){
+		    family_arch_flag->name = "x86_64";
+		    family_arch_flag->cpusubtype = CPU_SUBTYPE_X86_64_ALL;
+		}
+		if(specific_arch_flag != NULL)
+		    specific_arch_flag->name = "x86_64";
+		return(1);
+	    default:
+		if(family_arch_flag != NULL){
+		    family_arch_flag->name = "x86_64";
+		    family_arch_flag->cpusubtype = CPU_SUBTYPE_X86_64_ALL;
                 }
                 if(specific_arch_flag != NULL){
                     specific_arch_flag->name =
