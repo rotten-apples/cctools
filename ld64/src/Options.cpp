@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <mach/vm_prot.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <vector>
 
 #include "config.h"
