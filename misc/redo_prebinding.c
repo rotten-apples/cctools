@@ -82,7 +82,7 @@
  */
 #include <mach-o/redo_prebinding.h>
 #endif /* defined(LIBRARY_API) */
-
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9775,7 +9775,7 @@ const char *format, ...)
 	errors++;
 }
 #endif /* defined(LIBRARY_API) */
-
+#if HAVE_GETATTRLIST
 #include <sys/attr.h>
 /*
  * Structure defining what's returned from getattrlist.  It returns all the
@@ -9860,3 +9860,13 @@ char *filename)
 
 	return(FALSE);
 }
+#else
+static
+enum bool
+has_resource_fork(
+                char *filename)
+{
+  return FALSE;
+}
+#endif
+
