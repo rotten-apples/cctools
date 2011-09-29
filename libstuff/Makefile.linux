@@ -1,0 +1,57 @@
+NULL =
+
+CFILES = \
+	SymLoc.c \
+	allocate.c \
+	apple_version.c \
+	arch.c \
+	arch_usage.c \
+	best_arch.c \
+	breakout.c \
+	bytesex.c \
+	checkout.c \
+	coff_bytesex.c \
+	crc32.c \
+	dylib_roots.c \
+	dylib_table.c \
+	emulated.c \
+	errors.c \
+	execute.c \
+	fatal_arch.c \
+	fatals.c \
+	get_arch_from_host.c \
+	get_toc_byte_sex.c \
+	guess_short_name.c \
+	hash_string.c \
+	hppa.c \
+	lto.c \
+	macosx_deployment_target.c \
+	ofile.c \
+	ofile_error.c \
+	ofile_get_word.c \
+	print.c \
+	reloc.c \
+	round.c \
+	seg_addr_table.c \
+	set_arch_flag_name.c \
+	swap_headers.c \
+	symbol_list.c \
+	unix_standard_mode.c \
+	version_number.c \
+	vm_flush_cache.c \
+	writeout.c \
+	$(NULL)
+COBJS = $(CFILES:.c=.o)
+
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DEMULATED_HOST_CPU_TYPE=CPU_TYPE_I386 -DEMULATED_HOST_CPU_SUBTYPE='CPU_SUBTYPE_INTEL(12, 1)' -I../include -I../../usr_include
+
+all: libstuff.a
+
+libstuff.a: $(COBJS)
+	$(AR) cr $@ $^
+
+.c.o:
+	$(CC) $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+clean:
+	-rm -rf libstuff.a $(COBJS)

@@ -1,0 +1,104 @@
+CFILES_codesign_allocate = codesign_allocate.c
+COBJS_codesign_allocate = $(CFILES_codesign_allocate:.c=.o)
+
+CFILES_install_name_tool = install_name_tool.c
+COBJS_install_name_tool = $(CFILES_install_name_tool:.c=.o)
+
+CFILES_libtool = libtool.c
+COBJS_libtool = $(CFILES_libtool:.c=.o)
+
+CFILES_lipo = lipo.c
+COBJS_lipo = $(CFILES_lipo:.c=.o)
+
+CFILES_nm = nm.c
+COBJS_nm = $(CFILES_nm:.c=.o)
+
+CFILES_nmedit = strip.c
+COBJS_nmedit = nmedit.o
+
+CFILES_pagestuff = pagestuff.c
+COBJS_pagestuff = $(CFILES_pagestuff:.c=.o)
+
+CFILES_segedit = segedit.c
+COBJS_segedit = $(CFILES_segedit:.c=.o)
+
+CFILES_size = size.c
+COBJS_size = $(CFILES_size:.c=.o)
+
+CFILES_strings = strings.c
+COBJS_strings = $(CFILES_strings:.c=.o)
+
+CFILES_strip = strip.c
+COBJS_strip = $(CFILES_strip:.c=.o)
+
+XCFLAGS = -fno-builtin-round -fno-builtin-trunc -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+
+all: codesign_allocate \
+     install_name_tool \
+     libtool \
+     lipo \
+     nm \
+     nmedit \
+     pagestuff \
+     ranlib \
+     segedit \
+     size \
+     strings \
+     strip
+
+codesign_allocate: $(COBJS_codesign_allocate)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+install_name_tool: $(COBJS_install_name_tool)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+libtool: $(COBJS_libtool)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+lipo: $(COBJS_lipo)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+nm: $(COBJS_nm)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+nmedit: $(COBJS_nmedit)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+pagestuff: $(COBJS_pagestuff)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+ranlib: nmedit
+	ln -s $< $@
+
+segedit: $(COBJS_segedit)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+size: $(COBJS_size)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+strings: $(COBJS_strings)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+strip: $(COBJS_strip)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+.c.o:
+	$(CC) $(CFLAGS) $(XCFLAGS) -c -o $@ $<
+
+nmedit.o: strip.c
+	$(CC) $(CFLAGS) $(XCFLAGS) -DNMEDIT -c -o $@ $<
+
+clean:
+	-rm -rf \
+	  codesign_allocate $(COBJS_codesign_allocate) \
+	  install_name_tool $(COBJS_install_name_tool) \
+	  libtool $(COBJS_libtool) \
+	  lipo $(COBJS_lipo) \
+	  nm $(COBJS_nm) \
+	  nmedit $(COBJS_nmedit) \
+	  pagestuff $(COBJS_pagestuff) \
+	  ranlib \
+	  segedit $(COBJS_segedit) \
+	  size $(COBJS_size) \
+	  strings $(COBJS_strings) \
+	  strip $(COBJS_strip)

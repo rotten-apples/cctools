@@ -47,7 +47,6 @@ char **envp)
     unsigned long count, verbose;
     char *p, c, *arch_name, *as, *as_local;
     char *prefix, buf[MAXPATHLEN], resolved_name[PATH_MAX];
-    uint32_t bufsize;
     struct arch_flag arch_flag;
     const struct arch_flag *arch_flags, *family_arch_flag;
 
@@ -57,13 +56,8 @@ char **envp)
 	/*
 	 * Construct the prefix to the assembler driver.
 	 */
-	bufsize = MAXPATHLEN;
 	p = buf;
-	i = _NSGetExecutablePath(p, &bufsize);
-	if(i == -1){
-	    p = allocate(bufsize);
-	    _NSGetExecutablePath(p, &bufsize);
-	}
+	readlink("/proc/self/exe", buf, sizeof(buf));
 	prefix = realpath(p, resolved_name);
 	p = rindex(prefix, '/');
 	if(p != NULL)

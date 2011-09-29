@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <mach/mach.h>
+#include "ld.h"
 #include <mach-o/loader.h>
 #if !(defined(KLD) && defined(__STATIC__))
 #include <sys/uio.h>
@@ -35,7 +36,6 @@
 #include <fcntl.h>
 #include <mach-o/dyld.h>
 #endif /* !(defined(KLD) && defined(__STATIC__)) */
-#include "ld.h"
 #include <stdlib.h>
 
 /*
@@ -59,6 +59,7 @@ uint8_t *uuid)
 	 * dynamically lookup uuid_generate_random() and if it is defined we
 	 * call it indirectly.
 	 */
+#if 0
 	if(NSIsSymbolNameDefined("_uuid_generate_random")){
 	    nssymbol = (void *)NSLookupAndBindSymbol("_uuid_generate_random");
 	    uuid_func = NSAddressOfSymbol(nssymbol);
@@ -67,7 +68,10 @@ uint8_t *uuid)
 	/*
 	 * Since we don't have uuid_generate() just read bytes from /dev/urandom
 	 */
-	else{
+	else
+#else
+        {
+#endif
 	    fd = open("/dev/urandom", O_RDONLY, 0);
 	    if(fd == -1){
 		system_warning("can't open: /dev/urandom to fill in uuid load "

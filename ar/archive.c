@@ -83,6 +83,7 @@ static char rcsid[] = "$NetBSD: archive.c,v 1.7 1995/03/26 03:27:46 glass Exp $"
 
 #include "archive.h"
 #include "extern.h"
+#include "stuff/ofile.h"
 
 typedef struct ar_hdr HDR;
 static char hb[sizeof(HDR) + 1];	/* real header */
@@ -107,11 +108,11 @@ open_archive(mode)
 			goto opened;
 		}
 		if (errno != EEXIST)
-			error(archive);
+			ar_error(archive);
 		mode &= ~O_EXCL;
 	}
 	if ((fd = open(archive, mode, DEFFILEMODE)) < 0)
-		error(archive);
+		ar_error(archive);
 
 	/* 
 	 * Attempt to place a lock on the opened file - if we get an 
@@ -142,7 +143,7 @@ opened:
 		case EISDIR:
 		case EDEADLK:
 		case ESTALE:
-			error(archive);
+			ar_error(archive);
 			break;
 
 		/* Locking is supported but we are out of resources right now */
@@ -151,7 +152,9 @@ opened:
 		/* Locking seems to not be working */
 		case ENOTSUP:
 		case EHOSTUNREACH:
+#ifdef EBADRPC
 		case EBADRPC:
+#endif
 		default:
 			/* Filesystem does not support locking */
 			break;
@@ -167,7 +170,7 @@ opened:
 		if ((nr = read(fd, buf, SARMAG) != SARMAG)) {
 			if (nr >= 0)
 				badfmt();
-			error(archive);
+			ar_error(archive);
 		} else if (bcmp(buf, ARMAG, SARMAG)) {
 			unsigned long magic;
 			memcpy(&magic, buf, sizeof(unsigned long));
@@ -183,7 +186,7 @@ opened:
 			badfmt();
 		}
 	} else if (write(fd, ARMAG, SARMAG) != SARMAG)
-		error(archive);
+		ar_error(archive);
 
 	if ((mode & O_ACCMODE) == O_RDWR)
 		archive_opened_for_writing = 1;
@@ -223,7 +226,7 @@ get_arobj(fd)
 		if (!nr)
 			return (0);
 		if (nr < 0)
-			error(archive);
+			ar_error(archive);
 		badfmt();
 	}
 
@@ -256,7 +259,7 @@ get_arobj(fd)
 		nr = read(fd, chdr.name, len);
 		if (nr != len) {
 			if (nr < 0)
-				error(archive);
+				ar_error(archive);
 			badfmt();
 		}
 		chdr.name[len] = 0;
@@ -310,24 +313,24 @@ put_arobj(cfp, sb)
 				    name, OLDARMAXNAME, name);
 				(void)fflush(stderr);
 			}
-			(void)sprintf(hb, HDR3, name, (long int)sb->st_mtimespec.tv_sec,
+			(void)sprintf(hb, HDR3, name, (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-			    sb->st_mode, sb->st_size, ARFMAG);
+			    sb->st_mode, (int64_t)sb->st_size, ARFMAG);
 			lname = 0;
 		} else if (lname > sizeof(hdr->ar_name) || strchr(name, ' '))
 			(void)sprintf(hb, HDR1, AR_EFMT1, (lname + 3) & ~3,
-			    (long int)sb->st_mtimespec.tv_sec,
+			    (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-			    sb->st_mode, sb->st_size + ((lname + 3) & ~3),
+			    sb->st_mode, (int64_t)sb->st_size + ((lname + 3) & ~3),
 			    ARFMAG);
 		else {
 			lname = 0;
-			(void)sprintf(hb, HDR2, name, (long int)sb->st_mtimespec.tv_sec,
+			(void)sprintf(hb, HDR2, name, (long int)sb->st_mtime,
 			    (unsigned int)(u_short)sb->st_uid,
 			    (unsigned int)(u_short)sb->st_gid,
-			    sb->st_mode, sb->st_size, ARFMAG);
+			    sb->st_mode, (int64_t)sb->st_size, ARFMAG);
 		}
 		size = sb->st_size;
 	} else {
@@ -337,7 +340,7 @@ put_arobj(cfp, sb)
 	}
 
 	if (write(cfp->wfd, hb, sizeof(HDR)) != sizeof(HDR))
-		error(cfp->wname);
+		ar_error(cfp->wname);
 	/*
 	 * For Rhapsody if long names are used then the name is padded with
 	 * '\0's to a 4 byte size.  This keeps members on 4-byte boundaries
@@ -345,13 +348,13 @@ put_arobj(cfp, sb)
 	 */
 	if (lname) {
 		if (write(cfp->wfd, name, lname) != (int)lname)
-			error(cfp->wname);
+			ar_error(cfp->wname);
 		already_written = lname;
 		if ((lname % 4) != 0) {
 			static char pad[3] = "\0\0\0";
 			if (write(cfp->wfd, pad, 4-(lname%4)) !=
 			    (int)(4-(lname%4)))
-				error(cfp->wname);
+				ar_error(cfp->wname);
 			already_written += 4 - (lname % 4);
 		}
 	}
@@ -395,23 +398,23 @@ copy_ar(cfp, size)
 		sz -= nr;
 		for (off = 0; off < nr; nr -= off, off += nw)
 			if ((nw = write(to, buf + off, nr)) < 0)
-				error(cfp->wname);
+				ar_error(cfp->wname);
 	}
 	if (sz) {
 		if (nr == 0)
 			badfmt();
-		error(cfp->rname);
+		ar_error(cfp->rname);
 	}
 
 	if (cfp->flags & RPAD && (size + chdr.lname) & 1 &&
 	    (nr = read(from, buf, 1)) != 1) {
 		if (nr == 0)
 			badfmt();
-		error(cfp->rname);
+		ar_error(cfp->rname);
 	}
 	if (cfp->flags & WPAD && (size + already_written) & 1 &&
 	    write(to, &pad, 1) != 1)
-		error(cfp->wname);
+		ar_error(cfp->wname);
 }
 
 /*
@@ -426,5 +429,5 @@ skip_arobj(fd)
 
 	len = chdr.size + ((chdr.size + chdr.lname) & 1);
 	if (lseek(fd, len, SEEK_CUR) == (off_t)-1)
-		error(archive);
+		ar_error(archive);
 }

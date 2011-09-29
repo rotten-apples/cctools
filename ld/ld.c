@@ -55,12 +55,9 @@
 #ifndef RLD
 #include "stuff/symbol_list.h"
 #endif
-#include "make.h"
 #include <mach/mach_init.h>
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
-#else
-#include <servers/bootstrap.h>
 #endif
 #else /* defined(KLD) && defined(__STATIC__) */
 #include <mach/mach.h>
@@ -458,7 +455,9 @@ static void ld_exit(int exit_value);
  */
 static int talking_to_ProjectBuilder = 0;
 static mach_port_t ProjectBuilder_port;
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 static void check_for_ProjectBuilder(void);
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 
 /* The signal hander routine for SIGINT, SIGTERM, SIGBUS & SIGSEGV */
 static void handler(int sig);
@@ -544,8 +543,10 @@ char *envp[])
 	if(signal(SIGSEGV, SIG_IGN) != SIG_IGN)
 	    signal(SIGSEGV, handler);
 
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 	/* If ProjectBuilder is around set up for it */
 	check_for_ProjectBuilder();
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 
 	/* This needs to be here so that we test the environment variable before
 	   the rest of options parsing.  */
@@ -3321,6 +3322,7 @@ vm_prot_t initprot)
 	return(TRUE);
 }
 
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 /*
  * check_for_ProjectBuilder() is called once before any error messages are
  * generated and sets up what is needed to send error messages to project
@@ -3372,6 +3374,14 @@ char *message)
 	    0, /* line */
 	    message, strlen(message)+1 > 1024 ? 1024 : strlen(message)+1);
 }
+#else
+__private_extern__
+void
+tell_ProjectBuilder(
+char *message)
+{
+}
+#endif  /* OLD_PROJECTBUILDER_INTERFACE */
 
 /*
  * ld_exit() is use for all exit()s from the link editor.

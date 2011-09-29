@@ -51,12 +51,9 @@
 #include "stuff/lto.h"
 #endif /* LTO_SUPPORT */
 
-#include "make.h"
 #include <mach/mach_init.h>
 #if defined(__OPENSTEP__) || defined(__GONZO_BUNSEN_BEAKER__)
 #include <servers/netname.h>
-#else
-#include <servers/bootstrap.h>
 #endif
 
 /* used by error routines as the name of the program */
@@ -2821,6 +2818,7 @@ unsigned long r)
 	return(v & ~(r - 1));
 }
 
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 /*
  * tellProjectBuilder() is called to cause the doing messages to be sent to
  * ProjectBuilder.  The string pointed to by message and arch_name together
@@ -2869,6 +2867,7 @@ char *fileName)
 	    0,
 	    message_buf, strlen(message_buf) + 1);
 }
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 
 /*
  * create_dynamic_shared_library() creates a dynamic shared library from the
@@ -2992,7 +2991,9 @@ char *output)
 	    if(narchs <= 1){
 		add_execute_list("-o");
 		add_execute_list(cmd_flags.output);
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 		tellProjectBuilder("Linking %s", "", cmd_flags.output);
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 	    }
 	    else{
 		add_execute_list("-o");
@@ -3002,8 +3003,10 @@ char *output)
 		    add_execute_list("-final_output");
 		    add_execute_list(cmd_flags.output);
 		}
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 		tellProjectBuilder("Linking %s for ", archs[i].arch_flag.name,
 				   cmd_flags.output);
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 	    }
 	    if(execute_list(cmd_flags.verbose) == 0)
 		fatal("internal link edit command failed");
@@ -3013,7 +3016,9 @@ char *output)
 	 * in a fat file.
 	 */
 	if(narchs > 1){
+#ifdef OLD_PROJECTBUILDER_INTERFACE
 	    tellProjectBuilder("Combining into %s", "", cmd_flags.output);
+#endif /* OLD_PROJECTBUILDER_INTERFACE */
 	    reset_execute_list();
 	    add_execute_list("lipo");
 	    add_execute_list("-create");

@@ -1048,8 +1048,8 @@ check_dylib_command:
 		break;
 
 	    case LC_ENCRYPTION_INFO:
-		ld = (struct encryption_info_command *)lc;
-		if(ld->cmdsize != sizeof(struct encryption_info_command)){
+		ec = (struct encryption_info_command *)lc;
+		if(ec->cmdsize != sizeof(struct encryption_info_command)){
 		    error("in swap_object_headers(): malformed load commands "
 			  "(LC_ENCRYPTION_INFO command %lu has incorrect "
 			  "cmdsize", i);

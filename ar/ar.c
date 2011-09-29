@@ -276,7 +276,16 @@ main(argc, argv)
 	if(run_ranlib){
 	    /* run ranlib -f or -q on the archive */
 	    reset_execute_list();
-	    add_execute_list("ranlib");
+
+	    /* Find ranlib in the same directory as ar. */
+	    char my_dir[PATH_MAX];
+	    readlink("/proc/self/exe", my_dir, sizeof(my_dir));
+	    char* last_slash = strrchr(my_dir, '/');
+	    *last_slash = '\0';
+	    char ranlib[PATH_MAX];
+	    snprintf(ranlib, sizeof(ranlib), "%s/ranlib", my_dir);
+
+	    add_execute_list(ranlib);
 	    if(options & AR_S)
 		add_execute_list("-f");
 	    else

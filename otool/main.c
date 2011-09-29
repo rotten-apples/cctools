@@ -1138,9 +1138,13 @@ void *cookie) /* cookie is not used */
 		S_ATTR_SOME_INSTRUCTIONS){
 	    if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__protocol") == 0 && vflag == TRUE){
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_protocol_section(ofile->load_commands, mh_ncmds,
 		   mh_sizeofcmds, ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	            (strcmp(sectname, "__string_object") == 0 ||
@@ -1154,16 +1158,24 @@ void *cookie) /* cookie is not used */
 			strings, strings_size, sorted_symbols, nsorted_symbols,
 			vflag);
 		else
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		    print_objc_string_object_section(sectname,
 			ofile->load_commands, mh_ncmds, mh_sizeofcmds,
 			ofile->object_byte_sex, ofile->object_addr,
 			ofile->object_size, vflag);
+#else
+		    printf("Objective-C not supported.\n");
+#endif
 	    }
 	    else if(strcmp(segname, SEG_OBJC) == 0 &&
 	       strcmp(sectname, "__runtime_setup") == 0 && vflag == TRUE){
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		print_objc_runtime_setup_section(ofile->load_commands, mh_ncmds,
 		   mh_sizeofcmds, ofile->object_byte_sex, ofile->object_addr,
 		   ofile->object_size, vflag);
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 #ifdef EFI_SUPPORT
 	    else if(strcmp(segname, "__RELOC") == 0 &&
@@ -1340,10 +1352,14 @@ void *cookie) /* cookie is not used */
 			    loc_relocs, nloc_relocs, vflag);
 	    }
 	    else{
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		 print_objc_segment(ofile->load_commands,mh_ncmds,mh_sizeofcmds,
 				    ofile->object_byte_sex, ofile->object_addr,
 				    ofile->object_size, sorted_symbols,
 				    nsorted_symbols, vflag);
+#else
+		 printf("Objective-C not supported\n");
+#endif
 	    }
 	}
 

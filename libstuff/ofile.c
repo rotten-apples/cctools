@@ -4049,7 +4049,7 @@ check_dylib_command:
 		    }
 		    break;
 		}
-#endif PPC_THREAD_STATE64_COUNT
+#endif /* PPC_THREAD_STATE64_COUNT */
 	    	if(cputype == CPU_TYPE_MC88000){
 		    m88k_thread_state_grf_t *cpu;
 		    m88k_thread_state_xrf_t *fpu;
