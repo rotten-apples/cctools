@@ -51,9 +51,9 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 /* These #imports are for type definitions etc. */
 #include <stdint.h>
-#import <stdio.h>
-#import <assert.h>
-#import <mach/machine.h>
+#include <stdio.h>
+#include <assert.h>
+#include <mach/machine.h>
 
 /* These defines are potentially useful */
 #undef FALSE
