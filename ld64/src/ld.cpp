@@ -52,8 +52,9 @@ extern "C" double log2 ( double );
 #include <ext/hash_map>
 #include <dlfcn.h>
 #include <AvailabilityMacros.h>
+#include <signal.h>
 
-#include "configure.h"
+#include "config.h"
 #include "Options.h"
 
 #include "ObjectFile.h"
