@@ -431,6 +431,8 @@ void Reader::optimize(std::vector<ObjectFile::Atom *>& allAtoms, std::vector<Obj
 	
 	// create optimizer and add each Reader
 	lto_code_gen_t generator = ::lto_codegen_create();
+
+	::lto_codegen_set_assembler_path(generator, BINDIR "/" ASPROG );
 	for (std::set<Reader*>::iterator it=fgReaders.begin(); it != fgReaders.end(); ++it) {
 		if ( ::lto_codegen_add_module(generator, (*it)->fModule) )
 			throwf("lto: could not merge in %s because %s", (*it)->fPath, ::lto_get_error_message());
