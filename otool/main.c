@@ -1369,6 +1369,7 @@ void *cookie) /* cookie is not used */
 			    loc_relocs, nloc_relocs, vflag);
 	    }
 	    else{
+#ifdef HAVE_OBJC_OBJC_RUNTIME_H
 		 /*
 		  * This is the 32-bit non-arm cputype case.  Which is normally
 		  * the first Objective-C ABI.  But it may be the case of a
@@ -1416,6 +1417,9 @@ void *cookie) /* cookie is not used */
 			    nsorted_symbols, ext_relocs, next_relocs,
 			    loc_relocs, nloc_relocs, vflag);
 		}
+#else
+		printf("Objective-C not supported\n");
+#endif
 	    }
 	}
 
