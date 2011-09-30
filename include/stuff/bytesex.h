@@ -195,9 +195,12 @@ __private_extern__ void swap_ppc_thread_state_t(
     ppc_thread_state_t *cpu,
     enum byte_sex target_byte_sex);
 
+#if 0
+../include/stuff/bytesex.h:199: error: expected ‘)’ before ‘*’ token
 __private_extern__ void swap_ppc_thread_state64_t(
     ppc_thread_state64_t *cpu,
     enum byte_sex target_byte_sex);
+#endif
 
 __private_extern__ void swap_ppc_float_state_t(
     ppc_float_state_t *fpu,
