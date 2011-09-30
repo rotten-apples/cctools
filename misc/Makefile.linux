@@ -31,7 +31,7 @@ COBJS_strings = $(CFILES_strings:.c=.o)
 CFILES_strip = strip.c
 COBJS_strip = $(CFILES_strip:.c=.o)
 
-XCFLAGS = -fno-builtin-round -fno-builtin-trunc -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+XCFLAGS = -fno-builtin-round -fno-builtin-trunc -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include -I/usr/include/xnu
 
 all: codesign_allocate \
      install_name_tool \

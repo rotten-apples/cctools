@@ -43,7 +43,7 @@ CFILES = \
 	$(NULL)
 COBJS = $(CFILES:.c=.o)
 
-XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DEMULATED_HOST_CPU_TYPE=CPU_TYPE_I386 -DEMULATED_HOST_CPU_SUBTYPE='CPU_SUBTYPE_INTEL(12, 1)' -I../include -I../../usr_include
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DEMULATED_HOST_CPU_TYPE=CPU_TYPE_I386 -DEMULATED_HOST_CPU_SUBTYPE='CPU_SUBTYPE_INTEL(12, 1)' -I../include -I../../usr_include -I/usr/include/xnu
 
 all: libstuff.a
 

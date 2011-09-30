@@ -21,7 +21,7 @@ COBJS = $(CFILES:.c=.o)
 OBJCFILES = print_objc.c
 OBJCOBJS = $(OBJCFILES:.c=.o)
 
-XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -I../include -I../../usr_include -I/usr/include/xnu
 
 all: otool
 
