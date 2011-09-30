@@ -36,6 +36,7 @@
 #include <mach-o/loader.h>
 #endif /* !(defined(KLD) && defined(__STATIC__)) */
 #include <stdlib.h>
+#include <fcntl.h>
 
 /*
  * uuid() is called to set the uuid[] bytes for the uuid load command.
@@ -48,7 +49,9 @@ uint8_t *uuid)
     struct uuid_command u;
 #if !(defined(KLD) && defined(__STATIC__))
     void (*uuid_func)(uint8_t *out);
+#if 0
     NSSymbol nssymbol;
+#endif
     int fd;
     ssize_t n;
 
