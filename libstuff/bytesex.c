@@ -805,6 +805,7 @@ enum byte_sex target_byte_sex)
 	cpu->vrsave = SWAP_INT(cpu->vrsave);
 }
 
+#if 0
 __private_extern__
 void
 swap_ppc_thread_state64_t(
@@ -851,6 +852,7 @@ enum byte_sex target_byte_sex)
 	cpu->ctr = SWAP_LONG_LONG(cpu->ctr);
 	cpu->vrsave =  SWAP_INT(cpu->vrsave);
 }
+#endif
 
 __private_extern__
 void

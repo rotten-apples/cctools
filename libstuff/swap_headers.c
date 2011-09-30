@@ -438,7 +438,9 @@ check_dylib_command:
 		    ppc_thread_state_t *cpu;
 		    ppc_float_state_t *fpu;
 		    ppc_exception_state_t *except;
+#if 0
 		    ppc_thread_state64_t *cpu64;
+#endif
 
 		    nflavor = 0;
 		    p = (char *)ut + ut->cmdsize;
@@ -490,6 +492,7 @@ check_dylib_command:
 			    except = (ppc_exception_state_t *)state;
 			    state += sizeof(ppc_exception_state_t);
 			    break;
+#if 0
 			case PPC_THREAD_STATE64:
 			    if(count != PPC_THREAD_STATE64_COUNT){
 				error("in swap_object_headers(): malformed "
@@ -504,6 +507,7 @@ check_dylib_command:
 			    cpu64 = (ppc_thread_state64_t *)state;
 			    state += sizeof(ppc_thread_state64_t);
 			    break;
+#endif
 			default:
 			    error("in swap_object_headers(): malformed "
 				"load commands (unknown "
@@ -1257,7 +1261,9 @@ check_dylib_command:
 	    	   cputype == CPU_TYPE_VEO ||
 		   cputype == CPU_TYPE_POWERPC64){
 		    ppc_thread_state_t *cpu;
+#if 0
 		    ppc_thread_state64_t *cpu64;
+#endif
 		    ppc_float_state_t *fpu;
 		    ppc_exception_state_t *except;
 
@@ -1274,11 +1280,13 @@ check_dylib_command:
 			    swap_ppc_thread_state_t(cpu, target_byte_sex);
 			    state += sizeof(ppc_thread_state_t);
 			    break;
+#if 0
 			case PPC_THREAD_STATE64:
 			    cpu64 = (ppc_thread_state64_t *)state;
 			    swap_ppc_thread_state64_t(cpu64, target_byte_sex);
 			    state += sizeof(ppc_thread_state64_t);
 			    break;
+#endif
 			case PPC_FLOAT_STATE:
 			    fpu = (ppc_float_state_t *)state;
 			    swap_ppc_float_state_t(fpu, target_byte_sex);

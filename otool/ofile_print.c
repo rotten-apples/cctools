@@ -3882,7 +3882,9 @@ enum byte_sex thread_states_byte_sex)
 	   cputype == CPU_TYPE_POWERPC64 ||
 	   cputype == CPU_TYPE_VEO){
 	    ppc_thread_state_t cpu;
+#if 0
 	    ppc_thread_state64_t cpu64;
+#endif
 	    ppc_float_state_t fpu;
 	    ppc_exception_state_t except;
 
@@ -4029,6 +4031,7 @@ enum byte_sex thread_states_byte_sex)
 			   (unsigned int)except.pad1[0],
 			   (unsigned int)except.pad1[0]);
 		    break;
+#if 0
 		case PPC_THREAD_STATE64:
 		    printf("     flavor PPC_THREAD_STATE64\n");
 		    if(count == PPC_THREAD_STATE64_COUNT)
@@ -4073,6 +4076,7 @@ enum byte_sex thread_states_byte_sex)
 			   cpu64.r30, cpu64.r31, cpu64.cr,  cpu64.xer, cpu64.lr,
 			   cpu64.ctr, cpu64.vrsave, cpu64.srr0, cpu64.srr1);
 		    break;
+#endif
 		default:
 		    printf("     flavor %u (unknown)\n", flavor);
 		    printf("      count %u\n", count);
