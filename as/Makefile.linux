@@ -43,13 +43,17 @@ COBJS_ppc = $(CFILES_ppc:%.c=$(ARCH_DIR)/ppc/%.o)
 CFILES_ppc64 = $(CFILES_ppc)
 COBJS_ppc64 = $(CFILES_ppc64:%.c=$(ARCH_DIR)/ppc64/%.o)
 
+CFILES_arm = $(CFILES) arm.c
+COBJS_arm = $(CFILES_arm:%.c=$(ARCH_DIR)/arm/%.o)
+
 XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DNeXT_MOD -I../include -I../../usr_include -I/usr/include/xnu
 
 all: bin/as \
      $(ARCH_DIR)/i386/as \
      $(ARCH_DIR)/x86_64/as \
      $(ARCH_DIR)/ppc/as \
-     $(ARCH_DIR)/ppc64/as
+     $(ARCH_DIR)/ppc64/as \
+     $(ARCH_DIR)/arm/as
 
 bin/as: $(COBJS_driver)
 	$(CC) -o $@ $^ -L../libstuff -lstuff
@@ -85,6 +89,13 @@ $(ARCH_DIR)/ppc64/as: $(COBJS_ppc64)
 $(COBJS_ppc64): $(ARCH_DIR)/ppc64/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(XCFLAGS) -DPPC -DARCH64 -c -o $@ $<
+
+$(ARCH_DIR)/arm/as: $(COBJS_arm)
+	$(CC) -o $@ $^ -L../libstuff -lstuff
+
+$(COBJS_arm): $(ARCH_DIR)/arm/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(XCFLAGS) -DARM -c -o $@ $<
 
 clean:
 	-rm -rf bin libexec
