@@ -43,7 +43,7 @@ COBJS_ppc = $(CFILES_ppc:%.c=$(ARCH_DIR)/ppc/%.o)
 CFILES_ppc64 = $(CFILES_ppc)
 COBJS_ppc64 = $(CFILES_ppc64:%.c=$(ARCH_DIR)/ppc64/%.o)
 
-XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DNeXT_MOD -I../include -I../../usr_include
+XCFLAGS = -fno-builtin-round -D__LITTLE_ENDIAN__ -D__private_extern__='__attribute__((visibility("hidden")))' -DNeXT_MOD -I../include -I../../usr_include -I/usr/include/xnu
 
 all: bin/as \
      $(ARCH_DIR)/i386/as \
