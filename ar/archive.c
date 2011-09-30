@@ -323,9 +323,11 @@ put_arobj(cfp, sb)
 		 * places that write archives to allow testing and comparing
 		 * things for exact binary equality.
 		 */
+#if 0
 		if (getenv("ZERO_AR_DATE") == NULL)
 			tv_sec = (long int)sb->st_mtimespec.tv_sec;
 		else
+#endif
 			tv_sec = (long int)0;
 
 		/*
