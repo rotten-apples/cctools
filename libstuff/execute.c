@@ -155,9 +155,9 @@ char *str)
 	 * Construct the prefix to the program running.
 	 */
 	p = buf;
-	readlink("/proc/self/exe", buf, sizeof(buf));
+	buf[readlink("/proc/self/exe", buf, sizeof(buf))] = '\0';
 	prefix = realpath(p, resolved_name);
-	p = rindex(prefix, '/');
+	p = rindex(prefix, '-');
 	if(p != NULL)
 	    p[1] = '\0';
 
